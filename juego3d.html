@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Maze Runner</title>
 <style>
 :root{
@@ -11,7 +11,7 @@
   --titular:"Arial Black","Segoe UI Black",Impact,"Segoe UI",sans-serif;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(#5A0C14 0%,#B01E27 38%,#D7282F 62%,#F47C74 100%);font-family:"Segoe UI",system-ui,Arial,sans-serif;color:var(--carbon)}
+html,body{margin:0;height:100%;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;background:linear-gradient(#5A0C14 0%,#B01E27 38%,#D7282F 62%,#F47C74 100%);font-family:"Segoe UI",system-ui,Arial,sans-serif;color:var(--carbon)}
 canvas{display:block;position:fixed;left:0;top:0;transition:filter .6s ease}
 canvas.borroso{filter:blur(9px) brightness(.82)}
 /* El cielo va en su propio lienzo, siempre un poco desenfocado, como fondo lejano. */
@@ -98,11 +98,36 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 .extremos .rotulo:last-child{text-align:right}
 .punta{display:inline-block;font-weight:900;font-size:11px;color:var(--oro);margin:0 6px 5px 0}
 .muestra{display:inline-block;width:14px;height:14px;border-radius:4px;border:2px solid #000;vertical-align:-3px;margin-right:7px}
-#resultado table{border-collapse:collapse;margin:4px 0 0}
-#resultado td,#resultado th{padding:2px 8px;text-align:right}
-#resultado td:first-child,#resultado th:first-child{text-align:left}
-#resultado tr.este{background:#3A3A40}
-#resultado .mejor{color:#7CFF8A;font-weight:800}
+.tabla{border-collapse:collapse;margin:4px 0 0}
+.colores{display:flex;flex-wrap:wrap;gap:3px 14px;font-weight:700;font-size:13px}
+.tabla td,.tabla th{padding:2px 8px;text-align:right}
+.tabla td:first-child,.tabla th:first-child{text-align:left}
+.tabla tr.este{background:#3A3A40}
+.tabla .mejor{color:#7CFF8A;font-weight:800}
+/* Pantallas chicas: la interfaz se encoge entera con --escala, que se calcula según el alto de la ventana. */
+#hud,#menu,#fin,#ayuda{zoom:var(--escala,1)}
+#aprender{zoom:var(--escalaPanel,1)}
+#leccion{touch-action:pan-y}
+/* Controles táctiles: cruceta a la izquierda y botones a la derecha. No se encogen, para que el dedo les atine. */
+#tactil{position:fixed;inset:0;pointer-events:none;z-index:6}
+#cruz{position:absolute;left:max(14px,env(safe-area-inset-left));bottom:14px;display:grid;grid-template:repeat(3,54px)/repeat(3,54px);pointer-events:auto}
+#atajos{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:14px;display:flex;gap:8px;pointer-events:auto}
+#tactil button{font:inherit;font-family:var(--titular);font-style:italic;font-size:13px;color:var(--carbon);background:var(--oro);border:4px solid var(--carbon);border-radius:12px;padding:8px 12px;touch-action:none}
+#cruz button{padding:0;font-size:22px;font-style:normal;background:rgba(255,255,255,.88)}
+#cruz button.pulsado,#atajos button:active{background:var(--blanco);transform:scale(.92)}
+body.tactil #lugar,body.tactil #acercar,body.tactil #ayuda,body.tactil .teclas{display:none}
+body.tactil #flechas{zoom:1.7;bottom:20px}
+/* Con el panel del modo aprender a la derecha, los botones pasan a la izquierda para no taparlo. */
+body.conPanel #atajos{right:auto;left:max(14px,env(safe-area-inset-left))}
+body.conPanel #tocaOtra{display:none}
+body.tactil #rivales{zoom:1.35}
+/* Aviso de girar: solo en pantallas táctiles puestas en vertical. */
+#girar{display:none;position:fixed;inset:0;z-index:50;background:linear-gradient(#5A0C14,#D7282F);flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px}
+#girar .carrera{font-size:34px;margin:0}
+#girar .nota{margin:0;color:var(--blanco);font-weight:700;font-size:17px}
+#girar .telefono{width:64px;height:112px;border:7px solid var(--blanco);border-radius:14px;box-shadow:0 0 0 5px var(--carbon);animation:girar 2.2s cubic-bezier(.6,0,.3,1) infinite}
+@keyframes girar{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (orientation: portrait) and (pointer: coarse){#girar{display:flex}}
 #ayuda{position:fixed;left:0;right:0;bottom:14px;text-align:center;font-size:17px;-webkit-text-stroke-width:5px;pointer-events:none;white-space:pre-wrap}
 
 .capa{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
@@ -140,7 +165,7 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 .trozo{position:fixed;pointer-events:none;z-index:20}
 #salto{position:fixed;inset:0;pointer-events:none;z-index:15;transition:none}
 #sinVista{position:fixed;inset:auto 0 45% 0;text-align:center;font-size:22px}
-@media (prefers-reduced-motion: reduce){#portada .pulsa,#menu.entrando #modos button,.salta,#cuenta.salta{animation:none}}
+@media (prefers-reduced-motion: reduce){#girar .telefono{animation:none;transform:rotate(-90deg)}#portada .pulsa,#menu.entrando #modos button,.salta,#cuenta.salta{animation:none}}
 </style>
 </head>
 <body>
@@ -158,17 +183,27 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
   <div id="aprender" hidden><div id="leyenda"></div><div id="resultado"></div><div id="leccion"></div></div>
 </div>
 <div id="ayuda" class="carrera" hidden></div>
-<div id="fin" class="capa" hidden><h3 id="finTitulo" class="carrera"></h3><p id="finDetalle" class="carrera"></p><p class="carrera">ESPACIO: OTRA VEZ   ESC: MENÚ</p></div>
+<div id="fin" class="capa" hidden><h3 id="finTitulo" class="carrera"></h3><p id="finDetalle" class="carrera"></p><p class="carrera teclas">ESPACIO: OTRA VEZ   ESC: MENÚ</p></div>
 <div id="portada" class="capa">
   <h1 class="carrera">Maze Runner</h1>
   <p class="carrera">Proyecto de matemáticas discretas</p>
-  <p class="carrera pulsa">PRESIONA CUALQUIER TECLA</p>
+  <p class="carrera pulsa" id="pulsa">PRESIONA CUALQUIER TECLA</p>
 </div>
 <div id="menu" class="capa" hidden>
   <h2 class="carrera">ELIGE UN MODO</h2>
   <div id="modos"></div>
-  <p class="carrera">CLIC O TECLAS 1 A 7</p>
+  <p class="carrera" id="comoElegir">CLIC O TECLAS 1 A 7</p>
 </div>
+<div id="tactil" hidden>
+  <div id="cruz">
+    <button data-tecla="arrowup" style="grid-area:1/2" aria-label="Arriba">&#9650;</button>
+    <button data-tecla="arrowleft" style="grid-area:2/1" aria-label="Izquierda">&#9664;</button>
+    <button data-tecla="arrowright" style="grid-area:2/3" aria-label="Derecha">&#9654;</button>
+    <button data-tecla="arrowdown" style="grid-area:3/2" aria-label="Abajo">&#9660;</button>
+  </div>
+  <div id="atajos"><button id="tocaCerca">ACERCAR</button><button id="tocaOtra">REINICIAR</button><button id="tocaMenu">MENÚ</button></div>
+</div>
+<div id="girar"><div class="telefono"></div><p class="carrera">GIRA TU TELÉFONO</p><p class="nota">Maze Runner se juega con el teléfono en horizontal.</p></div>
 <canvas id="salto" hidden></canvas>
 <div id="sinVista" class="carrera" hidden>No se pudo iniciar la vista 3D. Revisa la conexión a internet o que el navegador permita WebGL.</div>
 
@@ -1225,7 +1260,7 @@ const DESVIO = -0.4;      // la cámara mira un poco hacia el fondo del tablero
 
 function iniciarVista() {
   const render = new THREE.WebGLRenderer({antialias: true, alpha: true});      // transparente: detrás se ve el cielo
-  render.setPixelRatio(Math.min(devicePixelRatio, 2));
+  render.setPixelRatio(Math.min(devicePixelRatio, 2));      // más nitidez que eso solo gasta batería
   render.shadowMap.enabled = true;
   render.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.prepend(render.domElement);
@@ -1584,8 +1619,16 @@ function ajustarTamano() {
   vista.render.setSize(innerWidth, innerHeight);
   vista.renderCielo.setSize(innerWidth, innerHeight);
   vista.camara.aspect = innerWidth / innerHeight;
+  // La interfaz está pensada para una ventana de unos 760 px de alto. Si la pantalla es
+  // más baja, como un teléfono acostado, todo se encoge en la misma proporción. El panel
+  // del modo aprender se encoge menos para que su texto siga siendo legible.
+  const escala = Math.max(0.5, Math.min(1, innerHeight / 760));
+  document.documentElement.style.setProperty('--escala', escala);
+  document.documentElement.style.setProperty('--escalaPanel', Math.max(escala, esTactil ? 0.8 : 0.7) / escala);
   // vista.panel es la fracción del ancho que tapa un panel a la derecha. La imagen se
   // recorre la mitad de esa franja para que el tablero quede centrado en lo que sobra.
+  vista.compacto = innerHeight < 520;      // pantalla baja: no hay sitio para paneles flotantes sobre el tablero
+  vista.panel = modo && modo.panelDerecho ? (innerWidth - $('leccion').getBoundingClientRect().left) / innerWidth : 0;
   if (vista.panel) vista.camara.setViewOffset(innerWidth, innerHeight, vista.panel * innerWidth / 2, 0, innerWidth, innerHeight);
   else vista.camara.clearViewOffset();
   vista.camara.updateProjectionMatrix();
@@ -1641,7 +1684,7 @@ function encuadrar() {
   const prueba = vista.camara.clone(), mx = vista.columnas / 2 + 0.4, mz = vista.filas / 2 + 0.4;
   prueba.clearViewOffset();
   // Con panel, el tablero debe caber en el ancho que sobra y dejar abajo sitio para la comparación.
-  const ancho = 0.93 * (1 - (vista.panel || 0)), bajo = vista.panel ? -0.5 : -0.84;
+  const ancho = 0.93 * (1 - (vista.panel || 0)), bajo = vista.panel && !vista.compacto ? -0.5 : -0.84;
   const esquinas = [[-mx, -mz], [mx, -mz], [-mx, mz], [mx, mz]];
   for (vista.distancia = 6; vista.distancia < 90; vista.distancia += 0.5) {
     prueba.position.set(0, vista.distancia * 0.86, vista.distancia * 0.52 + DESVIO);
@@ -2107,6 +2150,19 @@ const pulsadas = new Set();
 const DIRECCIONES = {arrowup: [-1, 0], w: [-1, 0], arrowright: [0, 1], d: [0, 1], arrowdown: [1, 0], s: [1, 0], arrowleft: [0, -1], a: [0, -1]};
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 const calmado = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Pantalla táctil: se muestran controles en pantalla. Se vuelve a revisar si cambia el
+// tipo de puntero, por ejemplo al conectar un ratón a una tableta.
+const punteroGrueso = matchMedia('(pointer: coarse)');
+let esTactil = punteroGrueso.matches;
+function revisarTactil() {
+  esTactil = punteroGrueso.matches;
+  document.body.classList.toggle('tactil', esTactil);
+  $('pulsa').textContent = esTactil ? 'TOCA LA PANTALLA' : 'PRESIONA CUALQUIER TECLA';
+  $('comoElegir').textContent = esTactil ? 'TOCA UN MODO' : 'CLIC O TECLAS 1 A 7';
+  $('tactil').hidden = !esTactil || pantalla !== 'juego';
+  if (vista.render) ajustarTamano();
+}
+const enVertical = matchMedia('(orientation: portrait) and (pointer: coarse)');
 const lienzos = () => [vista.render.domElement, vista.renderCielo.domElement];
 const desenfocar = si => lienzos().forEach(l => l.classList.toggle('borroso', si));
 const animar = (pasos, opciones) => lienzos().map(l => l.animate(pasos, opciones));
@@ -2178,6 +2234,13 @@ function actualizarInterfaz() {
   $('fin').classList.toggle('chico', chico);
   $('fin').style.paddingTop = chico ? (carrera ? '12px' : '104px') : '';
   $('aviso').style.top = chico && terminado ? (carrera ? '152px' : '244px') : '';
+  // Controles táctiles: la cruceta solo mientras se juega; el botón de acercar, igual.
+  if (esTactil) {
+    const jugando = !!modo.jugador && !modo.soloVer && !terminado;
+    $('cruz').hidden = !jugando; $('tocaCerca').hidden = !jugando;
+    $('tocaCerca').textContent = vista.cerca ? 'ALEJAR' : 'ACERCAR';
+    $('tocaOtra').textContent = terminado ? 'OTRA VEZ' : 'REINICIAR';
+  }
   // Cuenta regresiva de salida.
   const cuenta = modo.espera > 0 ? String(Math.ceil(modo.espera)) : modo.tiempo - modo.salida < 0.8 ? '¡YA!' : '';
   if (poner($('cuenta'), cuenta) && cuenta) saltar($('cuenta'));
@@ -2193,7 +2256,7 @@ function pintarLeccion() {
   // Paneles del modo aprender: selectores, código con el renglón actual resaltado, la
   // estructura de datos, la explicación del paso y, al final, la comparación entre los
   // cinco algoritmos. Solo se vuelven a escribir cuando algo cambió.
-  const sello = modo.version + ':' + modo.cambios;
+  const sello = modo.version + ':' + modo.cambios + ':' + vista.compacto;
   if ($('leccion').dataset.sello === sello) return;
   $('leccion').dataset.sello = sello;
   const receta = RECETAS[modo.nombre], paso = modo.pasos[modo.indice];
@@ -2223,11 +2286,11 @@ function pintarLeccion() {
     <div><h4>CÓDIGO</h4><pre id="codigo">${codigo}</pre></div>
     <div><h4>FRONTERA: ${receta.estructura}</h4><small>${limpio(receta.regla)} La caja de borde dorado es la próxima en salir. ${paso.frontera.length} en espera.</small>${estructura}</div>
     <p>${limpio(receta.idea)}</p>
-    <small>Teclas: flecha derecha o espacio avanza, flecha izquierda regresa, P automático, V velocidad, 1 a 5 algoritmo, M mapa, Fin último paso. Rueda y arrastrar mueven la cámara. Esc regresa al menú.</small>`;
+    <small class="teclas">Teclas: flecha derecha o espacio avanza, flecha izquierda regresa, P automático, V velocidad, 1 a 5 algoritmo, M mapa, Fin último paso. Rueda y arrastrar mueven la cámara. Esc regresa al menú.</small>`;
   const muestra = (color, texto) => `<span><span class="muestra" style="background:${hex(color)}"></span>${texto}</span>`;
-  poner($('leyenda'), [muestra(PALETA.busqueda.actual[0], 'Se está explorando'), muestra(PALETA.busqueda.nueva[0], 'Acaba de entrar a la frontera'), muestra(PALETA.busqueda.frontera[0], 'Espera en la frontera'),
+  const leyenda = [muestra(PALETA.busqueda.actual[0], 'Se está explorando'), muestra(PALETA.busqueda.nueva[0], 'Acaba de entrar a la frontera'), muestra(PALETA.busqueda.frontera[0], 'Espera en la frontera'),
     muestra(PALETA.busqueda.explorada[0], 'Ya explorada'), muestra(PALETA.busqueda.ruta[1], 'Ruta encontrada'), muestra(PALETA.suelo[0], 'Llano: costo 1'), muestra(PALETA.copa[0], 'Bosque (árbol): costo 3'),
-    muestra(PALETA.agua[0], 'Agua (hundida): costo 5'), muestra(PALETA.muro, 'Muro: no se pasa')].join(''));
+    muestra(PALETA.agua[0], 'Agua (hundida): costo 5'), muestra(PALETA.muro, 'Muro: no se pasa')].join('');
   // Comparación de los cinco en este mapa: se ve desde el primer paso.
   const conRuta = modo.tabla.filter(x => x.costo !== null);
   const barato = Math.min(...conRuta.map(x => x.costo)), poco = Math.min(...modo.tabla.map(x => x.exploradas));
@@ -2235,10 +2298,15 @@ function pintarLeccion() {
   const celda = (valor, mejor) => `<td${mejor ? ' class="mejor"' : ''}>${valor ?? 'sin ruta'}</td>`;
   const filas = modo.tabla.map(x => `<tr${x.nombre === modo.nombre ? ' class="este"' : ''}><td>${limpio(x.nombre)}</td>${celda(x.exploradas, x.exploradas === poco)}${celda(x.pasos, false)}${celda(x.costo, x.costo === barato)}</tr>`).join('');
   const veredicto = conRuta.length ? `Ruta más barata: ${nombres(conRuta.filter(x => x.costo === barato))} (costo ${barato}). ` : 'Ninguno encontró ruta. ';
-  $('resultado').innerHTML = `<div><h4>LOS CINCO EN EL MAPA ${limpio(modo.leccion.nombre.toUpperCase())}</h4>
-    <table><tr><th>Algoritmo</th><th>Exploradas</th><th>Pasos</th><th>Costo</th></tr>${filas}</table></div>
+  const comparacion = `<div><h4>LOS CINCO EN EL MAPA ${limpio(modo.leccion.nombre.toUpperCase())}</h4>
+    <table class="tabla"><tr><th>Algoritmo</th><th>Exploradas</th><th>Pasos</th><th>Costo</th></tr>${filas}</table></div>
     <div><h4>POR QUÉ</h4><p><b>${limpio(veredicto)}Menos exploración: ${limpio(nombres(modo.tabla.filter(x => x.exploradas === poco)))} (${poco} casillas).</b></p>
     <p style="margin-top:6px">${limpio(modo.leccion.porque)}</p></div>`;
+  // En pantallas bajas la comparación y la leyenda van dentro del panel, que se puede
+  // desplazar, para no tapar el tablero.
+  $('leyenda').hidden = $('resultado').hidden = vista.compacto;
+  if (vista.compacto) $('leccion').insertAdjacentHTML('beforeend', comparacion + `<div><h4>COLORES</h4><div class="colores">${leyenda}</div></div>`);
+  else { $('leyenda').innerHTML = leyenda; $('resultado').innerHTML = comparacion; }
 }
 
 function abrir(indice) {
@@ -2251,13 +2319,15 @@ function abrir(indice) {
   if (!calmado) animar([{transform: 'scale(1.7)'}, {transform: 'scale(1)'}], {duration: 520, easing: 'cubic-bezier(.1,.9,.2,1)'});
   vista.pos.set(0, 170, 150); vista.impulso = 1.1;
   vistaGeneral(); vista.mirando = false; vista.cerca = false;
-  // El panel mide min(470px, 46vw) más sus márgenes; ver la regla de #leccion.
-  vista.panel = modo.panelDerecho ? (Math.min(470, innerWidth * 0.46) + 28) / innerWidth : 0;
+  $('aprender').hidden = !modo.panelDerecho;      // tiene que estar a la vista para poder medir su ancho
+  $('tactil').hidden = !esTactil;
+  document.body.classList.toggle('conPanel', !!modo.panelDerecho);
   ajustarTamano();
 }
 function mostrarModos() {
   modo = null; pantalla = 'modos'; pulsadas.clear();
-  if (vista.panel) { vista.panel = 0; ajustarTamano(); }
+  $('tactil').hidden = true; document.body.classList.remove('conPanel');
+  ajustarTamano();
   $('hud').hidden = true; $('ayuda').hidden = true; $('fin').hidden = true; $('fin').classList.remove('ver');
   $('menu').hidden = false;
   // Quitar y volver a poner la clase reinicia la animación de entrada de las cajas.
@@ -2266,6 +2336,13 @@ function mostrarModos() {
 }
 function dejarPortada() {
   if (pantalla !== 'portada') return;
+  // En el teléfono se pide pantalla completa y, donde el navegador lo permite, se fija en
+  // horizontal. Si no lo permite no pasa nada: el aviso de girar cubre ese caso.
+  if (esTactil && document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen()
+      .then(() => screen.orientation && screen.orientation.lock ? screen.orientation.lock('landscape') : null)
+      .catch(error => console.info('No se pudo fijar la pantalla en horizontal:', error.message));
+  }
   $('portada').classList.add('barrida');
   setTimeout(() => $('portada').hidden = true, calmado ? 0 : 750);
   mostrarModos();
@@ -2352,6 +2429,17 @@ function iniciar() {
   $('flechas').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo) verOtro(Number(b.dataset.sentido)); });
   $('aprender').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo && modo.accion) modo.accion(b.dataset.accion, Number(b.dataset.valor)); });
   $('rivales').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo) modo.elegir(b.dataset.lado, Number(b.dataset.i)); });
+  // Cruceta: mientras un dedo está sobre una flecha, cuenta como tecla presionada.
+  for (const boton of $('cruz').children) {
+    const soltar = () => { pulsadas.delete(boton.dataset.tecla); boton.classList.remove('pulsado'); };
+    boton.addEventListener('pointerdown', ev => { ev.preventDefault(); pulsadas.add(boton.dataset.tecla); boton.classList.add('pulsado'); });
+    for (const evento of ['pointerup', 'pointercancel', 'pointerleave']) boton.addEventListener(evento, soltar);
+  }
+  $('tocaCerca').addEventListener('click', () => { vista.cerca = !vista.cerca; });
+  $('tocaOtra').addEventListener('click', () => { if (modo) modo.cargar(); });
+  $('tocaMenu').addEventListener('click', mostrarModos);
+  punteroGrueso.addEventListener('change', revisarTactil);
+  revisarTactil();
   if (typeof THREE === 'undefined') { $('sinVista').hidden = false; return; }
   try { iniciarVista(); } catch (error) { $('sinVista').hidden = false; console.error(error); return; }
   addEventListener('keydown', ev => {
@@ -2371,24 +2459,35 @@ function iniciar() {
   });
   addEventListener('keyup', ev => pulsadas.delete(ev.key.toLowerCase()));
   addEventListener('blur', () => pulsadas.clear());
-  // Ratón del espectador: la rueda acerca y aleja, y arrastrar gira la cámara.
-  let arrastre = null;
+  // Cámara libre: la rueda acerca y aleja y arrastrar gira. Con dos dedos, pellizcar acerca y aleja.
+  const dedos = new Map();      // puntero -> su última posición
+  const separacion = () => { const [a, b] = [...dedos.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
   addEventListener('wheel', ev => {
     if (!camaraLibre() || ev.target.closest('#aprender')) return;      // sobre un panel, la rueda lo desplaza
     vista.libre.zoom = Math.min(1.7, Math.max(0.12, vista.libre.zoom * Math.exp(ev.deltaY * 0.0012)));
   }, {passive: true});
-  vista.render.domElement.addEventListener('pointerdown', ev => { if (camaraLibre()) arrastre = [ev.clientX, ev.clientY]; });
+  vista.render.domElement.addEventListener('pointerdown', ev => { if (camaraLibre()) dedos.set(ev.pointerId, [ev.clientX, ev.clientY]); });
   addEventListener('pointermove', ev => {
-    if (!arrastre || !camaraLibre()) return;
-    vista.libre.azimut -= (ev.clientX - arrastre[0]) * 0.006;
+    const previo = dedos.get(ev.pointerId);
+    if (!previo || !camaraLibre()) return;
+    if (dedos.size === 2) {
+      // Pellizco: el zoom cambia en la misma proporción que la distancia entre los dedos.
+      const antes = separacion();
+      dedos.set(ev.pointerId, [ev.clientX, ev.clientY]);
+      if (antes > 0) vista.libre.zoom = Math.min(1.7, Math.max(0.12, vista.libre.zoom * antes / Math.max(1, separacion())));
+      return;
+    }
+    vista.libre.azimut -= (ev.clientX - previo[0]) * 0.006;
     // La inclinación se limita para no pasar por debajo del tablero ni quedar justo encima.
-    vista.libre.elevacion = Math.min(1.5, Math.max(0.2, vista.libre.elevacion + (ev.clientY - arrastre[1]) * 0.005));
-    arrastre = [ev.clientX, ev.clientY];
+    vista.libre.elevacion = Math.min(1.5, Math.max(0.2, vista.libre.elevacion + (ev.clientY - previo[1]) * 0.005));
+    dedos.set(ev.pointerId, [ev.clientX, ev.clientY]);
   });
-  addEventListener('pointerup', () => { arrastre = null; });
+  for (const evento of ['pointerup', 'pointercancel']) addEventListener(evento, ev => dedos.delete(ev.pointerId));
   const cronometro = new THREE.Clock();
   (function cuadro() {
     requestAnimationFrame(cuadro);
+    // Con el teléfono en vertical el juego se detiene hasta que lo giren.
+    if (enVertical.matches) { cronometro.getDelta(); return; }
     // Se limita dt para que una pausa de la pestaña no haga saltar a nadie.
     avanzar(Math.min(cronometro.getDelta(), 0.05));
   })();
