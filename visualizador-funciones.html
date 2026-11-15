@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Funciones paso a paso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&family=Newsreader:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fondo:#E8ECE6; --panel:#F6F8F4; --tinta:#15201A; --tenue:#56635B; --linea:#C6CEC5;
+  --verde:#1B8A4C; --ambar:#C97508; --azul:#2F6CB0; --rojo:#C62828; --morado:#7B2CBF;
+  --resalte:#FFE9B8; --cambio:#D9F2E1; --codigo:#FBFCFA;
+  --boton:#14703C; --sobre-boton:#FFFFFF; --sobre-ambar:#1A1203;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --fondo:#121815; --panel:#1B231F; --tinta:#E6ECE7; --tenue:#9AA8A0; --linea:#33403A;
+    --verde:#4CC27F; --ambar:#F0A73A; --azul:#7FB0E8; --rojo:#FF7B72; --morado:#C39BF0;
+    --resalte:#4A3A12; --cambio:#16382A; --codigo:#151C18;
+    --boton:#4CC27F; --sobre-boton:#0D1510; --sobre-ambar:#1A1203;
+  }
+}
+:root[data-theme="dark"]{
+  --fondo:#121815; --panel:#1B231F; --tinta:#E6ECE7; --tenue:#9AA8A0; --linea:#33403A;
+  --verde:#4CC27F; --ambar:#F0A73A; --azul:#7FB0E8; --rojo:#FF7B72; --morado:#C39BF0;
+  --resalte:#4A3A12; --cambio:#16382A; --codigo:#151C18;
+    --boton:#4CC27F; --sobre-boton:#0D1510; --sobre-ambar:#1A1203;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--tinta);font-family:Newsreader,Georgia,serif;font-size:17px;line-height:1.45}
+[hidden]{display:none!important}
+h1,h2,h3,button,select,.nav button,.etq{font-family:"Familjen Grotesk",system-ui,sans-serif}
+code,pre,.mono,textarea{font-family:"JetBrains Mono",Consolas,monospace}
+header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--linea)}
+header h1{font-size:21px;margin:0;flex:1}
+header p{margin:0;color:var(--tenue);font-size:15px}
+.app{display:grid;grid-template-columns:330px minmax(0,1fr);gap:16px;padding:16px;max-width:1500px;margin:0 auto}
+@media (max-width:1000px){.app{grid-template-columns:1fr}}
+.izq{align-self:start;position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;display:flex;flex-direction:column;gap:12px}
+@media (max-width:1000px){.izq{position:static;max-height:none}}
+.caja{background:var(--panel);border:1px solid var(--linea);border-radius:10px;padding:12px 14px}
+.nav h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--tenue);margin:10px 0 4px}
+.nav h3:first-child{margin-top:0}
+.nav button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--tinta);padding:5px 8px;border-radius:6px;font-size:15px;cursor:pointer}
+.nav button:hover{background:var(--fondo)}
+.nav button.activo{background:var(--boton);color:var(--sobre-boton)}
+.nav button .mono{font-size:13.5px}
+button.b,select{background:var(--panel);color:var(--tinta);border:1px solid var(--linea);border-radius:7px;padding:7px 11px;font-size:14.5px;cursor:pointer}
+button.b:hover{border-color:var(--tinta)}
+button.b.pri{background:var(--boton);border-color:var(--boton);color:var(--sobre-boton)}
+button.b.on{background:var(--ambar);border-color:var(--ambar);color:var(--sobre-ambar)}
+button.b:disabled{opacity:.45;cursor:default}
+.ficha h2{margin:0 0 4px;font-size:22px}
+.ficha h2 .mono{font-size:19px}
+.ficha p{margin:6px 0}
+.es{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+@media (max-width:700px){.es{grid-template-columns:1fr}}
+.es div{background:var(--fondo);border-radius:8px;padding:8px 12px}
+.es .etq{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--tenue)}
+.es ul{margin:2px 0 0;padding-left:18px}
+.controles{position:sticky;top:0;z-index:5;background:var(--panel);margin:-12px -14px 0;padding:12px 14px 2px;border-bottom:1px solid var(--linea);border-radius:10px 10px 0 0}
+.controles .msg{margin:8px 0}
+.barra{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.barra .sep{flex:1}
+#lienzo{overflow:auto;margin-top:10px}
+canvas{display:block;touch-action:manipulation}
+.leyenda{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13.5px;color:var(--tenue);margin-top:6px;font-family:"Familjen Grotesk",sans-serif}
+.leyenda i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.msg{border:1px solid var(--ambar);background:var(--resalte);padding:9px 12px;border-radius:8px;margin:10px 0;min-height:3.2em}
+.cola{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:8px 0;font-size:13px}
+.cola .chip{font-family:"JetBrains Mono",monospace;border:1.5px solid var(--ambar);border-radius:6px;padding:2px 6px;background:var(--codigo)}
+.cola .chip.sale{background:var(--ambar);color:var(--sobre-ambar)}
+.cola .etq{color:var(--tenue);font-size:12.5px}
+.dos{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;margin-top:10px}
+@media (max-width:1200px){.dos{grid-template-columns:1fr}}
+pre.codigo{margin:0;background:var(--codigo);border:1px solid var(--linea);border-radius:8px;padding:8px 0;overflow:auto;font-size:12.5px;line-height:1.5}
+pre.codigo span{display:block;padding:0 10px;white-space:pre}
+pre.codigo span.hl{background:var(--resalte);font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:13px}
+td,th{border-bottom:1px solid var(--linea);padding:4px 6px;text-align:left;vertical-align:top}
+th{font-family:"Familjen Grotesk",sans-serif;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--tenue)}
+td.mono{word-break:break-word}
+tr.cambio td{background:var(--cambio)}
+.visto{margin-top:8px}
+.visto b{font-family:"Familjen Grotesk",sans-serif;font-size:12.5px;font-weight:500;color:var(--tenue)}
+.visto pre{margin:4px 0 0;padding:6px 10px;background:var(--codigo);border:1px solid var(--linea);border-radius:6px;font-size:14px;line-height:1.35;letter-spacing:.12em;display:inline-block;min-width:90px}
+.visto pre span{display:block;min-height:1.35em}
+.visto pre i{font-style:normal;color:var(--ambar);margin-left:6px;letter-spacing:0}
+td.n{white-space:nowrap;font-family:"JetBrains Mono",monospace;color:var(--azul)}
+.sub{font-family:"Familjen Grotesk",sans-serif;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--tenue);margin:0 0 4px}
+input[type=range]{width:100%;accent-color:var(--ambar)}
+textarea{width:100%;min-height:150px;background:var(--codigo);color:var(--tinta);border:1px solid var(--linea);border-radius:8px;padding:8px;font-size:14px;line-height:1.25;letter-spacing:.12em}
+.error{color:var(--rojo);font-family:"Familjen Grotesk",sans-serif;font-size:14px}
+.flujo{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+.flujo button{font-family:"JetBrains Mono",monospace;font-size:13px}
+.flujo span{color:var(--tenue)}
+.nota{color:var(--tenue);font-size:15px}
+kbd{font-family:"JetBrains Mono",monospace;font-size:12px;border:1px solid var(--linea);border-radius:4px;padding:0 4px}
+</style>
+</head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1>Las funciones del notebook, paso a paso</h1>
+    <p>Elige una función, avanza con Siguiente y mira cómo cambian el mapa y las variables.</p>
+  </div>
+  <button class="b" id="tema">Tema claro u oscuro</button>
+</header>
+
+<div class="app">
+  <aside class="izq">
+    <nav class="caja nav" id="nav"></nav>
+    <div class="caja">
+      <p class="sub">Mapa de prueba</p>
+      <select id="selMapa" style="width:100%"></select>
+      <details style="margin-top:8px">
+        <summary class="etq" style="cursor:pointer">Editar el mapa</summary>
+        <p class="nota" style="margin:6px 0">Símbolos: <code>.</code> llano (1), <code>b</code> bosque (3), <code>a</code> agua (5), <code>#</code> muro, <code>I</code> inicio, <code>M</code> meta, <code>*</code> item.</p>
+        <textarea id="texto" spellcheck="false"></textarea>
+        <div class="barra" style="margin-top:6px"><button class="b pri" id="aplicar">Aplicar</button><span class="error" id="error"></span></div>
+      </details>
+    </div>
+  </aside>
+
+  <main>
+    <section class="caja ficha" id="ficha"></section>
+
+    <section class="caja" id="escena" style="margin-top:12px">
+      <div class="controles">
+      <div class="barra">
+        <button class="b" id="bIni">Reiniciar</button>
+        <button class="b" id="bAnt">Anterior</button>
+        <button class="b pri" id="bSig">Siguiente</button>
+        <button class="b" id="bAuto">Automático</button>
+        <button class="b" id="bFin">Ir al final</button>
+        <select id="vel" aria-label="Velocidad">
+          <option value="900">Lento</option><option value="350" selected>Normal</option><option value="110">Rápido</option><option value="25">Muy rápido</option>
+        </select>
+        <span class="sep"></span>
+        <button class="b on" id="vCuad">Cuadrícula</button>
+        <button class="b" id="vGraf">Grafo</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+        <input type="range" id="barra" min="0" max="0" value="0" aria-label="Paso">
+        <span class="mono" id="cuenta" style="white-space:nowrap;font-size:13px"></span>
+      </div>
+      <div class="msg" id="msg"></div>
+      </div>
+      <div id="lienzo"><canvas id="mapa"></canvas></div>
+      <div class="leyenda" id="leyenda"></div>
+      <div class="cola" id="cola"></div>
+      <div class="dos">
+        <div><p class="sub">Código: la línea que se está ejecutando</p><pre class="codigo" id="codigo"></pre></div>
+        <div><p class="sub">Variables en este paso (en verde lo que acaba de cambiar)</p><div id="vars"></div><div id="tabla" style="margin-top:10px"></div></div>
+      </div>
+      <p class="nota" style="margin:10px 0 0">Teclado: <kbd>→</kbd> siguiente, <kbd>←</kbd> anterior. Las posiciones son pares <span class="mono">(fila, columna)</span> y empiezan en 0; los números del borde del mapa te ayudan a ubicarlas.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+// CORE-START
+const COSTOS = {'.': 1, 'b': 3, 'a': 5};
+const MAPAS = {
+  'Chico (3 x 3)': 'I.b\n.#.\n..M',
+  'Mediano con terreno': 'I....b...\n.##..b...\n..#.aa...\n..#.aa.#.\n.....b.#M\n.........',
+  'Lago en el camino': '....................\n....................\n.I.....aaaaaa.....M.\n.......aaaaaa.......\n.......aaaaaa.......\n....................',
+  'Mixto del notebook': '........................\n.I....bbbbbb............\n......bbbbbb....###.....\n......bbbbbb....#.......\n..#####bbbbb....#..aaa..\n......#.........#..aaa..\n......#...aaaaaa#.......\n......#...aaaaaa####....\n..........aaaaaa......M.\n......#...aaaaaa........\n......#.................\n........................',
+  'Forma de L (filas cortas)': '.......\n.I.....\n.......\n..aa......bbb\n..aa......bbb\n.............\n.........#.M.\n.............',
+  'Sin solución': '................\n.I........#####.\n..........#...#.\n....bbb...#.M.#.\n....bbb...#...#.\n..........#####.\n................',
+  'Items chico': '.........\n*..I..*.M\n.........',
+  'Items del notebook': '........................\n...bbb..........###.....\n..*bbb....I..*....#...M.\n...bbb............#.....\n........aaaa.......*....\n........................'
+};
+
+function leerMapa(texto) {
+  let filas = texto.trim().split(/\r?\n/).map(l => l.trim());
+  const ancho = Math.max(0, ...filas.map(f => f.length));
+  filas = filas.map(f => f.padEnd(ancho, '#'));
+  const puntos = {'I': [], 'M': [], '*': []};
+  const cuad = [];
+  filas.forEach((fila, f) => {
+    let terreno = '';
+    [...fila].forEach((s, c) => {
+      if (s === 'I' || s === 'M' || s === '*') { puntos[s].push([f, c]); s = '.'; }
+      else if (s !== '#' && !(s in COSTOS)) throw new Error("Símbolo desconocido '" + s + "' en la fila " + f + ", columna " + c + ".");
+      terreno += s;
+    });
+    cuad.push(terreno);
+  });
+  if (puntos.I.length !== 1 || puntos.M.length !== 1) throw new Error('El mapa necesita exactamente una I y una M.');
+  return {texto, filasCrudas: texto.trim().split(/\r?\n/).map(l => l.trim()), cuad, inicio: puntos.I[0], meta: puntos.M[0], items: puntos['*']};
+}
+
+const K = p => p[0] + ',' + p[1];
+const F = p => p === null || p === undefined ? 'None' : '(' + p[0] + ', ' + p[1] + ')';
+const eq = (a, b) => a[0] === b[0] && a[1] === b[1];
+const num = x => x === Infinity ? 'inf' : String(x);
+
+function vecinos(cuad, p) {
+  const [f, c] = p, out = [];
+  for (const [nf, nc] of [[f - 1, c], [f, c + 1], [f + 1, c], [f, c - 1]]) {
+    const dentro = nf >= 0 && nf < cuad.length && nc >= 0 && nc < cuad[0].length;
+    if (dentro && cuad[nf][nc] !== '#') out.push([[nf, nc], COSTOS[cuad[nf][nc]]]);
+  }
+  return out;
+}
+function costoDe(cuad, ruta) {
+  if (ruta === null) return Infinity;
+  let s = 0;
+  for (let i = 1; i < ruta.length; i++) s += COSTOS[cuad[ruta[i][0]][ruta[i][1]]];
+  return s;
+}
+function reconstruir(padres, meta) {
+  const r = []; let x = meta;
+  while (x !== null) { r.push(x); x = padres[K(x)]; }
+  return r.reverse();
+}
+const heur = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+
+// heapq saca siempre la tupla menor; como las tuplas son distintas entre sí,
+// una lista ordenada con la misma comparación saca exactamente lo mismo.
+function cmpT(a, b) {
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i], y = b[i];
+    if (Array.isArray(x)) { if (x[0] !== y[0]) return x[0] - y[0]; if (x[1] !== y[1]) return x[1] - y[1]; }
+    else if (x !== y) return x - y;
+  }
+  return 0;
+}
+function pqPush(q, t) { let i = 0; while (i < q.length && cmpT(q[i], t) <= 0) i++; q.splice(i, 0, t); }
+
+function lista(arr, fmt) {
+  fmt = fmt || F;
+  if (arr.length <= 8) return '[' + arr.map(fmt).join(', ') + ']';
+  return '[' + arr.slice(0, 4).map(fmt).join(', ') + ', ... , ' + arr.slice(-3).map(fmt).join(', ') + ']   (' + arr.length + ' en total)';
+}
+const fmtT = t => '(' + t.map(x => Array.isArray(x) ? F(x) : num(x)).join(', ') + ')';
+function dic(obj, fmtV) {
+  const e = Object.entries(obj), f = fmtV || F;
+  const txt = e.slice(-5).map(([k, v]) => '(' + k.replace(',', ', ') + '): ' + f(v)).join(', ');
+  return '{' + (e.length > 5 ? '... , ' : '') + txt + '}' + (e.length > 5 ? '   (' + e.length + ' en total)' : '');
+}
+
+function finRuta(nombre, m, padres, meta, explorados) {
+  const ruta = reconstruir(padres, meta);
+  return {ruta, texto: 'Salió la meta ' + F(meta) + ', así que la búsqueda termina. reconstruir arma la ruta siguiendo a los padres hacia atrás: ' + (ruta.length - 1) + ' pasos, costo ' + costoDe(m.cuad, ruta) + '. ' + nombre + ' exploró ' + explorados.length + ' vértices.'};
+}
+
+function algBFS(m, ini, meta, P) {
+  const fr = [ini], padres = {}, explorados = []; padres[K(ini)] = null;
+  const snap = (ln, msg, x) => { if (P) P.push(Object.assign({ln, msg, explorados: explorados.slice(), frontera: fr.slice(), padres: Object.assign({}, padres),
+    cola: {tipo: 'cola', items: fr.map(F)}, vars: [['frontera', lista(fr)], ['explorados', lista(explorados)], ['padres', dic(padres)]]}, x)); };
+  snap([1, 2, 3], 'Se prepara todo: la cola empieza solo con el inicio ' + F(ini) + ', que no tiene padre.');
+  while (fr.length) {
+    const actual = fr.shift(); explorados.push(actual);
+    if (eq(actual, meta)) { const r = finRuta('BFS', m, padres, meta, explorados); snap([5, 6, 7, 8], r.texto, {actual, ruta: r.ruta, v: [['actual', F(actual)], ['ruta', lista(r.ruta)]]}); return {ruta: r.ruta, explorados}; }
+    snap([5, 6, 7], 'Sale ' + F(actual) + ' del frente de la cola: es el que lleva más tiempo esperando. No es la meta, así que se revisan sus vecinos.', {actual, v: [['actual', F(actual)]]});
+    for (const [v] of vecinos(m.cuad, actual)) {
+      if (!(K(v) in padres)) { padres[K(v)] = actual; fr.push(v); snap([9, 10, 11, 12], F(v) + ' no se había descubierto: se anota que se llegó desde ' + F(actual) + ' y entra al final de la cola.', {actual, vecino: {p: v, ok: true}, v: [['actual', F(actual)], ['vecino', F(v)]]}); }
+      else snap([9, 10], F(v) + ' ya estaba descubierto, se ignora.', {actual, vecino: {p: v, ok: false}, v: [['actual', F(actual)], ['vecino', F(v)]]});
+    }
+  }
+  snap([13], 'La cola se vació sin encontrar la meta: no existe ruta. Devuelve None.', {});
+  return {ruta: null, explorados};
+}
+
+function algDFS(m, ini, meta, P) {
+  const fr = [ini], padres = {}, explorados = [], vistos = new Set(); padres[K(ini)] = null;
+  const snap = (ln, msg, x) => { if (P) P.push(Object.assign({ln, msg, explorados: explorados.slice(), frontera: fr.slice(), padres: Object.assign({}, padres),
+    cola: {tipo: 'pila', items: fr.map(F)}, vars: [['frontera', lista(fr)], ['explorados', lista(explorados)], ['padres', dic(padres)]]}, x)); };
+  snap([1, 2, 3], 'Se prepara todo: la pila empieza solo con el inicio ' + F(ini) + '.');
+  while (fr.length) {
+    const actual = fr.pop();
+    if (vistos.has(K(actual))) { snap([5, 6, 7], 'Sale ' + F(actual) + ' de la pila, pero ya se había explorado antes (estaba repetido). Se descarta.', {actual, v: [['actual', F(actual)]]}); continue; }
+    vistos.add(K(actual)); explorados.push(actual);
+    if (eq(actual, meta)) { const r = finRuta('DFS', m, padres, meta, explorados); snap([5, 8, 9, 10], r.texto, {actual, ruta: r.ruta, v: [['actual', F(actual)], ['ruta', lista(r.ruta)]]}); return {ruta: r.ruta, explorados}; }
+    snap([5, 8, 9], 'Sale ' + F(actual) + ' de la cima de la pila: es el último que entró. No es la meta, así que se revisan sus vecinos.', {actual, v: [['actual', F(actual)]]});
+    for (const [v] of vecinos(m.cuad, actual)) {
+      if (!vistos.has(K(v))) { padres[K(v)] = actual; fr.push(v); snap([11, 12, 13, 14], F(v) + ' no se ha explorado: se apila encima. El último que se apile será el siguiente en salir.', {actual, vecino: {p: v, ok: true}, v: [['actual', F(actual)], ['vecino', F(v)]]}); }
+      else snap([11, 12], F(v) + ' ya se exploró, se ignora.', {actual, vecino: {p: v, ok: false}, v: [['actual', F(actual)], ['vecino', F(v)]]});
+    }
+  }
+  snap([15], 'La pila se vació sin encontrar la meta: no existe ruta. Devuelve None.', {});
+  return {ruta: null, explorados};
+}
+
+function algDijkstra(m, ini, meta, P) {
+  const fr = [[0, ini]], costos = {}, padres = {}, explorados = []; costos[K(ini)] = 0; padres[K(ini)] = null;
+  const snap = (ln, msg, x) => { if (P) P.push(Object.assign({ln, msg, explorados: explorados.slice(), frontera: fr.map(t => t[1]), padres: Object.assign({}, padres), etiquetas: Object.assign({}, costos),
+    cola: {tipo: 'prioridad', items: fr.map(fmtT)}, vars: [['frontera', lista(fr, fmtT)], ['costos', dic(costos, num)], ['explorados', lista(explorados)], ['padres', dic(padres)]]}, x)); };
+  snap([1, 2, 3, 4], 'Se prepara todo: la frontera tiene el par (0, inicio). Llegar al inicio cuesta 0.');
+  while (fr.length) {
+    const [costo, actual] = fr.shift();
+    const va = [['costo, actual', costo + ', ' + F(actual)]];
+    if (costo > costos[K(actual)]) { snap([6, 7, 8], 'Sale (' + costo + ', ' + F(actual) + '), pero es una entrada vieja: ya se conoce un camino de costo ' + costos[K(actual)] + ' a esa casilla. Se descarta.', {actual, v: va}); continue; }
+    explorados.push(actual);
+    if (eq(actual, meta)) { const r = finRuta('Dijkstra', m, padres, meta, explorados); snap([6, 9, 10, 11], r.texto, {actual, ruta: r.ruta, v: va.concat([['ruta', lista(r.ruta)]])}); return {ruta: r.ruta, explorados}; }
+    snap([6, 7, 9, 10], 'Sale ' + F(actual) + ' con costo acumulado ' + costo + ': es el vértice más barato de alcanzar que quedaba en la frontera.', {actual, v: va});
+    for (const [v, peso] of vecinos(m.cuad, actual)) {
+      const nuevo = costo + peso, viejo = costos[K(v)], vv = va.concat([['vecino, peso', F(v) + ', ' + peso], ['nuevo', String(nuevo)]]);
+      if (viejo === undefined || nuevo < viejo) {
+        costos[K(v)] = nuevo; padres[K(v)] = actual; pqPush(fr, [nuevo, v]);
+        snap([12, 13, 14, 15, 16, 17], 'Llegar a ' + F(v) + ' pasando por aquí cuesta ' + costo + ' + ' + peso + ' = ' + nuevo + '. ' + (viejo === undefined ? 'Es la primera vez que se alcanza' : 'Mejora el costo que se conocía (' + viejo + ')') + ': se anota y entra a la frontera.', {actual, vecino: {p: v, ok: true}, v: vv});
+      } else snap([12, 13, 14], 'Llegar a ' + F(v) + ' pasando por aquí costaría ' + costo + ' + ' + peso + ' = ' + nuevo + ', que no mejora el ' + viejo + ' ya conocido. No cambia nada.', {actual, vecino: {p: v, ok: false}, v: vv});
+    }
+  }
+  snap([18], 'La frontera se vació sin encontrar la meta: no existe ruta. Devuelve None.', {});
+  return {ruta: null, explorados};
+}
+
+function algVoraz(m, ini, meta, P) {
+  const fr = [[heur(ini, meta), ini]], padres = {}, explorados = [], hs = {}; padres[K(ini)] = null; hs[K(ini)] = heur(ini, meta);
+  const snap = (ln, msg, x) => { if (P) P.push(Object.assign({ln, msg, explorados: explorados.slice(), frontera: fr.map(t => t[1]), padres: Object.assign({}, padres), etiquetas: Object.assign({}, hs),
+    cola: {tipo: 'prioridad', items: fr.map(fmtT)}, vars: [['frontera', lista(fr, fmtT)], ['explorados', lista(explorados)], ['padres', dic(padres)]]}, x)); };
+  snap([1, 2, 3], 'Se prepara todo: la frontera tiene el par (distancia estimada a la meta, inicio). Del inicio a la meta se estiman ' + heur(ini, meta) + ' pasos.');
+  while (fr.length) {
+    const [h, actual] = fr.shift(); explorados.push(actual);
+    const va = [['actual', F(actual)]];
+    if (eq(actual, meta)) { const r = finRuta('La búsqueda voraz', m, padres, meta, explorados); snap([5, 6, 7, 8], r.texto, {actual, ruta: r.ruta, v: va.concat([['ruta', lista(r.ruta)]])}); return {ruta: r.ruta, explorados}; }
+    snap([5, 6, 7], 'Sale ' + F(actual) + ', que es el que parece más cerca de la meta (distancia estimada ' + h + '). No importa cuánto costó llegar a él.', {actual, v: va});
+    for (const [v] of vecinos(m.cuad, actual)) {
+      if (!(K(v) in padres)) { padres[K(v)] = actual; hs[K(v)] = heur(v, meta); pqPush(fr, [heur(v, meta), v]); snap([9, 10, 11, 12], F(v) + ' es nuevo: entra a la frontera con prioridad heuristica = ' + heur(v, meta) + '. No se mira el costo de su terreno.', {actual, vecino: {p: v, ok: true}, v: va.concat([['vecino', F(v)], ['heuristica(vecino, meta)', String(heur(v, meta))]])}); }
+      else snap([9, 10], F(v) + ' ya estaba descubierto, se ignora.', {actual, vecino: {p: v, ok: false}, v: va.concat([['vecino', F(v)]])});
+    }
+  }
+  snap([13], 'La frontera se vació sin encontrar la meta: no existe ruta. Devuelve None.', {});
+  return {ruta: null, explorados};
+}
+
+function algAEstrella(m, ini, meta, P) {
+  const h0 = heur(ini, meta);
+  const fr = [[h0, h0, ini]], costos = {}, padres = {}, explorados = [], cerrados = new Set(), etq = {}; costos[K(ini)] = 0; padres[K(ini)] = null; etq[K(ini)] = '0+' + h0;
+  const snap = (ln, msg, x) => { if (P) P.push(Object.assign({ln, msg, explorados: explorados.slice(), frontera: fr.map(t => t[2]), padres: Object.assign({}, padres), etiquetas: Object.assign({}, etq),
+    cola: {tipo: 'prioridad', items: fr.map(fmtT)}, vars: [['frontera', lista(fr, fmtT)], ['costos', dic(costos, num)], ['explorados', lista(explorados)], ['padres', dic(padres)]]}, x)); };
+  snap([1, 2, 3, 4, 5, 6], 'Se prepara todo: la frontera tiene la terna (costo + estimado, estimado, inicio). El inicio lleva costo 0 y se estiman ' + h0 + ' pasos hasta la meta.');
+  while (fr.length) {
+    const [fTotal, , actual] = fr.shift();
+    const va = [['actual', F(actual)]];
+    if (cerrados.has(K(actual))) { snap([8, 9, 10], 'Sale ' + F(actual) + ', pero ya se había explorado (era una entrada vieja). Se descarta.', {actual, v: va}); continue; }
+    cerrados.add(K(actual)); explorados.push(actual);
+    if (eq(actual, meta)) { const r = finRuta('A*', m, padres, meta, explorados); snap([8, 11, 12, 13, 14], r.texto, {actual, ruta: r.ruta, v: va.concat([['ruta', lista(r.ruta)]])}); return {ruta: r.ruta, explorados}; }
+    snap([8, 9, 11, 12, 13], 'Sale ' + F(actual) + ': tiene la menor suma de costo acumulado (' + costos[K(actual)] + ') más distancia estimada (' + heur(actual, meta) + ') = ' + fTotal + '.', {actual, v: va});
+    for (const [v, peso] of vecinos(m.cuad, actual)) {
+      const nuevo = costos[K(actual)] + peso, viejo = costos[K(v)], h = heur(v, meta), vv = va.concat([['vecino, peso', F(v) + ', ' + peso], ['nuevo', String(nuevo)]]);
+      if (viejo === undefined || nuevo < viejo) {
+        costos[K(v)] = nuevo; padres[K(v)] = actual; etq[K(v)] = nuevo + '+' + h; pqPush(fr, [nuevo + h, h, v]);
+        snap([15, 16, 17, 18, 19, 20, 21], 'Llegar a ' + F(v) + ' cuesta ' + costos[K(actual)] + ' + ' + peso + ' = ' + nuevo + (viejo === undefined ? '' : ', mejor que el ' + viejo + ' conocido') + '. Faltan unos ' + h + ' pasos, así que entra con prioridad ' + nuevo + ' + ' + h + ' = ' + (nuevo + h) + '.', {actual, vecino: {p: v, ok: true}, v: vv.concat([['h', String(h)]])});
+      } else snap([15, 16, 17], 'Llegar a ' + F(v) + ' por aquí costaría ' + nuevo + ', que no mejora el ' + viejo + ' ya conocido. No cambia nada.', {actual, vecino: {p: v, ok: false}, v: vv});
+    }
+  }
+  snap([22], 'La frontera se vació sin encontrar la meta: no existe ruta. Devuelve None.', {});
+  return {ruta: null, explorados};
+}
+
+const ALGORITMOS = {'BFS': algBFS, 'DFS': algDFS, 'Dijkstra': algDijkstra, 'Voraz': algVoraz, 'A*': algAEstrella};
+
+const KT = (a, b) => K(a) + '>' + K(b);
+function tramosEntre(m, puntos) {
+  const T = {};
+  for (const a of puntos) for (const b of puntos) if (!eq(a, b)) T[KT(a, b)] = algDijkstra(m, a, b, null).ruta;
+  return T;
+}
+function costoOrden(m, T, orden) {
+  let s = 0;
+  for (let i = 0; i + 1 < orden.length; i++) s += costoDe(m.cuad, T[KT(orden[i], orden[i + 1])]);
+  return s;
+}
+function unir(T, orden) {
+  let r = [orden[0]];
+  for (let i = 0; i + 1 < orden.length; i++) { const t = T[KT(orden[i], orden[i + 1])]; if (t === null) return null; r = r.concat(t.slice(1)); }
+  return r;
+}
+function permutaciones(arr) {
+  if (arr.length <= 1) return [arr.slice()];
+  const out = [];
+  arr.forEach((x, i) => { for (const p of permutaciones(arr.slice(0, i).concat(arr.slice(i + 1)))) out.push([x].concat(p)); });
+  return out;
+}
+function fuerzaBruta(m, T, ini, items, meta) {
+  const ordenes = permutaciones(items).map(p => [ini].concat(p, [meta]));
+  let mejor = ordenes[0], cm = costoOrden(m, T, mejor);
+  for (const o of ordenes) { const c = costoOrden(m, T, o); if (c < cm) { mejor = o; cm = c; } }
+  return {orden: mejor, costo: cm, evaluados: ordenes.length};
+}
+function vecinoCercano(m, T, ini, items, meta) {
+  const orden = [ini], pend = items.slice();
+  while (pend.length) {
+    let sig = pend[0];
+    for (const it of pend) if (costoDe(m.cuad, T[KT(orden[orden.length - 1], it)]) < costoDe(m.cuad, T[KT(orden[orden.length - 1], sig)])) sig = it;
+    pend.splice(pend.indexOf(sig), 1); orden.push(sig);
+  }
+  orden.push(meta);
+  return {orden, costo: costoOrden(m, T, orden), evaluados: 1};
+}
+// CORE-END
+
+// ---------- Estado de la página ----------
+let M = leerMapa(MAPAS['Chico (3 x 3)']);
+let cap = null, pasos = [], idx = 0, sel = null, vista = 'cuad', timer = null, geo = null;
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const TERRENO = {'.': '#efe9d0', 'b': '#6aa56a', 'a': '#6fa8dc', '#': '#2b2b2b'};
+const NOMBRE = {'.': 'llano', 'b': 'bosque', 'a': 'agua', '#': 'muro'};
+
+function repr(t) { const r = "'" + t.replace(/\n/g, '\\n') + "'"; return r.length > 96 ? r.slice(0, 92) + " ...'" : r; }
+const listaS = a => '[' + a.map(s => "'" + s + "'").join(', ') + ']';
+function listaSC(a) { return a.length <= 6 ? listaS(a) : listaS(a.slice(0, 3)).slice(0, -1) + ', ... , ' + listaS(a.slice(-2)).slice(1) + '   (' + a.length + ' filas)'; }
+
+// ---------- Capítulos ----------
+const C = [];
+function capitulo(grupo, id, nombre, o) { C.push(Object.assign({grupo, id, nombre}, o)); }
+
+capitulo('Empieza aquí', 'panorama', 'Cómo se conectan', {
+  titulo: 'Cómo se conectan las funciones',
+  que: 'El notebook es una cadena: el texto del mapa entra por un lado y la ruta dibujada sale por el otro. Cada función hace un solo trabajo y le pasa su resultado a la siguiente.',
+  html: () => '<div class="flujo"><span>texto</span><span>-></span>' + ['leer_mapa', 'vecinos', 'bfs', 'reconstruir', 'costo_de', 'comparar'].map(x => '<button class="b" data-ir="' + x + '">' + x + '</button>').join('<span>-></span>') + '</div>'
+    + '<ul><li><b>leer_mapa</b> convierte el texto en una cuadrícula y ubica inicio, meta e items.</li>'
+    + '<li><b>vecinos</b> dice a qué casillas se puede pasar desde una casilla y cuánto cuesta. Son las aristas del grafo.</li>'
+    + '<li><b>bfs, dfs, dijkstra, voraz, a_estrella</b> usan vecinos para explorar el mapa. Todas reciben lo mismo y devuelven lo mismo.</li>'
+    + '<li><b>reconstruir</b> arma la ruta final a partir de los padres que anotó el algoritmo.</li>'
+    + '<li><b>costo_de</b> suma lo que cuesta esa ruta.</li>'
+    + '<li><b>comparar</b> corre los cinco algoritmos y junta los resultados en una tabla y un dibujo.</li>'
+    + '<li>Para los items: <b>tramos_entre</b> calcula rutas entre puntos y <b>fuerza_bruta</b> o <b>vecino_mas_cercano</b> eligen el orden.</li></ul>'
+    + '<p class="nota">Elige una función en la lista de la izquierda. Puedes cambiar de mapa cuando quieras y todo se recalcula.</p>'
+});
+
+capitulo('El mapa', 'leer_mapa', 'leer_mapa', {
+  titulo: 'Convierte el texto en una cuadrícula',
+  que: 'Recibe el mapa como un solo texto y lo separa en filas, completa las filas cortas con muro y busca dónde están el inicio, la meta y los items.',
+  ent: [['texto', 'el mapa escrito con un carácter por casilla']],
+  sal: ['<span class="mono">cuadricula</span>: lista de filas con el terreno', '<span class="mono">inicio</span> y <span class="mono">meta</span>: pares (fila, columna)', '<span class="mono">items</span>: lista de posiciones'],
+  codigo: ['def leer_mapa(texto):', '    filas = [linea.strip() for linea in texto.strip().splitlines()]', '    ancho = max((len(fila) for fila in filas), default=0)', '    filas = [fila.ljust(ancho, "#") for fila in filas]', '    puntos = {"I": [], "M": [], "*": []}', '    cuadricula = []', '    for f, fila in enumerate(filas):', '        terreno = ""', '        for c, simbolo in enumerate(fila):', '            if simbolo in puntos:', '                puntos[simbolo].append((f, c))', '                simbolo = "."', '            elif simbolo != "#" and simbolo not in COSTOS:', '                raise ValueError(...)', '            terreno += simbolo', '        cuadricula.append(terreno)', '    if len(puntos["I"]) != 1 or len(puntos["M"]) != 1:', '        raise ValueError("El mapa necesita exactamente una I y una M.")', '    return cuadricula, puntos["I"][0], puntos["M"][0], puntos["*"]'],
+  build: () => {
+    const P = [], crudo = '\n' + M.texto.trim() + '\n', fc = M.filasCrudas, ancho = M.cuad[0].length;
+    const rell = fc.map(f => f.padEnd(ancho, '#')), cortas = fc.filter(f => f.length < ancho).length;
+    const base = {filasVisibles: 0, puntos: {I: [], M: [], '*': []}, flechas: false};
+    P.push(Object.assign({}, base, {ln: [0], msg: 'El mapa llega como un solo texto. Cada \\n es un salto de línea; sobra uno al principio y otro al final.', vars: [['texto', repr(crudo), crudo]]}));
+    P.push(Object.assign({}, base, {ln: [1], msg: 'texto.strip() quita los saltos de línea sobrantes del principio y del final. Sigue siendo un solo texto.', vars: [['texto.strip()', repr(M.texto.trim()), M.texto.trim()]]}));
+    P.push(Object.assign({}, base, {ln: [1], msg: 'splitlines() corta el texto en cada salto de línea y strip() limpia los espacios de cada fila. Ahora es una lista con ' + fc.length + ' filas.', vars: [['filas', listaSC(fc)]]}));
+    P.push(Object.assign({}, base, {ln: [2], msg: 'Se busca la fila más larga: mide ' + ancho + ' casillas. Ese será el ancho del mapa.', vars: [['filas', listaSC(fc)], ['ancho', String(ancho)]]}));
+    P.push(Object.assign({}, base, {ln: [3], msg: cortas ? 'Hay ' + cortas + ' fila(s) más cortas que ' + ancho + ': ljust las completa con # (muro) por la derecha para que el mapa quede rectangular.' : 'Todas las filas ya miden ' + ancho + ', así que ljust no agrega nada.', vars: [['filas', listaSC(rell)], ['ancho', String(ancho)]]}));
+    const pts = {I: [], M: [], '*': []}, cu = [];
+    const vp = () => '{"I": ' + lista(pts.I) + ', "M": ' + lista(pts.M) + ', "*": ' + lista(pts['*']) + '}';
+    P.push(Object.assign({}, base, {ln: [4, 5], msg: 'Se crean dos cosas vacías: un diccionario para anotar dónde están I, M y los items, y la lista donde se guardará el terreno.', vars: [['puntos', vp()], ['cuadricula', '[]']]}));
+    rell.forEach((fila, f) => {
+      const halla = [];
+      [...fila].forEach((s, c) => { if (s === 'I' || s === 'M' || s === '*') { pts[s].push([f, c]); halla.push("'" + s + "' en " + F([f, c])); } });
+      cu.push(M.cuad[f]);
+      P.push({ln: [6, 7, 8, 9, 10, 11, 14, 15], filasVisibles: f + 1, filaActual: f, flechas: false, puntos: {I: pts.I.slice(), M: pts.M.slice(), '*': pts['*'].slice()},
+        msg: "Fila " + f + ": se recorre '" + fila + "' letra por letra. " + (halla.length ? 'Se encontró ' + halla.join(' y ') + ': se anota su posición y en el terreno se guarda como llano. ' : 'No hay puntos especiales. ') + "El terreno queda '" + M.cuad[f] + "'.",
+        vars: [['f, fila', f + ", '" + fila + "'"], ['terreno', "'" + M.cuad[f] + "'"], ['puntos', vp()], ['cuadricula', listaSC(cu)]]});
+    });
+    P.push({ln: [16], flechas: false, msg: 'Se revisa que haya exactamente una I y una M. Hay ' + pts.I.length + ' y ' + pts.M.length + ': el mapa es válido.', vars: [['puntos', vp()], ['cuadricula', listaSC(cu)]]});
+    P.push({ln: [18], flechas: false, msg: 'Devuelve cuatro cosas: la cuadrícula de terreno, el inicio, la meta y la lista de items.', vars: [['cuadricula', listaSC(cu)], ['inicio', F(M.inicio)], ['meta', F(M.meta)], ['items', lista(M.items)]]});
+    return P;
+  }
+});
+
+capitulo('El mapa', 'vecinos', 'vecinos', {
+  titulo: 'Las aristas que salen de una casilla',
+  que: 'Revisa las cuatro casillas pegadas a una casilla y se queda con las que existen y no son muro. Cada una sale junto con lo que cuesta entrar a ella. Esta función es la que convierte el mapa en un grafo.',
+  clic: 'Haz clic en cualquier casilla del mapa para ver sus vecinos.',
+  ent: [['cuadricula', 'el terreno que devolvió leer_mapa'], ['casilla', 'un par (fila, columna)']],
+  sal: ['Pares <span class="mono">(vecino, peso)</span>, uno por cada arista'],
+  codigo: ['def vecinos(cuadricula, casilla):', '    f, c = casilla', '    for nf, nc in ((f - 1, c), (f, c + 1), (f + 1, c), (f, c - 1)):', '        dentro = 0 <= nf < len(cuadricula) and 0 <= nc < len(cuadricula[0])', '        if dentro and cuadricula[nf][nc] != "#":', '            yield (nf, nc), COSTOS[cuadricula[nf][nc]]'],
+  build: () => {
+    const P = [], p = sel || M.inicio, [f, c] = p, out = [], nombres = ['arriba', 'derecha', 'abajo', 'izquierda'];
+    const S = o => '[' + o.map(([v, w]) => '(' + F(v) + ', ' + w + ')').join(', ') + ']';
+    P.push({ln: [0, 1], actual: p, flechas: false, msg: 'Se separa la casilla ' + F(p) + ' en fila f = ' + f + ' y columna c = ' + c + '.', vars: [['casilla', F(p)], ['f, c', f + ', ' + c], ['salida hasta ahora', '[]']]});
+    [[f - 1, c], [f, c + 1], [f + 1, c], [f, c - 1]].forEach((q, i) => {
+      const dentro = q[0] >= 0 && q[0] < M.cuad.length && q[1] >= 0 && q[1] < M.cuad[0].length;
+      const muro = dentro && M.cuad[q[0]][q[1]] === '#', ok = dentro && !muro;
+      if (ok) out.push([q, COSTOS[M.cuad[q[0]][q[1]]]]);
+      P.push({ln: ok ? [2, 3, 4, 5] : [2, 3, 4], actual: p, flechas: false, vecino: dentro ? {p: q, ok} : null,
+        msg: 'Hacia ' + nombres[i] + ' está ' + F(q) + '. ' + (!dentro ? 'Se sale del mapa, así que no hay arista.' : muro ? 'Es muro, así que no hay arista.' : 'Está dentro y es ' + NOMBRE[M.cuad[q[0]][q[1]]] + ': hay arista con peso ' + COSTOS[M.cuad[q[0]][q[1]]] + '.'),
+        vars: [['casilla', F(p)], ['nf, nc', q[0] + ', ' + q[1]], ['dentro', dentro ? 'True' : 'False'], ['salida hasta ahora', S(out)]]});
+    });
+    P.push({ln: [0], actual: p, flechas: false, frontera: out.map(o => o[0]), msg: 'Resultado: ' + F(p) + ' tiene ' + out.length + ' vecino(s). Ese número es el grado del vértice en el grafo.', vars: [['casilla', F(p)], ['salida', S(out)]]});
+    return P;
+  }
+});
+
+capitulo('El mapa', 'costo_de', 'costo_de', {
+  titulo: 'Cuánto cuesta una ruta',
+  que: 'Suma lo que cuesta entrar a cada casilla de la ruta. La primera no se cuenta porque la unidad ya está parada ahí. Si no hay ruta devuelve infinito. Aquí se usa la ruta que encuentra Dijkstra en el mapa elegido.',
+  ent: [['cuadricula', 'el terreno'], ['ruta', 'lista de casillas, o None']],
+  sal: ['Un número: el costo total (o <span class="mono">inf</span>)'],
+  codigo: ['def costo_de(cuadricula, ruta):', '    if ruta is None:', '        return math.inf', '    return sum(COSTOS[cuadricula[f][c]] for f, c in ruta[1:])'],
+  build: () => {
+    const P = [], ruta = algDijkstra(M, M.inicio, M.meta, null).ruta;
+    if (!ruta) return [{ln: [1, 2], flechas: false, msg: 'En este mapa no hay ruta, así que llega None y la función devuelve infinito.', vars: [['ruta', 'None'], ['resultado', 'inf']]}];
+    P.push({ln: [0, 1], ruta, flechas: false, msg: 'Llega una ruta de ' + ruta.length + ' casillas. No es None, así que se suma. La primera casilla ' + F(ruta[0]) + ' no se cuenta.', vars: [['ruta', lista(ruta)], ['suma', '0']]});
+    let s = 0;
+    for (let i = 1; i < ruta.length; i++) {
+      const t = M.cuad[ruta[i][0]][ruta[i][1]], antes = s; s += COSTOS[t];
+      P.push({ln: [3], ruta: ruta.slice(0, i + 1), actual: ruta[i], flechas: false, msg: 'Entrar a ' + F(ruta[i]) + ' es ' + NOMBRE[t] + ' y cuesta ' + COSTOS[t] + '. La suma pasa de ' + antes + ' a ' + s + '.', vars: [['f, c', ruta[i][0] + ', ' + ruta[i][1]], ['COSTOS[...]', String(COSTOS[t])], ['suma', String(s)]]});
+    }
+    P.push({ln: [3], ruta, flechas: false, msg: 'Devuelve ' + s + ': el costo total de la ruta.', vars: [['ruta', lista(ruta)], ['resultado', String(s)]]});
+    return P;
+  }
+});
+
+capitulo('Búsqueda', 'bfs', 'bfs', {
+  titulo: 'Búsqueda en anchura',
+  que: 'La frontera es una <b>cola</b>: sale primero el que entró primero. Por eso el mapa se explora por capas alrededor del inicio. Encuentra la ruta con menos pasos, que solo es la más barata si todo el terreno cuesta lo mismo.',
+  ent: [['cuadricula', 'el terreno'], ['inicio', 'de dónde sale'], ['meta', 'a dónde va']],
+  sal: ['<span class="mono">ruta</span>: lista de casillas, o None', '<span class="mono">explorados</span>: casillas revisadas, en orden'],
+  codigo: ['def bfs(cuadricula, inicio, meta):', '    frontera = deque([inicio])', '    padres = {inicio: None}', '    explorados = []', '    while frontera:', '        actual = frontera.popleft()', '        explorados.append(actual)', '        if actual == meta:', '            return reconstruir(padres, meta), explorados', '        for vecino, _ in vecinos(cuadricula, actual):', '            if vecino not in padres:', '                padres[vecino] = actual', '                frontera.append(vecino)', '    return None, explorados'],
+  build: () => { const P = []; algBFS(M, M.inicio, M.meta, P); return P; }
+});
+capitulo('Búsqueda', 'dfs', 'dfs', {
+  titulo: 'Búsqueda en profundidad',
+  que: 'La frontera es una <b>pila</b>: sale primero el último que entró. Por eso avanza por un solo camino hasta que no puede seguir y entonces retrocede. Devuelve la primera ruta que encuentra, que suele dar muchas vueltas.',
+  ent: [['cuadricula', 'el terreno'], ['inicio', 'de dónde sale'], ['meta', 'a dónde va']],
+  sal: ['<span class="mono">ruta</span>: lista de casillas, o None', '<span class="mono">explorados</span>: casillas revisadas, en orden'],
+  codigo: ['def dfs(cuadricula, inicio, meta):', '    frontera = [inicio]', '    padres = {inicio: None}', '    explorados = []', '    while frontera:', '        actual = frontera.pop()', '        if actual in explorados:', '            continue', '        explorados.append(actual)', '        if actual == meta:', '            return reconstruir(padres, meta), explorados', '        for vecino, _ in vecinos(cuadricula, actual):', '            if vecino not in explorados:', '                padres[vecino] = actual', '                frontera.append(vecino)', '    return None, explorados'],
+  build: () => { const P = []; algDFS(M, M.inicio, M.meta, P); return P; }
+});
+capitulo('Búsqueda', 'dijkstra', 'dijkstra', {
+  titulo: 'Algoritmo de Dijkstra',
+  que: 'La frontera es una <b>cola de prioridad</b> ordenada por costo acumulado: siempre sale la casilla más barata de alcanzar desde el inicio. El número dentro de cada casilla es ese costo. Garantiza la ruta de menor costo.',
+  ent: [['cuadricula', 'el terreno'], ['inicio', 'de dónde sale'], ['meta', 'a dónde va']],
+  sal: ['<span class="mono">ruta</span>: la de menor costo, o None', '<span class="mono">explorados</span>: casillas revisadas, en orden'],
+  codigo: ['def dijkstra(cuadricula, inicio, meta):', '    frontera = [(0, inicio)]', '    costos = {inicio: 0}', '    padres = {inicio: None}', '    explorados = []', '    while frontera:', '        costo, actual = heapq.heappop(frontera)', '        if costo > costos[actual]:', '            continue', '        explorados.append(actual)', '        if actual == meta:', '            return reconstruir(padres, meta), explorados', '        for vecino, peso in vecinos(cuadricula, actual):', '            nuevo = costo + peso', '            if nuevo < costos.get(vecino, math.inf):', '                costos[vecino] = nuevo', '                padres[vecino] = actual', '                heapq.heappush(frontera, (nuevo, vecino))', '    return None, explorados'],
+  build: () => { const P = []; algDijkstra(M, M.inicio, M.meta, P); return P; }
+});
+capitulo('Búsqueda', 'heuristica', 'heuristica', {
+  titulo: 'Cuánto falta, a ojo',
+  que: 'Estima la distancia entre dos casillas contando filas y columnas de diferencia, como si no hubiera muros. Se llama distancia Manhattan. Nunca se pasa del costo real, y eso es lo que le permite a A* seguir siendo óptimo.',
+  clic: 'Haz clic en una casilla para medir su distancia a la meta.',
+  ent: [['a', 'una casilla'], ['b', 'otra casilla (normalmente la meta)']],
+  sal: ['Un número: pasos mínimos entre a y b'],
+  codigo: ['def heuristica(a, b):', '    return abs(a[0] - b[0]) + abs(a[1] - b[1])'],
+  build: () => {
+    const a = sel || M.inicio, b = M.meta, df = Math.abs(a[0] - b[0]), dc = Math.abs(a[1] - b[1]);
+    const real = algDijkstra(M, a, b, null).ruta, cr = M.cuad[a[0]][a[1]] === '#' ? null : costoDe(M.cuad, real);
+    return [
+      {ln: [0], actual: a, flechas: false, msg: 'Llegan dos casillas: a = ' + F(a) + ' y b = ' + F(b) + ' (la meta).', vars: [['a', F(a)], ['b', F(b)]]},
+      {ln: [1], actual: a, flechas: false, linea: [a, [b[0], a[1]]], msg: 'Diferencia de filas: |' + a[0] + ' - ' + b[0] + '| = ' + df + '.', vars: [['a', F(a)], ['b', F(b)], ['abs(a[0] - b[0])', String(df)]]},
+      {ln: [1], actual: a, flechas: false, linea: [a, [b[0], a[1]], b], msg: 'Diferencia de columnas: |' + a[1] + ' - ' + b[1] + '| = ' + dc + '.', vars: [['a', F(a)], ['b', F(b)], ['abs(a[0] - b[0])', String(df)], ['abs(a[1] - b[1])', String(dc)]]},
+      {ln: [1], actual: a, flechas: false, linea: [a, [b[0], a[1]], b], ruta: real, msg: 'Devuelve ' + df + ' + ' + dc + ' = ' + (df + dc) + '. ' + (cr === null ? '' : cr === Infinity ? 'En realidad no hay ruta desde ahí; la heurística no lo sabe.' : 'El costo real de la mejor ruta (en rojo) es ' + cr + ': la estimación ' + (df + dc === cr ? 'acertó' : 'se quedó corta') + ', nunca se pasa.'), vars: [['a', F(a)], ['b', F(b)], ['resultado', String(df + dc)]]}
+    ];
+  }
+});
+capitulo('Búsqueda', 'voraz', 'voraz', {
+  titulo: 'Búsqueda voraz',
+  que: 'La frontera es una cola de prioridad ordenada <b>solo por la heurística</b>: siempre sale la casilla que parece más cerca de la meta, sin importar lo que costó llegar. El número de cada casilla es su distancia estimada. Es rápida, pero cruza terreno caro sin darse cuenta.',
+  ent: [['cuadricula', 'el terreno'], ['inicio', 'de dónde sale'], ['meta', 'a dónde va']],
+  sal: ['<span class="mono">ruta</span>: una ruta, no siempre la mejor', '<span class="mono">explorados</span>: casillas revisadas, en orden'],
+  codigo: ['def voraz(cuadricula, inicio, meta):', '    frontera = [(heuristica(inicio, meta), inicio)]', '    padres = {inicio: None}', '    explorados = []', '    while frontera:', '        _, actual = heapq.heappop(frontera)', '        explorados.append(actual)', '        if actual == meta:', '            return reconstruir(padres, meta), explorados', '        for vecino, _ in vecinos(cuadricula, actual):', '            if vecino not in padres:', '                padres[vecino] = actual', '                heapq.heappush(frontera, (heuristica(vecino, meta), vecino))', '    return None, explorados'],
+  build: () => { const P = []; algVoraz(M, M.inicio, M.meta, P); return P; }
+});
+capitulo('Búsqueda', 'a_estrella', 'a_estrella', {
+  titulo: 'Algoritmo A*',
+  que: 'Como Dijkstra, pero la prioridad es <b>costo acumulado + distancia estimada</b>. Cada casilla muestra esos dos números (por ejemplo 3+5). Así explora hacia la meta sin perder la garantía de la ruta óptima.',
+  ent: [['cuadricula', 'el terreno'], ['inicio', 'de dónde sale'], ['meta', 'a dónde va']],
+  sal: ['<span class="mono">ruta</span>: la de menor costo, o None', '<span class="mono">explorados</span>: casillas revisadas, en orden'],
+  codigo: ['def a_estrella(cuadricula, inicio, meta):', '    h = heuristica(inicio, meta)', '    frontera = [(h, h, inicio)]', '    costos = {inicio: 0}', '    padres = {inicio: None}', '    explorados = []', '    cerrados = set()', '    while frontera:', '        _, _, actual = heapq.heappop(frontera)', '        if actual in cerrados:', '            continue', '        cerrados.add(actual)', '        explorados.append(actual)', '        if actual == meta:', '            return reconstruir(padres, meta), explorados', '        for vecino, peso in vecinos(cuadricula, actual):', '            nuevo = costos[actual] + peso', '            if nuevo < costos.get(vecino, math.inf):', '                costos[vecino] = nuevo', '                padres[vecino] = actual', '                h = heuristica(vecino, meta)', '                heapq.heappush(frontera, (nuevo + h, h, vecino))', '    return None, explorados'],
+  build: () => { const P = []; algAEstrella(M, M.inicio, M.meta, P); return P; }
+});
+capitulo('Búsqueda', 'reconstruir', 'reconstruir', {
+  titulo: 'Arma la ruta hacia atrás',
+  que: 'Los algoritmos no guardan la ruta mientras buscan: solo anotan, para cada casilla, desde cuál se llegó a ella (su padre). Las flechas del mapa apuntan de cada casilla a su padre. Esta función parte de la meta y sigue las flechas hasta el inicio. Aquí se usan los padres que deja BFS.',
+  ent: [['padres', 'diccionario casilla -> casilla de donde vino'], ['meta', 'la casilla final']],
+  sal: ['<span class="mono">ruta</span>: lista de casillas del inicio a la meta'],
+  codigo: ['def reconstruir(padres, meta):', '    ruta = []', '    while meta is not None:', '        ruta.append(meta)', '        meta = padres[meta]', '    return ruta[::-1]'],
+  build: () => {
+    const T = []; const r = algBFS(M, M.inicio, M.meta, T);
+    if (!r.ruta) return [{ln: [0], flechas: false, msg: 'En este mapa la meta no se alcanza. Los algoritmos devuelven None directamente y reconstruir nunca se llama.', vars: []}];
+    const padres = T[T.length - 1].padres, P = [], ruta = []; let x = M.meta;
+    P.push({ln: [0, 1], padres, actual: x, msg: 'Llegan los padres que anotó BFS y la meta ' + F(x) + '. La ruta empieza vacía.', vars: [['meta', F(x)], ['ruta', '[]'], ['padres', dic(padres)]]});
+    while (x !== null) {
+      ruta.push(x); const p = padres[K(x)];
+      P.push({ln: [2, 3, 4], padres, actual: x, ruta: ruta.slice(), msg: 'Se agrega ' + F(x) + ' a la ruta. Su padre es ' + F(p) + (p === null ? ': es el inicio, que no tiene padre, así que el ciclo termina.' : ', así que ahora se retrocede a esa casilla.'), vars: [['meta', F(p)], ['ruta', lista(ruta)], ['padres[' + F(x) + ']', F(p)]]});
+      x = p;
+    }
+    const fin = ruta.slice().reverse();
+    P.push({ln: [5], padres, ruta: fin, msg: 'La lista quedó de la meta al inicio. ruta[::-1] la invierte y eso es lo que se devuelve.', vars: [['antes de invertir', lista(ruta)], ['resultado', lista(fin)]]});
+    return P;
+  }
+});
+
+capitulo('Comparación y dibujo', 'comparar', 'comparar', {
+  titulo: 'Corre los cinco y los compara',
+  que: 'Ejecuta los cinco algoritmos sobre el mismo mapa y arma la tabla. Una ruta es óptima si su costo iguala al de Dijkstra. En el notebook además mide el tiempo: corre cada algoritmo 20 veces y se queda con la mediana.',
+  ent: [['texto', 'el mapa como texto'], ['titulo', 'título de la figura']],
+  sal: ['No devuelve nada: imprime la tabla y muestra las figuras'],
+  codigo: ['def comparar(texto, titulo):', '    cuadricula, inicio, meta, items = leer_mapa(texto)', '    optimo = costo_de(cuadricula, dijkstra(cuadricula, inicio, meta)[0])', '    dibujar_mapa_y_grafo(cuadricula, inicio, meta, titulo=titulo)', '    for nombre, algoritmo in ALGORITMOS.items():', '        tiempos = []', '        for _ in range(20):', '            comienzo = time.perf_counter()', '            ruta, explorados = algoritmo(cuadricula, inicio, meta)', '            tiempos.append((time.perf_counter() - comienzo) * 1000)', '        costo = costo_de(cuadricula, ruta)', '        ...   # decide si la ruta es óptima', '        print(...)   # una fila de la tabla', '        dibujar(...)   # exploración y ruta de este algoritmo', '    plt.show()'],
+  build: () => {
+    const P = [], opt = costoDe(M.cuad, algDijkstra(M, M.inicio, M.meta, null).ruta), head = ['Algoritmo', 'Costo', 'Óptima', 'Explorados'], rows = [];
+    P.push({ln: [1], flechas: false, msg: 'Primero convierte el texto en cuadrícula con leer_mapa.', vars: [['inicio', F(M.inicio)], ['meta', F(M.meta)]]});
+    P.push({ln: [2, 3], flechas: false, msg: 'Calcula el costo de referencia con Dijkstra: ' + num(opt) + '. Contra ese número se decidirá si cada ruta es óptima. Después dibuja el mapa junto a su grafo.', vars: [['optimo', num(opt)]]});
+    for (const [nombre, alg] of Object.entries(ALGORITMOS)) {
+      const r = alg(M, M.inicio, M.meta, null), c = costoDe(M.cuad, r.ruta);
+      rows.push([nombre, r.ruta ? String(c) : '-', r.ruta ? (c === opt ? 'sí' : 'no') : '-', String(r.explorados.length)]);
+      P.push({ln: [4, 8, 10, 11, 12, 13], flechas: false, explorados: r.explorados, ruta: r.ruta, tabla: {head, rows: rows.map(x => x.slice())},
+        msg: nombre + ': ' + (r.ruta ? 'ruta de costo ' + c + (c === opt ? ', igual al óptimo' : ', más cara que el óptimo ' + opt) : 'no encontró ruta') + ', con ' + r.explorados.length + ' vértices explorados. Se agrega su fila a la tabla y se dibuja su panel.',
+        vars: [['nombre', nombre], ['costo', r.ruta ? String(c) : 'inf'], ['len(explorados)', String(r.explorados.length)]]});
+    }
+    P.push({ln: [14], flechas: false, tabla: {head, rows}, msg: 'Terminó: la tabla queda completa y plt.show() muestra la figura con los cinco paneles.', vars: [['optimo', num(opt)]]});
+    return P;
+  }
+});
+capitulo('Comparación y dibujo', 'dibujar', 'dibujar', {
+  titulo: 'Pinta el mapa por capas',
+  que: 'Dibuja el mapa como una imagen y va encimando cosas: primero el terreno, luego lo explorado, la ruta, los marcadores y al final la cuadrícula. <b>dibujar_grafo</b> hace lo mismo con nodos y aristas (pruébalo con el botón Grafo), y <b>dibujar_mapa_y_grafo</b> solo pone los dos dibujos lado a lado. Aquí se usa el resultado de A*.',
+  ent: [['cuadricula, inicio, meta', 'el mapa'], ['items, explorados, ruta', 'lo que se quiera encimar (opcionales)'], ['ax, titulo', 'dónde dibujar y qué título poner']],
+  sal: ['No devuelve nada: deja el dibujo en la figura'],
+  codigo: ['def dibujar(cuadricula, inicio, meta, items=(), explorados=(), ruta=None, ax=None, titulo=""):', '    ax.imshow([[to_rgb(COLORES[s]) for s in fila] for fila in cuadricula])', '    capa = [[(0, 0, 0, 0)] * len(cuadricula[0]) for _ in cuadricula]', '    for f, c in explorados:', '        capa[f][c] = to_rgba("#7b2cbf", 0.4)', '    ax.imshow(capa)', '    if ruta:', '        ax.plot([c for _, c in ruta], [f for f, _ in ruta], color="#d00000", linewidth=2.2)', '    for f, c in items:', '        ax.plot(c, f, "D", color="#ffc300", ...)', '    ax.plot(inicio[1], inicio[0], "o", color="#38b000", ...)', '    ax.plot(meta[1], meta[0], "*", color="#ff7b00", ...)', '    ax.grid(which="minor", color="#8a8a8a", linewidth=0.5)', '    ax.set_title(titulo, fontsize=10)'],
+  build: () => {
+    const r = algAEstrella(M, M.inicio, M.meta, null), b = {flechas: false, explorados: r.explorados, ruta: r.ruta};
+    const paso = (ln, msg, capas) => Object.assign({}, b, {ln, msg, capas, vars: [['explorados', r.explorados.length + ' casillas'], ['ruta', r.ruta ? r.ruta.length + ' casillas' : 'None'], ['items', lista(M.items)]]});
+    return [
+      paso([1], 'Capa 1: cada casilla se convierte en un color según su terreno e imshow lo pinta como una imagen.', {terreno: 1}),
+      paso([2, 3, 4, 5], 'Capa 2: se crea una capa transparente del mismo tamaño y se pintan de morado solo las casillas exploradas.', {terreno: 1, explorados: 1}),
+      paso([6, 7], 'Capa 3: la ruta se dibuja como una línea roja. Ojo: matplotlib pide (x, y), que aquí es (columna, fila).', {terreno: 1, explorados: 1, ruta: 1}),
+      paso([8, 9], 'Capa 4: un rombo amarillo por cada item.' + (M.items.length ? '' : ' Este mapa no tiene items.'), {terreno: 1, explorados: 1, ruta: 1, items: 1}),
+      paso([10, 11], 'Capa 5: el círculo verde del inicio y la estrella naranja de la meta.', {terreno: 1, explorados: 1, ruta: 1, items: 1, puntos: 1}),
+      paso([12, 13], 'Capa 6: la cuadrícula que separa las casillas, y el título.', {terreno: 1, explorados: 1, ruta: 1, items: 1, puntos: 1, rejilla: 1})
+    ];
+  }
+});
+capitulo('Comparación y dibujo', 'a_grafo', 'a_grafo', {
+  titulo: 'Construye el grafo de NetworkX',
+  que: 'Recorre la cuadrícula casilla por casilla. Cada casilla transitable se vuelve un nodo, y por cada vecino que le da la función vecinos se agrega una arista con su peso. Los muros se saltan. Es el mismo mapa, pero como objeto de grafo.',
+  ent: [['cuadricula', 'el terreno']],
+  sal: ['<span class="mono">grafo</span>: un nx.DiGraph con nodos y aristas con peso'],
+  codigo: ['def a_grafo(cuadricula):', '    grafo = nx.DiGraph()', '    for f, fila in enumerate(cuadricula):', '        for c, simbolo in enumerate(fila):', '            if simbolo != "#":', '                grafo.add_node((f, c))', '                for vecino, peso in vecinos(cuadricula, (f, c)):', '                    grafo.add_edge((f, c), vecino, weight=peso)', '    return grafo'],
+  build: () => {
+    const P = [], nodos = [], aristas = []; let na = 0;
+    const st = (ln, msg, x) => P.push(Object.assign({ln, msg, vistaForzada: 'grafo', fondo: true, flechas: false, nodos: nodos.slice(), aristas: aristas.slice(), vars: [['nodos', String(nodos.length)], ['aristas dirigidas', String(na)]]}, x));
+    st([1], 'Se crea un grafo dirigido vacío. Detrás se ve el mapa en tenue para ubicarse.', {});
+    M.cuad.forEach((fila, f) => [...fila].forEach((s, c) => {
+      if (s === '#') { st([2, 3, 4], F([f, c]) + ' es muro: no genera nodo ni aristas.', {actual: [f, c]}); return; }
+      nodos.push(K([f, c])); const vs = vecinos(M.cuad, [f, c]); vs.forEach(([v]) => aristas.push([[f, c], v])); na += vs.length;
+      st([2, 3, 4, 5, 6, 7], F([f, c]) + ' es ' + NOMBRE[s] + ': se agrega como nodo y salen ' + vs.length + ' arista(s): ' + (vs.map(([v, w]) => 'a ' + F(v) + ' con peso ' + w).join(', ') || 'ninguna') + '.', {actual: [f, c]});
+    }));
+    st([8], 'Devuelve el grafo: ' + nodos.length + ' nodos y ' + na + ' aristas dirigidas (' + na / 2 + ' pares de vecinos, cada uno en los dos sentidos).', {});
+    return P;
+  }
+});
+
+function necesitaItems() { return M.items.length ? null : '<p>Este mapa no tiene items. <button class="b pri" data-mapa="Items chico">Cargar el mapa Items chico</button> <button class="b" data-mapa="Items del notebook">Cargar el del notebook</button></p>'; }
+const nombrePunto = p => eq(p, M.inicio) ? 'I' : eq(p, M.meta) ? 'M' : 'item ' + (M.items.findIndex(q => eq(q, p)) + 1);
+const ordenTxt = o => o.map(nombrePunto).join(' -> ');
+
+capitulo('Items', 'tramos_entre', 'tramos_entre', {
+  titulo: 'La ruta más corta entre cada par de puntos',
+  que: 'Con items, primero se reduce el problema: se calcula con Dijkstra la mejor ruta entre cada par de puntos importantes (inicio, items y meta). El resultado es un grafo pequeño y completo, que aquí se ve como una tabla de costos.',
+  ent: [['cuadricula', 'el terreno'], ['puntos', 'lista con inicio, items y meta']],
+  sal: ['Un diccionario: <span class="mono">(origen, destino) -> ruta</span>'],
+  codigo: ['def tramos_entre(cuadricula, puntos):', '    return {(a, b): dijkstra(cuadricula, a, b)[0] for a in puntos for b in puntos if a != b}'],
+  falta: necesitaItems,
+  build: () => {
+    const pts = [M.inicio].concat(M.items, [M.meta]), P = [], head = ['desde \\ hacia'].concat(pts.map(nombrePunto)), cel = pts.map(a => pts.map(b => eq(a, b) ? '-' : ''));
+    const tb = () => ({head, rows: pts.map((a, i) => [nombrePunto(a)].concat(cel[i]))});
+    P.push({ln: [0], flechas: false, tabla: tb(), msg: 'Llegan ' + pts.length + ' puntos: el inicio, ' + M.items.length + ' item(s) y la meta. Hay que calcular ' + pts.length * (pts.length - 1) + ' rutas, una por cada par ordenado.', vars: [['puntos', lista(pts)]]});
+    pts.forEach((a, i) => pts.forEach((b, j) => {
+      if (i === j) return;
+      const r = algDijkstra(M, a, b, null).ruta, c = costoDe(M.cuad, r); cel[i][j] = num(c);
+      P.push({ln: [1], flechas: false, ruta: r, actual: a, tabla: tb(), msg: 'De ' + nombrePunto(a) + ' ' + F(a) + ' a ' + nombrePunto(b) + ' ' + F(b) + ': Dijkstra ' + (r ? 'encuentra una ruta de costo ' + c : 'no encuentra ruta') + '. Se guarda con la clave (a, b).', vars: [['a', F(a)], ['b', F(b)], ['costo del tramo', num(c)]]});
+    }));
+    P.push({ln: [1], flechas: false, tabla: tb(), msg: 'Devuelve el diccionario con todos los tramos. Con esta tabla ya no hace falta mirar el mapa para decidir el orden.', vars: [['tramos guardados', String(pts.length * (pts.length - 1))]]});
+    return P;
+  }
+});
+capitulo('Items', 'costo_del_orden', 'costo_del_orden', {
+  titulo: 'Cuánto cuesta visitar en cierto orden',
+  que: 'Recibe un orden de visita (inicio, items, meta) y suma el costo de cada tramo consecutivo usando la tabla de tramos. Aquí se prueba con los items en el orden en que aparecen en el mapa.',
+  ent: [['cuadricula', 'el terreno'], ['tramos', 'el diccionario de tramos_entre'], ['orden', 'lista de puntos, del inicio a la meta']],
+  sal: ['Un número: el costo total de ese orden'],
+  codigo: ['def costo_del_orden(cuadricula, tramos, orden):', '    return sum(costo_de(cuadricula, tramos[(a, b)]) for a, b in zip(orden, orden[1:]))'],
+  falta: necesitaItems,
+  build: () => {
+    const orden = [M.inicio].concat(M.items, [M.meta]), T = tramosEntre(M, orden), P = []; let s = 0, r = [orden[0]];
+    P.push({ln: [0], flechas: false, msg: 'El orden a evaluar es: ' + ordenTxt(orden) + '. zip(orden, orden[1:]) lo parte en parejas consecutivas.', vars: [['orden', lista(orden)], ['suma', '0']]});
+    for (let i = 0; i + 1 < orden.length; i++) {
+      const t = T[KT(orden[i], orden[i + 1])], c = costoDe(M.cuad, t), antes = s; s += c; if (t && r) r = r.concat(t.slice(1)); else r = null;
+      P.push({ln: [1], flechas: false, ruta: r, actual: orden[i + 1], msg: 'Tramo de ' + nombrePunto(orden[i]) + ' a ' + nombrePunto(orden[i + 1]) + ': cuesta ' + num(c) + '. La suma pasa de ' + num(antes) + ' a ' + num(s) + '.', vars: [['a, b', F(orden[i]) + ', ' + F(orden[i + 1])], ['costo del tramo', num(c)], ['suma', num(s)]]});
+    }
+    P.push({ln: [1], flechas: false, ruta: r, msg: 'Devuelve ' + num(s) + ': lo que cuesta visitar los items en ese orden.', vars: [['resultado', num(s)]]});
+    return P;
+  }
+});
+capitulo('Items', 'fuerza_bruta', 'fuerza_bruta', {
+  titulo: 'Probar todos los órdenes',
+  que: 'Genera todas las permutaciones de los items, calcula el costo de cada una y se queda con la más barata. Siempre encuentra el mejor orden, pero con n items hay n! órdenes que revisar. En el mapa, la ruta roja es el orden que se está probando y la verde punteada es el mejor hasta el momento.',
+  ent: [['cuadricula, tramos', 'el terreno y la tabla de tramos'], ['inicio, items, meta', 'los puntos a visitar']],
+  sal: ['<span class="mono">mejor</span>: el orden más barato', 'Cuántos órdenes se evaluaron'],
+  codigo: ['def fuerza_bruta(cuadricula, tramos, inicio, items, meta):', '    ordenes = [[inicio, *p, meta] for p in permutations(items)]', '    mejor = min(ordenes, key=lambda orden: costo_del_orden(cuadricula, tramos, orden))', '    return mejor, len(ordenes)'],
+  falta: () => necesitaItems() || (M.items.length > 6 ? '<p>Este mapa tiene ' + M.items.length + ' items. Para verlo paso a paso usa un mapa con 6 o menos.</p>' : null),
+  build: () => {
+    const pts = [M.inicio].concat(M.items, [M.meta]), T = tramosEntre(M, pts), ords = permutaciones(M.items).map(p => [M.inicio].concat(p, [M.meta])), P = [], head = ['#', 'Orden', 'Costo'], rows = [];
+    P.push({ln: [1], flechas: false, msg: 'permutations genera los ' + ords.length + ' órdenes posibles de ' + M.items.length + ' item(s). A cada uno se le pone el inicio adelante y la meta al final.', vars: [['len(ordenes)', String(ords.length)]]});
+    let mejor = null, cm = Infinity;
+    ords.forEach((o, i) => {
+      const c = costoOrden(M, T, o), gana = mejor === null || c < cm; if (gana) { mejor = o; cm = c; }
+      rows.push([String(i + 1), ordenTxt(o), num(c)]);
+      P.push({ln: [2], flechas: false, ruta: unir(T, o), ruta2: gana ? null : unir(T, mejor), tabla: {head, rows: rows.slice(-8)}, msg: 'Orden ' + (i + 1) + ' de ' + ords.length + ': ' + ordenTxt(o) + ' cuesta ' + num(c) + '. ' + (gana ? 'Es el mejor hasta ahora.' : 'No supera al mejor, que cuesta ' + num(cm) + '.'), vars: [['orden', lista(o)], ['costo', num(c)], ['mejor costo', num(cm)]]});
+    });
+    P.push({ln: [3], flechas: false, ruta: unir(T, mejor), msg: 'Devuelve el mejor orden: ' + ordenTxt(mejor) + ', con costo ' + num(cm) + ', después de evaluar ' + ords.length + ' órdenes.', vars: [['mejor', lista(mejor)], ['costo', num(cm)], ['len(ordenes)', String(ords.length)]]});
+    return P;
+  }
+});
+capitulo('Items', 'vecino_mas_cercano', 'vecino_mas_cercano', {
+  titulo: 'Ir siempre al item más cercano',
+  que: 'Parado en un punto, mira cuánto cuesta ir a cada item pendiente y va al más barato. Repite hasta que no queden. Solo construye un orden, así que es muy rápido, pero una buena decisión ahora puede salir cara al final. <b>comparar_items</b> corre esta estrategia y la fuerza bruta y dibuja las dos rutas.',
+  ent: [['cuadricula, tramos', 'el terreno y la tabla de tramos'], ['inicio, items, meta', 'los puntos a visitar']],
+  sal: ['<span class="mono">orden</span>: el orden elegido', 'El número 1: solo evaluó un orden'],
+  codigo: ['def vecino_mas_cercano(cuadricula, tramos, inicio, items, meta):', '    orden = [inicio]', '    pendientes = list(items)', '    while pendientes:', '        siguiente = min(pendientes, key=lambda item: costo_de(cuadricula, tramos[(orden[-1], item)]))', '        pendientes.remove(siguiente)', '        orden.append(siguiente)', '    return orden + [meta], 1'],
+  falta: necesitaItems,
+  build: () => {
+    const pts = [M.inicio].concat(M.items, [M.meta]), T = tramosEntre(M, pts), P = [], orden = [M.inicio], pend = M.items.slice();
+    P.push({ln: [1, 2], flechas: false, actual: M.inicio, frontera: pend.slice(), msg: 'Empieza en el inicio. Todos los items están pendientes (marcados en ámbar).', vars: [['orden', lista(orden)], ['pendientes', lista(pend)]]});
+    while (pend.length) {
+      const desde = orden[orden.length - 1], cs = pend.map(it => costoDe(M.cuad, T[KT(desde, it)])); let k = 0; cs.forEach((c, i) => { if (c < cs[k]) k = i; });
+      const sig = pend[k], txt = pend.map((it, i) => nombrePunto(it) + ' cuesta ' + num(cs[i])).join(', ');
+      pend.splice(k, 1); orden.push(sig);
+      P.push({ln: [3, 4, 5, 6], flechas: false, ruta: unir(T, orden), actual: sig, frontera: pend.slice(), msg: 'Desde ' + nombrePunto(desde) + ': ' + txt + '. El más cercano es ' + nombrePunto(sig) + ', así que va ahí.', vars: [['siguiente', F(sig)], ['orden', lista(orden)], ['pendientes', lista(pend)]]});
+    }
+    const fin = orden.concat([M.meta]), c = costoOrden(M, T, fin), fb = M.items.length <= 6 ? fuerzaBruta(M, T, M.inicio, M.items, M.meta) : null;
+    P.push({ln: [7], flechas: false, ruta: unir(T, fin), ruta2: fb && fb.costo < c ? unir(T, fb.orden) : null, msg: 'Ya no quedan items: va a la meta. Orden final: ' + ordenTxt(fin) + ', costo ' + num(c) + '. ' + (fb ? (fb.costo < c ? 'La fuerza bruta encuentra uno de costo ' + num(fb.costo) + ' (verde punteado): aquí el vecino más cercano no fue óptimo.' : 'La fuerza bruta da el mismo costo: aquí sí acertó el óptimo.') : ''), vars: [['orden + [meta]', lista(fin)], ['costo', num(c)], ['órdenes evaluados', '1']]});
+    return P;
+  }
+});
+
+// ---------- Dibujo ----------
+function pintar() {
+  const st = pasos[idx] || {}, cv = $('mapa'), ctx = cv.getContext('2d');
+  const rows = M.cuad.length, cols = M.cuad[0].length, mg = 24;
+  const disp = Math.max(260, $('lienzo').clientWidth - 2);
+  const cs = Math.max(13, Math.min(62, Math.floor((disp - mg) / cols)));
+  const w = mg + cs * cols + 2, h = mg + cs * rows + 2, dpr = window.devicePixelRatio || 1;
+  cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  geo = {mg, cs, rows, cols};
+  const tinta = css('--tinta'), tenue = css('--tenue'), ambar = css('--ambar');
+  const X = c => mg + c * cs, Y = f => mg + f * cs, cx = p => X(p[1]) + cs / 2, cy = p => Y(p[0]) + cs / 2;
+  const modo = st.vistaForzada || vista, capas = st.capas || {terreno: 1, explorados: 1, ruta: 1, items: 1, puntos: 1, rejilla: 1};
+  const visibles = st.filasVisibles === undefined ? rows : st.filasVisibles;
+  // números de fila y columna
+  ctx.fillStyle = tenue; ctx.font = '10px "JetBrains Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const cada = cs >= 17 ? 1 : 5;
+  for (let c = 0; c < cols; c += cada) ctx.fillText(c, X(c) + cs / 2, mg / 2);
+  for (let f = 0; f < rows; f += cada) ctx.fillText(f, mg / 2, Y(f) + cs / 2);
+  const expl = new Set((capas.explorados ? st.explorados || [] : []).map(K));
+  const front = new Set((st.frontera || []).map(K));
+
+  if (modo === 'cuad') {
+    for (let f = 0; f < rows; f++) for (let c = 0; c < cols; c++) {
+      if (f >= visibles) { ctx.fillStyle = css('--panel'); ctx.fillRect(X(c), Y(f), cs, cs); ctx.strokeStyle = css('--linea'); ctx.lineWidth = 1; ctx.strokeRect(X(c) + .5, Y(f) + .5, cs - 1, cs - 1); continue; }
+      ctx.fillStyle = capas.terreno ? TERRENO[M.cuad[f][c]] : css('--panel'); ctx.fillRect(X(c), Y(f), cs, cs);
+      if (expl.has(f + ',' + c)) { ctx.fillStyle = 'rgba(123,44,191,0.40)'; ctx.fillRect(X(c), Y(f), cs, cs); }
+    }
+    if (capas.rejilla) { ctx.strokeStyle = 'rgba(90,90,90,0.55)'; ctx.lineWidth = 1; ctx.beginPath(); for (let c = 0; c <= cols; c++) { ctx.moveTo(X(c) + .5, Y(0)); ctx.lineTo(X(c) + .5, Y(rows)); } for (let f = 0; f <= rows; f++) { ctx.moveTo(X(0), Y(f) + .5); ctx.lineTo(X(cols), Y(f) + .5); } ctx.stroke(); }
+    if (st.filaActual !== undefined) { ctx.strokeStyle = ambar; ctx.lineWidth = 3; ctx.strokeRect(X(0) + 1.5, Y(st.filaActual) + 1.5, cs * cols - 3, cs - 3); }
+    front.forEach(k => { const [f, c] = k.split(',').map(Number); ctx.strokeStyle = ambar; ctx.lineWidth = 3; ctx.strokeRect(X(c) + 2.5, Y(f) + 2.5, cs - 5, cs - 5); });
+  } else {
+    if (st.fondo) { ctx.globalAlpha = 0.22; for (let f = 0; f < rows; f++) for (let c = 0; c < cols; c++) { ctx.fillStyle = TERRENO[M.cuad[f][c]]; ctx.fillRect(X(c), Y(f), cs, cs); } ctx.globalAlpha = 1; }
+    const hay = st.nodos ? new Set(st.nodos) : null, R = cs * 0.33;
+    ctx.strokeStyle = tinta; ctx.lineWidth = Math.max(1, cs / 26); ctx.beginPath();
+    if (st.aristas) st.aristas.forEach(([a, b]) => { ctx.moveTo(cx(a), cy(a)); ctx.lineTo(cx(b), cy(b)); });
+    else for (let f = 0; f < rows; f++) for (let c = 0; c < cols; c++) { if (M.cuad[f][c] === '#') continue; if (c + 1 < cols && M.cuad[f][c + 1] !== '#') { ctx.moveTo(cx([f, c]), cy([f, c])); ctx.lineTo(cx([f, c + 1]), cy([f, c + 1])); } if (f + 1 < rows && M.cuad[f + 1][c] !== '#') { ctx.moveTo(cx([f, c]), cy([f, c])); ctx.lineTo(cx([f + 1, c]), cy([f + 1, c])); } }
+    ctx.stroke();
+    if (st.ruta && capas.ruta) trazo(ctx, st.ruta, cx, cy, '#d00000', Math.max(3, cs / 8), false);
+    for (let f = 0; f < rows; f++) for (let c = 0; c < cols; c++) {
+      if (M.cuad[f][c] === '#' || (hay && !hay.has(f + ',' + c))) continue;
+      ctx.beginPath(); ctx.arc(cx([f, c]), cy([f, c]), R, 0, 7); ctx.fillStyle = TERRENO[M.cuad[f][c]]; ctx.fill();
+      if (expl.has(f + ',' + c)) { ctx.fillStyle = 'rgba(123,44,191,0.50)'; ctx.fill(); }
+      ctx.strokeStyle = front.has(f + ',' + c) ? ambar : '#1a1a1a'; ctx.lineWidth = front.has(f + ',' + c) ? 3 : 1; ctx.stroke();
+    }
+  }
+  if (st.ruta2) trazo(ctx, st.ruta2, cx, cy, '#1B8A4C', Math.max(2.5, cs / 11), true);
+  if (st.ruta && capas.ruta && modo === 'cuad') trazo(ctx, st.ruta, cx, cy, '#d00000', Math.max(2.5, cs / 9), false);
+  if (st.linea) trazo(ctx, st.linea, cx, cy, '#2F6CB0', Math.max(2.5, cs / 10), true);
+  // flechas hacia el padre
+  if (st.padres && st.flechas !== false && cs >= 18) {
+    ctx.strokeStyle = 'rgba(20,20,20,0.75)'; ctx.fillStyle = 'rgba(20,20,20,0.75)'; ctx.lineWidth = 1.4;
+    for (const [k, p] of Object.entries(st.padres)) {
+      if (!p) continue; const q = k.split(',').map(Number), dx = Math.sign(p[1] - q[1]), dy = Math.sign(p[0] - q[0]);
+      const x0 = cx(q) + dx * cs * .12, y0 = cy(q) + dy * cs * .12, x1 = cx(q) + dx * cs * .42, y1 = cy(q) + dy * cs * .42, a = cs * .09;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1 + dx * a, y1 + dy * a); ctx.lineTo(x1 - dy * a, y1 - dx * a); ctx.lineTo(x1 + dy * a, y1 + dx * a); ctx.fill();
+    }
+  }
+  // etiquetas de costo
+  if (st.etiquetas && cs >= 26) {
+    ctx.font = '600 ' + Math.max(9, Math.round(cs * .2)) + 'px "JetBrains Mono", monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    for (const [k, t] of Object.entries(st.etiquetas)) { const [f, c] = k.split(',').map(Number); ctx.fillStyle = M.cuad[f][c] === '#' ? '#fff' : '#111'; ctx.fillText(String(t), X(c) + 3, Y(f) + 3); }
+  }
+  // vecino que se revisa y casilla actual
+  if (st.vecino) { const p = st.vecino.p; ctx.setLineDash([5, 3]); ctx.strokeStyle = st.vecino.ok ? '#0f9d58' : '#d00000'; ctx.lineWidth = 3.5; ctx.strokeRect(X(p[1]) + 2, Y(p[0]) + 2, cs - 4, cs - 4); ctx.setLineDash([]); }
+  if (st.actual) { const p = st.actual; ctx.strokeStyle = '#111'; ctx.lineWidth = 4; ctx.strokeRect(X(p[1]) + 2, Y(p[0]) + 2, cs - 4, cs - 4); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(X(p[1]) + 4.5, Y(p[0]) + 4.5, cs - 9, cs - 9); }
+  // marcadores
+  const pts = st.puntos || {I: [M.inicio], M: [M.meta], '*': M.items}, r = cs * .2;
+  if (capas.items) pts['*'].forEach(p => { ctx.beginPath(); ctx.moveTo(cx(p), cy(p) - r); ctx.lineTo(cx(p) + r, cy(p)); ctx.lineTo(cx(p), cy(p) + r); ctx.lineTo(cx(p) - r, cy(p)); ctx.closePath(); ctx.fillStyle = '#ffc300'; ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke(); });
+  if (capas.puntos) {
+    pts.I.forEach(p => { ctx.beginPath(); ctx.arc(cx(p), cy(p), r, 0, 7); ctx.fillStyle = '#38b000'; ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke(); });
+    pts.M.forEach(p => { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .55 : r * 1.3; ctx.lineTo(cx(p) + rr * Math.cos(a), cy(p) + rr * Math.sin(a)); } ctx.closePath(); ctx.fillStyle = '#ff7b00'; ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke(); });
+  }
+}
+function trazo(ctx, pts, cx, cy, color, ancho, punteado) {
+  if (!pts || pts.length < 2) return;
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = ancho; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; if (punteado) ctx.setLineDash([7, 5]);
+  ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(cx(p), cy(p)) : ctx.moveTo(cx(p), cy(p))); ctx.stroke(); ctx.restore();
+}
+
+// ---------- Interfaz ----------
+function render() {
+  const st = pasos[idx] || {}, prev = idx > 0 ? pasos[idx - 1] : null;
+  $('msg').textContent = st.msg || '';
+  $('cuenta').textContent = pasos.length ? 'Paso ' + (idx + 1) + ' de ' + pasos.length : '';
+  $('barra').max = Math.max(0, pasos.length - 1); $('barra').value = idx;
+  $('bAnt').disabled = idx === 0; $('bSig').disabled = idx >= pasos.length - 1;
+  const hl = new Set(st.ln || []);
+  $('codigo').innerHTML = (cap.codigo || []).map((l, i) => '<span' + (hl.has(i) ? ' class="hl"' : '') + '>' + esc(l) + '</span>').join('');
+  const primera = $('codigo').querySelector('.hl'); if (primera) { const pre = $('codigo'); pre.scrollTop = Math.max(0, primera.offsetTop - pre.clientHeight / 3); }
+  const vs = (st.v || []).concat(st.vars || []), antes = {};
+  if (prev) (prev.v || []).concat(prev.vars || []).forEach(([n, v]) => antes[n] = v);
+  $('vars').innerHTML = vs.length ? '<table>' + vs.map(([n, v, visto]) => '<tr' + (prev && antes[n] !== v ? ' class="cambio"' : '') + '><td class="n">' + esc(n) + '</td><td class="mono">' + esc(v) + (visto === undefined ? '' : comoSeVe(visto)) + '</td></tr>').join('') + '</table>' : '';
+  $('tabla').innerHTML = st.tabla ? '<table><tr>' + st.tabla.head.map(x => '<th>' + esc(x) + '</th>').join('') + '</tr>' + st.tabla.rows.map(r => '<tr>' + r.map(x => '<td class="mono">' + esc(x) + '</td>').join('') + '</tr>').join('') + '</table>' : '';
+  if (st.cola) {
+    const it = st.cola.items, t = st.cola.tipo, max = 14, pila = t === 'pila';
+    const vis = pila ? it.slice(-max) : it.slice(0, max), resto = it.length - vis.length;
+    const chips = vis.map((x, i) => '<span class="chip' + ((pila ? i === vis.length - 1 : i === 0) ? ' sale' : '') + '">' + esc(x) + '</span>').join('');
+    const titulo = t === 'cola' ? 'Cola (sale el de la izquierda, entra por la derecha):' : pila ? 'Pila (entra y sale por la derecha):' : 'Cola de prioridad, ordenada de menor a mayor (sale el de la izquierda):';
+    $('cola').innerHTML = '<span class="etq">' + titulo + '</span>' + (pila && resto > 0 ? '<span class="etq">' + resto + ' más ...</span>' : '') + (chips || '<span class="etq">vacía</span>') + (!pila && resto > 0 ? '<span class="etq">... y ' + resto + ' más</span>' : '');
+  } else $('cola').innerHTML = '';
+  pintar();
+}
+function comoSeVe(texto) {
+  // El mismo texto con los saltos de línea de verdad. Cada salto se marca con una flecha para que se note dónde corta.
+  const lineas = texto.split('\n');
+  const html = lineas.map((l, i) => '<span>' + esc(l) + (i < lineas.length - 1 ? '<i>\u21b5</i>' : '') + '</span>').join('');
+  return '<div class="visto"><b>Así se ve con los saltos de línea (cada \u21b5 es un \\n):</b><pre>' + html + '</pre></div>';
+}
+function leyenda() {
+  const L = [['#efe9d0', 'llano 1'], ['#6aa56a', 'bosque 3'], ['#6fa8dc', 'agua 5'], ['#2b2b2b', 'muro'], ['rgba(123,44,191,.55)', 'explorado'], [css('--ambar'), 'en la frontera'], ['#d00000', 'ruta']];
+  $('leyenda').innerHTML = L.map(([c, t]) => '<span><i style="background:' + c + '"></i>' + t + '</span>').join('') + '<span>recuadro negro: casilla actual</span><span>punteado verde o rojo: vecino aceptado o descartado</span>';
+}
+function parar() { if (timer) { clearInterval(timer); timer = null; } $('bAuto').classList.remove('on'); $('bAuto').textContent = 'Automático'; }
+function ir(i) { idx = Math.max(0, Math.min(pasos.length - 1, i)); render(); }
+function abrir(id, conservaSel) {
+  parar(); cap = C.find(x => x.id === id) || C[0]; if (!conservaSel) sel = null;
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('activo', b.dataset.id === cap.id));
+  const falta = cap.falta ? cap.falta() : null;
+  let h = '<h2>' + (cap.codigo ? '<span class="mono">' + cap.nombre + '</span>: ' : '') + cap.titulo + '</h2><p>' + cap.que + '</p>';
+  if (cap.ent) h += '<div class="es"><div><span class="etq">Entradas</span><ul>' + cap.ent.map(([n, d]) => '<li><span class="mono">' + n + '</span>: ' + d + '</li>').join('') + '</ul></div><div class="sal"><span class="etq">Salida</span><ul>' + cap.sal.map(s => '<li>' + s + '</li>').join('') + '</ul></div></div>';
+  if (cap.clic) h += '<p style="background:var(--resalte);border-radius:8px;padding:6px 10px;font-weight:600">' + cap.clic + '</p>';
+  if (cap.html) h += cap.html();
+  if (falta) h += falta;
+  $('ficha').innerHTML = h;
+  const hay = !!cap.build && !falta;
+  $('escena').hidden = !hay;
+  if (hay) { pasos = cap.build(); idx = 0; leyenda(); render(); }
+  if (location.hash !== '#' + cap.id) history.replaceState(null, '', '#' + cap.id);
+}
+function cargarMapa(texto, nombre) {
+  try { M = leerMapa(texto); } catch (e) { $('error').textContent = e.message; return false; }
+  $('error').textContent = ''; $('texto').value = texto; if (nombre) $('selMapa').value = nombre; sel = null;
+  if (cap) abrir(cap.id);
+  return true;
+}
+
+// navegación
+let g = '';
+$('nav').innerHTML = C.map(c => (c.grupo !== g ? (g = c.grupo, '<h3>' + c.grupo + '</h3>') : '') + '<button data-id="' + c.id + '">' + (c.codigo ? '<span class="mono">' + c.nombre + '</span>' : c.nombre) + '</button>').join('');
+$('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) abrir(b.dataset.id); });
+$('ficha').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.ir) abrir(b.dataset.ir); if (b.dataset.mapa) cargarMapa(MAPAS[b.dataset.mapa], b.dataset.mapa); });
+$('selMapa').innerHTML = Object.keys(MAPAS).map(n => '<option>' + n + '</option>').join('');
+$('selMapa').addEventListener('change', e => cargarMapa(MAPAS[e.target.value]));
+$('aplicar').addEventListener('click', () => cargarMapa($('texto').value));
+$('bIni').onclick = () => { parar(); ir(0); };
+$('bAnt').onclick = () => { parar(); ir(idx - 1); };
+$('bSig').onclick = () => { parar(); ir(idx + 1); };
+$('bFin').onclick = () => { parar(); ir(pasos.length - 1); };
+$('barra').oninput = e => { parar(); ir(Number(e.target.value)); };
+function auto() {
+  if (timer) { parar(); return; }
+  if (idx >= pasos.length - 1) ir(0);
+  $('bAuto').classList.add('on'); $('bAuto').textContent = 'Pausar';
+  timer = setInterval(() => { if (idx >= pasos.length - 1) parar(); else ir(idx + 1); }, Number($('vel').value));
+}
+$('bAuto').onclick = auto;
+$('vel').onchange = () => { if (timer) { parar(); auto(); } };
+function ponVista(v) { vista = v; $('vCuad').classList.toggle('on', v === 'cuad'); $('vGraf').classList.toggle('on', v === 'grafo'); pintar(); }
+$('vCuad').onclick = () => ponVista('cuad'); $('vGraf').onclick = () => ponVista('grafo');
+$('mapa').addEventListener('click', e => {
+  if (!cap.clic || !geo) return;
+  const r = $('mapa').getBoundingClientRect(), c = Math.floor((e.clientX - r.left - geo.mg) / geo.cs), f = Math.floor((e.clientY - r.top - geo.mg) / geo.cs);
+  if (f < 0 || c < 0 || f >= geo.rows || c >= geo.cols) return;
+  sel = [f, c]; abrir(cap.id, true); ir(pasos.length - 1);
+});
+document.addEventListener('keydown', e => {
+  if (['TEXTAREA', 'SELECT', 'INPUT'].includes(document.activeElement.tagName) || $('escena').hidden) return;
+  if (e.key === 'ArrowRight') { parar(); ir(idx + 1); e.preventDefault(); }
+  if (e.key === 'ArrowLeft') { parar(); ir(idx - 1); e.preventDefault(); }
+});
+$('tema').onclick = () => {
+  const el = document.documentElement, oscuro = el.dataset.theme ? el.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  el.dataset.theme = oscuro ? 'light' : 'dark'; if (!$('escena').hidden) { leyenda(); pintar(); }
+};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!$('escena').hidden) { leyenda(); pintar(); } });
+window.addEventListener('resize', () => { if (!$('escena').hidden) pintar(); });
+$('texto').value = MAPAS['Chico (3 x 3)'];
+abrir((location.hash || '#panorama').slice(1));
+</script>
+</body>
+</html>
