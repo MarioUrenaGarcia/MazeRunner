@@ -91,6 +91,45 @@ def bfs(cuadricula, inicio, meta):
     return None
 
 
+def dfs(cuadricula, inicio, meta):
+    """Primera ruta que aparece al avanzar siempre por el último camino abierto. Suele dar muchas vueltas."""
+    frontera = [inicio]
+    padres = {inicio: None}
+    explorados = set()
+    while frontera:
+        actual = frontera.pop()
+        if actual in explorados:
+            continue
+        explorados.add(actual)
+        if actual == meta:
+            return reconstruir(padres, meta)
+        for vecino, _ in vecinos(cuadricula, actual):
+            if vecino not in explorados:
+                padres[vecino] = actual
+                frontera.append(vecino)
+    return None
+
+
+def dijkstra(cuadricula, inicio, meta):
+    """Ruta de menor costo: sale siempre la casilla más barata de alcanzar desde el inicio."""
+    frontera = [(0, inicio)]
+    costos = {inicio: 0}
+    padres = {inicio: None}
+    while frontera:
+        costo, actual = heapq.heappop(frontera)
+        if costo > costos[actual]:
+            continue      # entrada vieja: ya había un camino más barato
+        if actual == meta:
+            return reconstruir(padres, meta)
+        for vecino, peso in vecinos(cuadricula, actual):
+            nuevo = costo + peso
+            if nuevo < costos.get(vecino, math.inf):
+                costos[vecino] = nuevo
+                padres[vecino] = actual
+                heapq.heappush(frontera, (nuevo, vecino))
+    return None
+
+
 def voraz(cuadricula, inicio, meta):
     """Ruta que avanza siempre hacia la casilla que parece más cercana a la meta."""
     frontera = [(heuristica(inicio, meta), inicio)]
@@ -176,9 +215,11 @@ def terreno_al_azar(libres, cuantos, azar):
     return piezas
 
 
-# Cada rival: nombre, algoritmo y color.
+# Cada rival: nombre, algoritmo y color. Son los cinco algoritmos comparados en la fase 1.
 RIVALES = [
     ("BFS", bfs, (236, 140, 40)),
+    ("DFS", dfs, (42, 157, 143)),
+    ("Dijkstra", dijkstra, (47, 108, 176)),
     ("Voraz", voraz, (170, 90, 220)),
     ("A*", a_estrella, (60, 60, 66)),
 ]
@@ -321,6 +362,7 @@ class Modo:
         """Prepara un tablero vacío y reinicia el estado de la partida."""
         self.base, self.puntos = leer_mapa(texto)      # tablero vacío: solo llano
         self.cuadricula = list(self.base)              # tablero con el terreno del momento
+        self.version_terreno = 0                       # sube cada vez que cambia el terreno
         self.filas, self.columnas = len(self.base), len(self.base[0])
         self.azar = random.Random(self.semilla)
         # Las casillas se achican lo necesario para que el tablero quepa junto al panel.
@@ -340,6 +382,7 @@ class Modo:
         for tipo, (f, c) in piezas:
             filas[f][c] = tipo
         self.cuadricula = ["".join(fila) for fila in filas]
+        self.version_terreno += 1
 
     def terminar(self, ganado, titulo, detalle=""):
         self.estado = "ganado" if ganado else "perdido"
@@ -348,6 +391,9 @@ class Modo:
     def tecla(self, tecla):
         if tecla == pygame.K_r or (tecla in (pygame.K_SPACE, pygame.K_RETURN) and self.estado != "jugando"):
             self.cargar()
+
+    def clic(self, punto):
+        """Los modos con botones en pantalla redefinen este método."""
 
     def transitable(self, casilla):
         f, c = casilla
@@ -494,19 +540,20 @@ class Modo:
 # Modo 1: atrapa gemas
 # ---------------------------------------------------------------------------
 
-# Tablero de un competidor: empieza vacío. En la partida hay cuatro copias idénticas.
+# Tablero de un competidor: empieza vacío. En la partida hay seis copias idénticas,
+# una para el jugador y una por cada algoritmo.
 MAPA_GEMAS = """
-I..........
-...........
-...........
-...........
-...........
-...........
-...........
-...........
-...........
+I........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
 """
-PIEZAS_POR_TIPO = 6      # muros, árboles y charcos que hay en cada tablero
+PIEZAS_POR_TIPO = 5      # muros, árboles y charcos que hay en cada tablero
 
 
 class AtrapaGemas(Modo):
@@ -519,17 +566,17 @@ class AtrapaGemas(Modo):
     """
 
     titulo = "ATRAPA GEMAS"
-    resumen = "Mismo tablero, mismas gemas y mismo terreno cambiante para todos. Termina antes que BFS, voraz y A*."
+    resumen = "Mismo tablero, mismas gemas y mismo terreno cambiante para todos. Termina antes que los cinco algoritmos."
     ayuda = "Flechas o WASD: moverte.   Tu tablero es el de arriba a la izquierda.   R: reiniciar.   Esc: menú."
     total = 8
 
     def cargar(self):
         base = MAPA_GEMAS.strip().splitlines()
         ancho = len(base[0])
-        # Cuatro copias en dos filas, separadas por una franja vacía.
-        doble = [fila + "_" + fila for fila in base]
-        self.usar_mapa("\n".join(doble + ["_" * (2 * ancho + 1)] + doble))
-        # Todo se sortea una vez, en coordenadas del tablero base, y vale para los cuatro.
+        # Seis copias en dos filas de tres, separadas por franjas vacías.
+        triple = ["_".join([fila] * 3) for fila in base]
+        self.usar_mapa("\n".join(triple + ["_" * (3 * ancho + 2)] + triple))
+        # Todo se sortea una vez, en coordenadas del tablero base, y vale para los seis.
         local, puntos = leer_mapa(MAPA_GEMAS)
         inicio = puntos["I"][0]
         llano = [(f, c) for f in range(len(local)) for c in range(ancho) if (f, c) != inicio]
@@ -631,7 +678,7 @@ class AtrapaGemas(Modo):
         minutos, segundos = divmod(self.reloj, 60)
         letrero(pantalla, f"{int(minutos)}:{segundos:04.1f}", derecha, 124, 26, BLANCO, "derecha")
         for i, personaje in enumerate(orden):
-            y = 190 + i * 50
+            y = 176 + i * 46
             letrero(pantalla, str(i + 1), PANEL_X, y, 30, ORO)
             pygame.draw.circle(pantalla, BLANCO, (PANEL_X + 48, y + 22), 15)
             pygame.draw.circle(pantalla, NEGRO, (PANEL_X + 48, y + 22), 13)
@@ -642,7 +689,7 @@ class AtrapaGemas(Modo):
             else:
                 letrero(pantalla, f"{personaje.puntos}/{self.total}", PANEL_X + 70, y + 20, 15, ORO)
         lugar = orden.index(self.jugador) + 1
-        letrero(pantalla, f"{lugar}º", PANEL_X + 10, 470, 120, ORO if lugar == 1 else BLANCO)
+        letrero(pantalla, f"{lugar}º", PANEL_X + 10, 490, 110, ORO if lugar == 1 else BLANCO)
 
     def dibujar(self, pantalla):
         self.dibujar_suelo(pantalla)
@@ -687,15 +734,18 @@ class Bandera(Modo):
     """
 
     titulo = "CAPTURA LA BANDERA"
-    resumen = "Roba la bandera de la CPU y llévala a la tuya. Banderas y terreno cambian, siempre en espejo."
-    ayuda = "Flechas o WASD: moverte.   Si hay choque con una bandera en juego, los dos vuelven a su salida.   R: reiniciar.   Esc: menú."
+    resumen = "Roba la bandera de la CPU y llévala a la tuya. Tú eliges contra qué algoritmo juegas, o lo dejas al azar."
+    ayuda = "Flechas o WASD: moverte.   1 a 6: rival.   Choque con bandera en juego: los dos a su salida.   R: reiniciar.   Esc: menú."
     meta = 3
+    OPCIONES = [nombre for nombre, _, _ in RIVALES] + ["Azar"]
+    rival = "A*"      # contra quién se juega; se conserva de una partida a otra
 
     def cargar(self):
         self.usar_mapa(MAPA_BANDERA)
         self.jugador = Personaje(self.puntos["I"][0], ROJO, "Tú", a_estrella, VELOCIDAD_JUGADOR)
-        self.cpu = Personaje(self.puntos["3"][0], CARBON, "A*", a_estrella, 4.3)
-        self.jugador.lleva = self.cpu.lleva = False
+        self.cpu = self.nuevo_rival(self.puntos["3"][0])
+        self.botones = []      # rectángulos del selector de rival, para atender los clics
+        self.jugador.lleva = False
         self.mitad = self.columnas // 2
         # Se sortea una sola secuencia de posiciones, en la mitad del jugador. La bandera
         # de la CPU usa siempre la casilla espejo.
@@ -703,10 +753,36 @@ class Bandera(Modo):
             (f, c) for f in range(self.filas) for c in range(self.mitad - 1)
             if distancia((f, c), self.jugador.base) >= 3
         ]
-        self.secuencia = self.azar.sample(candidatas, 2 * self.meta - 1)
+        self.secuencia = self.azar.sample(candidatas, 16)      # de sobra: se avanza una con cada punto y con cada choque
         self.ronda = 0
         self.colocar_banderas()
         self.cambiar_mapa()
+
+    def nuevo_rival(self, posicion):
+        """Crea a la CPU con el algoritmo elegido. En 'Azar' se sortea uno cualquiera."""
+        opciones = [rival for rival in RIVALES if rival[0] == Bandera.rival]
+        nombre, algoritmo, color = opciones[0] if opciones else self.azar.choice(RIVALES)
+        cpu = Personaje(posicion, color, nombre, algoritmo, 4.3)
+        cpu.lleva, cpu.plan = False, None
+        return cpu
+
+    def elegir_rival(self, indice):
+        """Cambia el algoritmo de la CPU y empieza una partida nueva."""
+        Bandera.rival = self.OPCIONES[indice]
+        self.cargar()
+
+    def tecla(self, tecla):
+        # Las teclas 1 a 6 eligen contra qué algoritmo jugar.
+        if pygame.K_1 <= tecla < pygame.K_1 + len(self.OPCIONES):
+            self.elegir_rival(tecla - pygame.K_1)
+        else:
+            super().tecla(tecla)
+
+    def clic(self, punto):
+        for indice, boton in enumerate(self.botones):
+            if boton.collidepoint(punto):
+                self.elegir_rival(indice)
+                return
 
     def espejo(self, casilla):
         return (casilla[0], self.columnas - 1 - casilla[1])
@@ -762,26 +838,38 @@ class Bandera(Modo):
             personaje.lleva = rival.lleva = False
             self.ronda += 1
             self.colocar_banderas()
+            if Bandera.rival == "Azar":
+                # En el modo al azar la CPU cambia de algoritmo después de cada punto.
+                anterior = self.cpu
+                self.cpu = self.nuevo_rival(anterior.posicion)
+                self.cpu.base, self.cpu.puntos, self.cpu.bandera = anterior.base, anterior.puntos, anterior.bandera
             self.cambiar_mapa()
 
     def choque(self):
-        """Al chocar, los dos vuelven a su salida, sueltan lo que cargaban y el mapa cambia."""
+        """Al chocar, los dos vuelven a su salida, sueltan lo que cargaban, y cambian banderas y terreno."""
         for personaje in (self.jugador, self.cpu):
             personaje.regresar()
             personaje.lleva = False
+        self.ronda += 1
+        self.colocar_banderas()
         self.cambiar_mapa()
 
     def actualizar(self, dt):
         jugador, cpu = self.jugador, self.cpu
         self.mover_jugador(jugador, dt)
         cpu.avanzar(dt, self.cuadricula)
-        # La CPU vuelve a planear en cada casilla: el objetivo y el terreno cambian.
-        if not cpu.camino or cpu.avance == 0:
-            cpu.ir_a(self.cuadricula, self.objetivo_cpu())
+        # La CPU solo vuelve a planear cuando cambia su objetivo o el terreno. Si planeara en cada
+        # casilla, un algoritmo como DFS elegiría un camino distinto a cada paso y no llegaría nunca.
+        plan = (self.objetivo_cpu(), self.version_terreno)
+        if not cpu.camino or (cpu.avance == 0 and cpu.plan != plan):
+            cpu.ir_a(self.cuadricula, plan[0])
+            cpu.plan = plan
         if not jugador.camino or jugador.avance == 0:
             self.revisar(jugador, cpu)
+        cpu = self.cpu      # en el modo al azar, un punto del jugador cambia de rival
         if not cpu.camino or cpu.avance == 0:
             self.revisar(cpu, jugador)
+            cpu = self.cpu
         # El choque solo cuenta cuando alguien lleva una bandera: así se defiende la propia.
         if distancia(jugador.visual(), cpu.visual()) < CONTACTO and (jugador.lleva or cpu.lleva):
             self.choque()
@@ -793,13 +881,13 @@ class Bandera(Modo):
     def dibujar_panel(self, pantalla):
         """Marcador del duelo y aviso de quién lleva bandera."""
         letrero(pantalla, f"PRIMERO A {self.meta}", PANEL_X, 22, 19, ORO)
-        for i, (nombre, personaje) in enumerate((("TÚ", self.jugador), ("CPU A*", self.cpu))):
-            caja = pygame.Rect(PANEL_X, 70 + i * 130, 180, 110)
+        for i, (nombre, personaje) in enumerate((("TÚ", self.jugador), (f"CPU {self.cpu.nombre.upper()}", self.cpu))):
+            caja = pygame.Rect(PANEL_X, 60 + i * 112, 180, 98)
             pygame.draw.rect(pantalla, NEGRO, caja.move(5, 5), border_radius=14)
             pygame.draw.rect(pantalla, personaje.color, caja, border_radius=14)
             pygame.draw.rect(pantalla, NEGRO, caja, 5, border_radius=14)
             letrero(pantalla, nombre, caja.x + 14, caja.y + 10, 20)
-            letrero(pantalla, str(personaje.puntos), caja.right - 16, caja.y + 28, 64, BLANCO, "derecha")
+            letrero(pantalla, str(personaje.puntos), caja.right - 16, caja.y + 22, 58, BLANCO, "derecha")
         if self.jugador.lleva and self.cpu.lleva:
             aviso = ["¡LOS DOS", "LLEVAN", "BANDERA!"]
         elif self.jugador.lleva:
@@ -809,7 +897,18 @@ class Bandera(Modo):
         else:
             aviso = []
         for i, linea in enumerate(aviso):
-            letrero(pantalla, linea, PANEL_X, 350 + i * 28, 17, ORO)
+            letrero(pantalla, linea, PANEL_X, 290 + i * 26, 17, ORO)
+        # Selector de rival: se elige con un clic o con las teclas 1 a 6.
+        letrero(pantalla, "RIVAL", PANEL_X, 388, 19, ORO)
+        self.botones = []
+        for i, nombre in enumerate(self.OPCIONES):
+            boton = pygame.Rect(PANEL_X, 420 + i * 38, 180, 32)
+            elegido = nombre == Bandera.rival
+            pygame.draw.rect(pantalla, ORO if elegido else (48, 52, 64), boton, border_radius=8)
+            pygame.draw.rect(pantalla, NEGRO, boton, 3, border_radius=8)
+            imagen = fuente(16, carrera=True).render(f"{i + 1}  {nombre.upper()}", True, NEGRO if elegido else BLANCO)
+            pantalla.blit(imagen, (boton.x + 12, boton.centery - imagen.get_height() // 2))
+            self.botones.append(boton)
 
     def dibujar_destino(self, pantalla):
         """Señala a dónde llevar la bandera rival: ruta más corta, marco que late y flecha."""
@@ -908,7 +1007,10 @@ def main():
                     modo = MODOS[evento.key - pygame.K_1]()
                 elif modo is not None:
                     modo.tecla(evento.key)
-            elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and modo is None:
+            elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                if modo is not None:
+                    modo.clic(evento.pos)
+                    continue
                 for i, clase in enumerate(MODOS):
                     if rectangulo_del_menu(i).collidepoint(evento.pos):
                         modo = clase()
