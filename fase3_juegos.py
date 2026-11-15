@@ -76,12 +76,19 @@ def heuristica(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
+# Cada búsqueda deja aquí cuántas casillas tuvo que revisar para encontrar su ruta.
+# Es la métrica principal de la fase 1, y en el juego se convierte en tiempo de pensar.
+EXPLORACION = {"casillas": 0}
+
+
 def bfs(cuadricula, inicio, meta):
     """Ruta con menos pasos. No toma en cuenta el costo del terreno."""
+    EXPLORACION["casillas"] = 0
     frontera = deque([inicio])
     padres = {inicio: None}
     while frontera:
         actual = frontera.popleft()
+        EXPLORACION["casillas"] += 1
         if actual == meta:
             return reconstruir(padres, meta)
         for vecino, _ in vecinos(cuadricula, actual):
@@ -93,6 +100,7 @@ def bfs(cuadricula, inicio, meta):
 
 def dfs(cuadricula, inicio, meta):
     """Primera ruta que aparece al avanzar siempre por el último camino abierto. Suele dar muchas vueltas."""
+    EXPLORACION["casillas"] = 0
     frontera = [inicio]
     padres = {inicio: None}
     explorados = set()
@@ -101,6 +109,7 @@ def dfs(cuadricula, inicio, meta):
         if actual in explorados:
             continue
         explorados.add(actual)
+        EXPLORACION["casillas"] += 1
         if actual == meta:
             return reconstruir(padres, meta)
         for vecino, _ in vecinos(cuadricula, actual):
@@ -112,6 +121,7 @@ def dfs(cuadricula, inicio, meta):
 
 def dijkstra(cuadricula, inicio, meta):
     """Ruta de menor costo: sale siempre la casilla más barata de alcanzar desde el inicio."""
+    EXPLORACION["casillas"] = 0
     frontera = [(0, inicio)]
     costos = {inicio: 0}
     padres = {inicio: None}
@@ -119,6 +129,7 @@ def dijkstra(cuadricula, inicio, meta):
         costo, actual = heapq.heappop(frontera)
         if costo > costos[actual]:
             continue      # entrada vieja: ya había un camino más barato
+        EXPLORACION["casillas"] += 1
         if actual == meta:
             return reconstruir(padres, meta)
         for vecino, peso in vecinos(cuadricula, actual):
@@ -132,10 +143,12 @@ def dijkstra(cuadricula, inicio, meta):
 
 def voraz(cuadricula, inicio, meta):
     """Ruta que avanza siempre hacia la casilla que parece más cercana a la meta."""
+    EXPLORACION["casillas"] = 0
     frontera = [(heuristica(inicio, meta), inicio)]
     padres = {inicio: None}
     while frontera:
         _, actual = heapq.heappop(frontera)
+        EXPLORACION["casillas"] += 1
         if actual == meta:
             return reconstruir(padres, meta)
         for vecino, _ in vecinos(cuadricula, actual):
@@ -147,6 +160,7 @@ def voraz(cuadricula, inicio, meta):
 
 def a_estrella(cuadricula, inicio, meta):
     """Ruta de menor costo: combina el costo acumulado con el estimado restante."""
+    EXPLORACION["casillas"] = 0
     h = heuristica(inicio, meta)
     frontera = [(h, h, inicio)]
     costos = {inicio: 0}
@@ -157,6 +171,7 @@ def a_estrella(cuadricula, inicio, meta):
         if actual in cerrados:
             continue
         cerrados.add(actual)
+        EXPLORACION["casillas"] += 1
         if actual == meta:
             return reconstruir(padres, meta)
         for vecino, peso in vecinos(cuadricula, actual):
@@ -235,6 +250,7 @@ VELOCIDAD_JUGADOR = 5.0            # casillas de llano por segundo
 VELOCIDAD_RIVAL = 4.4
 CONTACTO = 0.6                     # distancia, en casillas, a la que dos personajes chocan
 CUENTA_ATRAS = 3.0                 # segundos antes de la salida
+SEGUNDOS_POR_CASILLA = 0.008       # tiempo que un rival se queda pensando por cada casilla que explora
 
 CIELO = (28, 34, 48)
 BLANCO = (245, 245, 245)
@@ -309,6 +325,7 @@ class Personaje:
         self.velocidad = velocidad
         self.camino = []      # casillas que le faltan por recorrer
         self.avance = 0.0     # fracción recorrida hacia la siguiente casilla
+        self.pensando = 0.0   # segundos que le faltan para terminar de planear
         self.puntos = 0
 
     def visual(self):
@@ -326,9 +343,15 @@ class Personaje:
         ruta = self.algoritmo(cuadricula, origen, objetivo)
         resto = ruta[1:] if ruta else []
         self.camino = ([origen] if origen != self.posicion else []) + resto
+        # Planear no es gratis: se queda quieto un tiempo proporcional a lo que exploró.
+        # Así un algoritmo que revisa medio tablero pierde frente a uno que va al grano.
+        self.pensando = EXPLORACION["casillas"] * SEGUNDOS_POR_CASILLA
 
     def avanzar(self, dt, cuadricula):
         """Camina por su ruta. Devuelve True cuando acaba de llegar a una casilla."""
+        if self.pensando > 0:
+            self.pensando -= dt      # todavía está pensando la ruta
+            return False
         if not self.camino:
             return False
         f, c = self.camino[0]
@@ -342,7 +365,7 @@ class Personaje:
 
     def regresar(self):
         """Lo devuelve de golpe a su casilla de salida."""
-        self.posicion, self.camino, self.avance = self.base, [], 0.0
+        self.posicion, self.camino, self.avance, self.pensando = self.base, [], 0.0, 0.0
 
 
 class Modo:
@@ -492,6 +515,14 @@ class Modo:
         fondo = imagen.get_rect(center=(x, y - p(40))).inflate(8, 2)
         pygame.draw.rect(pantalla, borde, fondo, border_radius=4)
         pantalla.blit(imagen, imagen.get_rect(center=(x, y - p(40))))
+        if personaje.pensando > 0:
+            # Globo de puntos suspensivos sobre quien está pensando la ruta.
+            globo = pygame.Rect(0, 0, p(30), p(16))
+            globo.center = (x, y - p(58))
+            pygame.draw.rect(pantalla, BLANCO, globo, border_radius=6)
+            pygame.draw.rect(pantalla, NEGRO, globo, 2, border_radius=6)
+            for i in (-1, 0, 1):
+                pygame.draw.circle(pantalla, NEGRO, (globo.centerx + i * p(8), globo.centery), max(1, p(2)))
 
     def dibujar_objetos(self, pantalla, extras=()):
         """Dibuja muros, árboles y los objetos del modo, ordenados por profundidad.
