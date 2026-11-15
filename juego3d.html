@@ -1434,7 +1434,8 @@ function cohete(pos, colores, grande, retraso = 0) {
 }
 
 // Estilos de animación: cada algoritmo se mueve y festeja según su "personalidad".
-// camina recibe la fase de la zancada (dos zancadas por casilla) y festeja el compás del baile.
+// camina recibe la fase de la zancada (dos zancadas por casilla) y un signo que se invierte en
+// cada casilla; festeja recibe el compás del baile.
 // Una pose puede fijar: salto, pierna (zancada), abre (piernas separadas), brazos [izq, der]
 // (giro adelante o atrás; negativo es al frente), alza [izq, der] (brazo levantado hacia el
 // lado), inclina (cuerpo al frente), ladeo, gira (vueltas por segundo) y mece.
@@ -1465,12 +1466,23 @@ const ESTILOS = {
     camina: z => ({salto: Math.abs(Math.sin(z)) * 0.19, pierna: Math.sin(z) * 1.25, brazos: [-1.45 + Math.sin(z * 2) * 0.15, -1.45 - Math.sin(z * 2) * 0.15], alza: [0.1, 0.1], inclina: 0.3}),
     festeja: c => ({salto: Math.abs(Math.sin(c * 0.8)) * 0.5, alza: [2.9, 2.9], brazos: [Math.sin(c * 3) * 0.2, -Math.sin(c * 3) * 0.2], pierna: Math.sin(c * 0.8) * 0.25}),
   },
-  // A* sabe hacia dónde queda la meta: corre con paso largo y firme señalándola con un brazo, y
-  // festeja con los pies en el suelo, apuntando al cielo con un brazo y luego con el otro.
+  // A* avanza a saltos largos, uno por casilla: sale parado con las piernas juntas, en el aire
+  // las abre una al frente y otra atrás con los brazos al contrario, y cae otra vez con las dos
+  // piernas juntas. Festeja con el baile del robot: cuatro poses fijas que cambia a saltos,
+  // girando el cuerpo en seco entre una y otra.
   'A*': {
-    camina: z => ({salto: Math.abs(Math.sin(z)) * 0.07, pierna: Math.sin(z) * 0.95, brazos: [-1.5, Math.sin(z) * 0.9], alza: [0.05, 0.1], inclina: 0.16}),
-    festeja: c => { const lado = Math.sin(c * 0.5), arriba = Math.max(0, lado), otro = Math.max(0, -lado);
-      return {salto: Math.abs(Math.sin(c)) * 0.09, abre: 0.3, ladeo: lado * 0.2, alza: [0.4 + arriba * 2.3, 0.4 + otro * 2.3], brazos: [0, 0]}; },
+    camina: (z, lado) => { const aire = Math.abs(Math.sin(z / 2));      // 0 en el suelo, 1 en lo más alto del salto
+      // 'lado' alterna en cada casilla: un salto va con la pierna izquierda al frente y el siguiente con la derecha.
+      return {salto: aire * 0.52, pierna: lado * aire * 1.5, brazos: [-lado * aire * 2.0, lado * aire * 2.0], alza: [0.12 + aire * 0.3, 0.12 + aire * 0.3], inclina: aire * 0.3}; },
+    festeja: c => {
+      const tiempo = c / 4.5, n = Math.floor(tiempo) % 4, golpe = tiempo % 1 < 0.2 ? 0.16 : 0;      // un brinco al cambiar de pose
+      return [
+        {salto: golpe, brazos: [-1.57, 0.7], alza: [0, 0.3], mece: -1.0, inclina: 0.28, abre: 0.3},
+        {salto: golpe, brazos: [0, -1.57], alza: [2.5, 0], mece: 0, ladeo: 0.38, abre: 0.45},
+        {salto: golpe, brazos: [0.7, -1.57], alza: [0.3, 0], mece: 1.0, inclina: 0.28, abre: 0.3},
+        {salto: golpe, brazos: [-1.57, 0], alza: [0, 2.5], mece: 0, ladeo: -0.38, abre: 0.45},
+      ][n];
+    },
   },
 };
 ESTILOS.Rojo = ESTILOS.base;
@@ -1589,7 +1601,11 @@ function sincronizar(modo, dt) {
     } else if (p.pensando > 0) {
       // Pensando la ruta: quieto, con una mano en la cabeza y meciéndose.
       pose = {brazos: [-2.5, 0], alza: [0.55, 0.12], ladeo: Math.sin(t * 7 + p.id) * 0.1};
-    } else if (caminando) pose = estilo.camina(p.avance * Math.PI * 2);
+    } else if (caminando) {
+      // Casillas vecinas siempre tienen paridad distinta, así que 'lado' cambia de signo en cada casilla.
+      const lado = (p.camino[0][0] + p.camino[0][1]) % 2 ? 1 : -1;
+      pose = estilo.camina(p.avance * Math.PI * 2, lado);
+    }
     pose = Object.assign({salto: 0, pierna: 0, abre: 0, brazos: [0, 0], alza: [0.12, 0.12], inclina: 0, ladeo: 0, gira: 0}, pose);
     g.position.y = pose.salto - (modo.cuad[Math.round(f)][Math.round(c)] === 'a' ? 0.14 : 0);
     // Cada articulación gira poco a poco hacia su ángulo, para que el cambio de pose no sea brusco.
