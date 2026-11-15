@@ -28,6 +28,7 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 .fila .ficha{width:30px;height:30px;border-radius:50%;border:4px solid var(--carbon);box-shadow:0 0 0 3px var(--blanco)}
 .fila .nombre{font-size:22px;min-width:92px}
 .fila .avance{font-size:19px;color:var(--oro)}
+.fila .avance.salta{animation:saltarContador .3s cubic-bezier(.2,1.6,.4,1)}
 .fila.yo .nombre{color:var(--oro)}
 .fila.listo .avance{color:#7CFF8A}
 #lugar{position:absolute;left:26px;bottom:74px;font-size:132px;-webkit-text-stroke-width:12px}
@@ -35,7 +36,9 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 #lugar.primero{color:var(--oro)}
 #contador{position:absolute;right:26px;top:18px;text-align:right}
 #contador small{display:block;font-size:22px;color:var(--oro)}
-#contador b{display:block;font-size:76px;-webkit-text-stroke-width:10px}
+#contador b{display:block;font-size:76px;-webkit-text-stroke-width:10px;transform-origin:right center}
+#contador b.salta{animation:saltarContador .3s cubic-bezier(.2,1.6,.4,1)}
+@keyframes saltarContador{from{transform:scale(1.3)}}
 #tiempo{position:absolute;right:26px;top:128px;font-size:30px}
 #marcador{position:absolute;left:50%;top:16px;transform:translateX(-50%) skewX(-9deg);display:flex;align-items:center;gap:14px}
 #marcador .lado{display:flex;align-items:center;gap:10px;padding:6px 18px;border:5px solid var(--carbon);border-radius:14px;box-shadow:5px 5px 0 var(--carbon)}
@@ -43,10 +46,20 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 #marcador .lado b{font-size:56px}
 #marcador .entre{font-size:30px;color:var(--oro)}
 #aviso{position:absolute;left:50%;top:118px;transform:translateX(-50%) skewX(-9deg);font-size:30px;color:var(--oro);white-space:nowrap}
-#rivales{position:absolute;left:20px;top:20px;display:flex;flex-direction:column;gap:7px;align-items:flex-start;pointer-events:auto}
+#rivales{position:absolute;left:20px;top:20px;display:flex;gap:22px;align-items:flex-start;pointer-events:auto}
+#rivales div{display:flex;flex-direction:column;gap:7px;align-items:flex-start}
 #rivales b{font-size:20px;color:var(--oro);transform:skewX(-9deg)}
 #rivales button{font:inherit;font-family:var(--titular);font-style:italic;font-size:17px;color:var(--blanco);background:var(--carbon);border:4px solid var(--carbon);border-radius:10px;padding:3px 12px;cursor:pointer;transform:skewX(-9deg);box-shadow:3px 3px 0 var(--carbon);opacity:.78}
 #rivales button.elegido{background:var(--oro);color:var(--carbon);opacity:1;transform:skewX(-9deg) scale(1.1);transform-origin:left center}
+.boton{font:inherit;font-family:var(--titular);font-style:italic;font-size:18px;color:var(--carbon);background:var(--oro);border:5px solid var(--carbon);border-radius:12px;padding:5px 16px;cursor:pointer;box-shadow:4px 4px 0 var(--carbon);transform:skewX(-9deg);pointer-events:auto}
+.boton:hover,.boton:focus-visible{background:var(--blanco);outline:none}
+.boton.activo{background:var(--blanco)}
+#acercar{position:absolute;right:26px;bottom:60px}
+#flechas{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);display:flex;align-items:center;gap:14px}
+#flechas span{font-size:20px;color:var(--oro)}
+#fin.chico{justify-content:flex-start}
+#fin.chico h3{font-size:clamp(30px,4vw,52px);-webkit-text-stroke-width:8px}
+#fin.chico p{font-size:17px;margin-top:4px}
 #cuenta{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-size:230px;-webkit-text-stroke-width:16px;color:var(--oro)}
 .salta{animation:saltar .45s cubic-bezier(.2,1.6,.4,1)}
 @keyframes saltar{from{transform:scale(2.1);opacity:0}}
@@ -67,13 +80,17 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 @keyframes barrer{to{clip-path:inset(0 0 0 100%);transform:translateX(90px);opacity:0}}
 #menu h2{font-size:46px;margin:0 0 26px;-webkit-text-stroke-width:9px}
 #menu p{margin:26px 0 0;font-size:19px;color:var(--oro);-webkit-text-stroke-width:5px}
-#modos{display:flex;flex-wrap:wrap;gap:26px;justify-content:center}
-#modos button{font:inherit;width:min(380px,86vw);text-align:left;background:var(--blanco);color:var(--carbon);border:6px solid var(--carbon);border-radius:18px;padding:16px 22px;cursor:pointer;box-shadow:8px 8px 0 var(--carbon);transform:skewX(-7deg);transition:transform .12s, box-shadow .12s, opacity .3s}
+#modos{display:flex;flex-wrap:wrap;gap:20px 24px;justify-content:center;max-width:1240px}
+#modos button{font:inherit;width:min(370px,86vw);text-align:left;background:var(--blanco);color:var(--carbon);border:6px solid var(--carbon);border-radius:18px;padding:16px 22px;cursor:pointer;box-shadow:8px 8px 0 var(--carbon);transform:skewX(-7deg);transition:transform .12s, box-shadow .12s, opacity .3s}
 #modos button:hover,#modos button:focus-visible{transform:skewX(-7deg) translate(-3px,-3px) scale(1.03);box-shadow:12px 12px 0 var(--carbon);outline:none}
-#modos b{display:block;font-family:var(--titular);font-style:italic;font-size:30px;color:var(--rojo)}
+#modos b{display:block;font-family:var(--titular);font-style:italic;font-size:24px;color:var(--rojo)}
 #modos span{display:block;font-size:16px;font-weight:700;margin-top:4px}
 #menu.entrando #modos button{animation:entrar .5s cubic-bezier(.2,1.4,.4,1) backwards}
-#menu.entrando #modos button:nth-child(2){animation-delay:.1s}
+#menu.entrando #modos button:nth-child(2){animation-delay:.08s}
+#menu.entrando #modos button:nth-child(3){animation-delay:.16s}
+#menu.entrando #modos button:nth-child(4){animation-delay:.24s}
+#menu.entrando #modos button:nth-child(5){animation-delay:.32s}
+#menu.entrando #modos button:nth-child(6){animation-delay:.4s}
 @keyframes entrar{from{opacity:0;transform:skewX(-7deg) translateY(40px) scale(.8)}}
 #menu.saliendo h2,#menu.saliendo p,#menu.saliendo button{opacity:0;transition:opacity .3s}
 #fin{pointer-events:none;justify-content:flex-end;padding-bottom:12vh}
@@ -96,6 +113,8 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
   <div id="marcador" class="carrera"></div>
   <div id="aviso" class="carrera"></div>
   <div id="rivales"></div>
+  <button id="acercar" class="boton">ACERCAR (C)</button>
+  <div id="flechas"><button class="boton" data-sentido="-1" aria-label="Ver al anterior">&#9664;</button><span class="carrera">VER A LOS DEMÁS</span><button class="boton" data-sentido="1" aria-label="Ver al siguiente">&#9654;</button></div>
   <div id="cuenta" class="carrera"></div>
 </div>
 <div id="ayuda" class="carrera" hidden></div>
@@ -108,7 +127,7 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 <div id="menu" class="capa" hidden>
   <h2 class="carrera">ELIGE UN MODO</h2>
   <div id="modos"></div>
-  <p class="carrera">CLIC O TECLAS 1 Y 2</p>
+  <p class="carrera">CLIC O TECLAS 1 A 6</p>
 </div>
 <canvas id="salto" hidden></canvas>
 <div id="sinVista" class="carrera" hidden>No se pudo iniciar la vista 3D. Revisa la conexión a internet o que el navegador permita WebGL.</div>
@@ -158,6 +177,10 @@ function reconstruir(padres, meta) {
 }
 const heuristica = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
 
+// Cada búsqueda deja aquí cuántas casillas tuvo que revisar para encontrar su ruta.
+// Es la métrica principal de la fase 1, y en el juego se convierte en tiempo de pensar.
+let casillasExploradas = 0;
+
 // Cola de prioridad sencilla: una lista que se mantiene ordenada por su primer valor.
 function meter(cola, elemento) {
   let i = cola.length;
@@ -166,34 +189,40 @@ function meter(cola, elemento) {
 }
 
 function bfs(cuad, inicio, meta) {
+  casillasExploradas = 0;
   // Ruta con menos pasos. No toma en cuenta el costo del terreno.
   const frontera = [inicio], padres = new Map([[K(inicio), null]]);
   for (let i = 0; i < frontera.length; i++) {
     const actual = frontera[i];
+    casillasExploradas++;
     if (igual(actual, meta)) return reconstruir(padres, meta);
     for (const [v] of vecinos(cuad, actual)) if (!padres.has(K(v))) { padres.set(K(v), actual); frontera.push(v); }
   }
   return null;
 }
 function dfs(cuad, inicio, meta) {
+  casillasExploradas = 0;
   // Primera ruta que aparece al avanzar siempre por el último camino abierto. Suele dar muchas vueltas.
   const frontera = [inicio], padres = new Map([[K(inicio), null]]), explorados = new Set();
   while (frontera.length) {
     const actual = frontera.pop();
     if (explorados.has(K(actual))) continue;
     explorados.add(K(actual));
+    casillasExploradas++;
     if (igual(actual, meta)) return reconstruir(padres, meta);
     for (const [v] of vecinos(cuad, actual)) if (!explorados.has(K(v))) { padres.set(K(v), actual); frontera.push(v); }
   }
   return null;
 }
 function dijkstra(cuad, inicio, meta) {
+  casillasExploradas = 0;
   // Ruta de menor costo: sale siempre la casilla más barata de alcanzar desde el inicio.
   const frontera = [[0, 0, inicio]], costos = new Map([[K(inicio), 0]]), padres = new Map([[K(inicio), null]]);
   let n = 0;
   while (frontera.length) {
     const [costo, , actual] = frontera.shift();
     if (costo > costos.get(K(actual))) continue;      // entrada vieja: ya había un camino más barato
+    casillasExploradas++;
     if (igual(actual, meta)) return reconstruir(padres, meta);
     for (const [v, peso] of vecinos(cuad, actual)) {
       const nuevo = costo + peso;
@@ -203,17 +232,20 @@ function dijkstra(cuad, inicio, meta) {
   return null;
 }
 function voraz(cuad, inicio, meta) {
+  casillasExploradas = 0;
   // Avanza siempre hacia la casilla que parece más cercana a la meta.
   const frontera = [[heuristica(inicio, meta), 0, inicio]], padres = new Map([[K(inicio), null]]);
   let n = 0;
   while (frontera.length) {
     const actual = frontera.shift()[2];
+    casillasExploradas++;
     if (igual(actual, meta)) return reconstruir(padres, meta);
     for (const [v] of vecinos(cuad, actual)) if (!padres.has(K(v))) { padres.set(K(v), actual); meter(frontera, [heuristica(v, meta), ++n, v]); }
   }
   return null;
 }
 function aEstrella(cuad, inicio, meta) {
+  casillasExploradas = 0;
   // Ruta de menor costo: combina el costo acumulado con el estimado restante.
   const h0 = heuristica(inicio, meta);
   const frontera = [[h0, h0, inicio]], costos = new Map([[K(inicio), 0]]), padres = new Map([[K(inicio), null]]), cerrados = new Set();
@@ -221,6 +253,7 @@ function aEstrella(cuad, inicio, meta) {
     const actual = frontera.shift()[2];
     if (cerrados.has(K(actual))) continue;
     cerrados.add(K(actual));
+    casillasExploradas++;
     if (igual(actual, meta)) return reconstruir(padres, meta);
     for (const [v, peso] of vecinos(cuad, actual)) {
       const nuevo = costos.get(K(actual)) + peso;
@@ -271,6 +304,17 @@ function terrenoAlAzar(libres, cuantos) {
   return lista;
 }
 
+function tablerosEnFilas(base, cuantos) {
+  // Texto de un mapa con varias copias del mismo tablero, en filas de tres separadas
+  // por franjas vacías. Si la última fila queda incompleta, el hueco no tiene tablero.
+  const ancho = base[0].length, hueco = '_'.repeat(ancho), filas = [];
+  for (let primero = 0; primero < cuantos; primero += 3) {
+    if (primero) filas.push('_'.repeat(3 * ancho + 2));
+    base.forEach(fila => filas.push([0, 1, 2].map(k => primero + k < cuantos ? fila : hueco).join('_')));
+  }
+  return filas.join('\n');
+}
+
 // Cada tipo de rival: nombre, algoritmo y color.
 // Son los cinco algoritmos comparados en la fase 1.
 const RIVALES = [['BFS', bfs, AMBAR], ['DFS', dfs, TURQUESA], ['Dijkstra', dijkstra, AZUL], ['Voraz', voraz, VIOLETA], ['A*', aEstrella, CARBON]];
@@ -279,12 +323,13 @@ const RIVALES = [['BFS', bfs, AMBAR], ['DFS', dfs, TURQUESA], ['Dijkstra', dijks
 // Piezas comunes a los dos modos
 // ---------------------------------------------------------------------------
 const VELOCIDAD_JUGADOR = 5.0, VELOCIDAD_RIVAL = 4.4, CONTACTO = 0.6, CUENTA_ATRAS = 3;
+const SEGUNDOS_POR_CASILLA = 0.008;      // tiempo que un rival se queda pensando por cada casilla que explora
 let siguienteId = 1, versionMapa = 0;
 
 class Personaje {
   // Cualquiera que camina por el mapa: el jugador o un rival.
   constructor(posicion, color, nombre, algoritmo, velocidad) {
-    Object.assign(this, {id: siguienteId++, posicion, base: posicion, color, nombre, algoritmo, velocidad, camino: [], avance: 0});
+    Object.assign(this, {id: siguienteId++, posicion, base: posicion, color, nombre, algoritmo, velocidad, camino: [], avance: 0, pensando: 0, porCasilla: SEGUNDOS_POR_CASILLA});
   }
   visual() {
     // Posición interpolada mientras camina entre dos casillas.
@@ -297,9 +342,14 @@ class Personaje {
     const origen = this.camino.length && this.avance > 0 ? this.camino[0] : this.posicion;
     const ruta = this.algoritmo(cuad, origen, objetivo);
     this.camino = (igual(origen, this.posicion) ? [] : [origen]).concat(ruta ? ruta.slice(1) : []);
+    // Planear no es gratis: se queda quieto un tiempo proporcional a lo que exploró.
+    // Así un algoritmo que revisa medio tablero pierde frente a uno que va al grano.
+    this.pensando = casillasExploradas * this.porCasilla;
+    this.exploradas = (this.exploradas || 0) + casillasExploradas;
   }
   avanzar(dt, cuad) {
     // Devuelve true cuando acaba de llegar a una casilla. El terreno caro se cruza más despacio.
+    if (this.pensando > 0) { this.pensando -= dt; return false; }      // todavía está pensando la ruta
     if (!this.camino.length) return false;
     const [f, c] = this.camino[0];
     this.avance += dt * this.velocidad / COSTOS[cuad[f][c]];
@@ -308,7 +358,7 @@ class Personaje {
     this.posicion = this.camino.shift();
     return true;
   }
-  regresar() { this.posicion = this.base; this.camino = []; this.avance = 0; }
+  regresar() { this.posicion = this.base; this.camino = []; this.avance = 0; this.pensando = 0; }
 }
 
 class Modo {
@@ -381,13 +431,10 @@ class AtrapaGemas extends Modo {
   // que todos enfrentan exactamente lo mismo y lo único que cambia es el algoritmo.
   cargar() {
     const base = MAPA_GEMAS.trim().split('\n'), ancho = base[0].length;
-    // Seis copias en dos filas de tres, separadas por franjas vacías.
-    const filas = [];
-    for (let bloque = 0; bloque < 2; bloque++) {
-      base.forEach(fila => filas.push([fila, fila, fila].join('_')));
-      if (bloque === 0) filas.push('_'.repeat(3 * ancho + 2));
-    }
-    this.usarMapa(filas.join('\n'));
+    // Un tablero por competidor, en filas de tres separadas por franjas vacías. Como
+    // espectador compiten solo los cinco algoritmos, así que un hueco queda sin tablero.
+    const quienes = [...(this.soloVer ? [] : [['Tú', aEstrella, ROJO, VELOCIDAD_JUGADOR]]), ...RIVALES.map(r => [...r, VELOCIDAD_RIVAL])];
+    this.usarMapa(tablerosEnFilas(base, quienes.length));
     this.total = 8;
     // Todo se sortea una vez, en coordenadas del tablero base, y vale para los seis.
     const local = leerMapa(MAPA_GEMAS), inicio = local.puntos.I[0], llano = [];
@@ -412,14 +459,15 @@ class AtrapaGemas extends Modo {
       }
       return [];
     });
-    const quienes = [['Tú', aEstrella, ROJO, VELOCIDAD_JUGADOR], ...RIVALES.map(r => [...r, VELOCIDAD_RIVAL])];
     this.todos = this.puntos.I.map((pos, k) => {
       const p = new Personaje(pos, quienes[k][2], quienes[k][0], quienes[k][1], quienes[k][3]);
       // El desvío traslada las coordenadas del tablero base al tablero de este competidor.
       p.desvio = [pos[0] - inicio[0], pos[1] - inicio[1]]; p.puntos = 0; p.tiempoFinal = null;
       return p;
     });
-    this.jugador = this.todos[0]; this.rivales = this.todos.slice(1);
+    // Sin jugador, todos son rivales manejados por la CPU.
+    this.jugador = this.soloVer ? null : this.todos[0];
+    this.rivales = this.soloVer ? this.todos : this.todos.slice(1);
     this.reloj = 0; this.llegadas = [];
     this.colocarTerreno();
     this.rivales.forEach(r => r.irA(this.cuad, this.gemaDe(r)));
@@ -439,7 +487,7 @@ class AtrapaGemas extends Modo {
   }
   actualizar(dt) {
     this.reloj += dt;
-    this.moverJugador(this.jugador, dt);
+    if (this.jugador && this.jugador.tiempoFinal === null) this.moverJugador(this.jugador, dt);
     this.rivales.forEach(r => r.avanzar(dt, this.cuad));
     for (const p of this.todos) {
       const gema = this.gemaDe(p);
@@ -450,7 +498,9 @@ class AtrapaGemas extends Modo {
       if (p.puntos === this.total) {
         p.tiempoFinal = this.reloj; this.llegadas.push(p);
         this.emitir('meta', gema, p.color, {quien: p.id, esJugador});
-        if (esJugador) return this.cerrar();
+        // El resultado se anuncia cuando termina el jugador o, si solo se mira, cuando llega el primero.
+        // Los demás siguen corriendo para que se pueda ver cómo acaban.
+        if (esJugador || (this.soloVer && this.llegadas.length === 1)) this.cerrar();
         continue;
       }
       // Al tomar la gema cambia el terreno de su tablero y hay que volver a planear la ruta.
@@ -466,6 +516,7 @@ class AtrapaGemas extends Modo {
   cerrar() {
     const lugar = this.llegadas.indexOf(this.jugador) + 1;
     const tabla = this.llegadas.map((p, i) => `${i + 1}. ${p.nombre} ${p.tiempoFinal.toFixed(1)} s`).join('   ');
+    if (this.soloVer) return this.terminar(true, 'GANÓ ' + this.llegadas[0].nombre.toUpperCase(), tabla, this.llegadas[0].visual());
     this.terminar(lugar === 1, lugar === 1 ? '¡GANASTE!' : `LUGAR ${lugar}`, tabla, this.jugador.visual());
   }
   escena() {
@@ -479,16 +530,17 @@ class AtrapaGemas extends Modo {
   hud() {
     const orden = this.orden();
     return {
-      tipo: 'carrera', lugar: orden.indexOf(this.jugador) + 1, tiempo: this.reloj,
-      contador: ['GEMAS', `${this.jugador.puntos}/${this.total}`],
+      tipo: 'carrera', lugar: this.jugador ? orden.indexOf(this.jugador) + 1 : null, tiempo: this.reloj,
+      contador: this.jugador ? ['GEMAS', `${this.jugador.puntos}/${this.total}`] : ['VA GANANDO', orden[0].nombre.toUpperCase()],
       filas: orden.map(p => ({id: p.id, nombre: p.nombre.toUpperCase(), color: p.color, yo: p === this.jugador, listo: p.tiempoFinal !== null,
         avance: p.tiempoFinal !== null ? p.tiempoFinal.toFixed(1) + ' s' : `${p.puntos}/${this.total}`})),
     };
   }
 }
+AtrapaGemas.prototype.sigueTrasFinal = true;
 AtrapaGemas.titulo = 'ATRAPA GEMAS';
 AtrapaGemas.resumen = 'Mismo tablero, mismas gemas y mismo terreno cambiante para todos. Termina antes que los cinco algoritmos.';
-AtrapaGemas.ayuda = 'FLECHAS O WASD   TU TABLERO ES EL DE ARRIBA A LA IZQUIERDA   R: REINICIAR   ESC: MENÚ';
+AtrapaGemas.ayuda = 'FLECHAS O WASD   C: ACERCAR LA CÁMARA   TU TABLERO ES EL DE ARRIBA A LA IZQUIERDA   R: REINICIAR   ESC: MENÚ';
 
 // ---------------------------------------------------------------------------
 // Modo 2: captura la bandera
@@ -516,8 +568,10 @@ class Bandera extends Modo {
   cargar() {
     this.usarMapa(MAPA_BANDERA);
     this.metaPuntos = 3;
-    this.jugador = new Personaje(this.puntos.I[0], ROJO, 'Tú', aEstrella, VELOCIDAD_JUGADOR);
+    // Como espectador, el lado izquierdo también lo maneja un algoritmo y conserva el color rojo.
+    this.jugador = this.soloVer ? this.nuevoRival(this.puntos.I[0], Bandera.izquierda, ROJO) : new Personaje(this.puntos.I[0], ROJO, 'Tú', aEstrella, VELOCIDAD_JUGADOR);
     this.cpu = this.nuevoRival(this.puntos['3'][0]);
+    this.ganador = null;
     for (const p of [this.jugador, this.cpu]) { p.lleva = false; p.puntos = 0; }
     this.mitad = Math.floor(this.columnas / 2);
     // Se sortea una sola secuencia de posiciones, en la mitad del jugador. La bandera
@@ -531,15 +585,20 @@ class Bandera extends Modo {
     this.colocarBanderas();
     this.cambiarMapa();
   }
-  nuevoRival(posicion) {
-    // Crea a la CPU con el algoritmo elegido. En 'Azar' se sortea uno cualquiera.
-    const opciones = RIVALES.filter(r => r[0] === Bandera.rival);
+  nuevoRival(posicion, eleccion = Bandera.rival, colorFijo) {
+    // Crea a un personaje de la CPU con el algoritmo elegido. En 'Azar' se sortea uno cualquiera.
+    const opciones = RIVALES.filter(r => r[0] === eleccion);
     const [nombre, algoritmo, color] = opciones.length ? opciones[0] : RIVALES[Math.floor(Math.random() * RIVALES.length)];
-    return new Personaje(posicion, color, nombre, algoritmo, 4.3);
+    return new Personaje(posicion, colorFijo || color, nombre, algoritmo, 4.3);
+  }
+  elegir(lado, indice) {
+    // Cambia el algoritmo de un lado y empieza una partida nueva.
+    Bandera[lado] = Bandera.OPCIONES[indice];
+    this.cargar();
   }
   tecla(t) {
-    // Las teclas 1 a 6 eligen contra qué algoritmo jugar y empiezan una partida nueva.
-    if (t >= '1' && t <= String(Bandera.OPCIONES.length)) { Bandera.rival = Bandera.OPCIONES[Number(t) - 1]; this.cargar(); }
+    // Las teclas 1 a 6 eligen el algoritmo del lado derecho.
+    if (t >= '1' && t <= String(Bandera.OPCIONES.length)) this.elegir('rival', Number(t) - 1);
     else super.tecla(t);
   }
   espejo(x) { return [x[0], this.columnas - 1 - x[1]]; }
@@ -567,13 +626,20 @@ class Bandera extends Modo {
       if ([...claves, ...cerca].every(k => zona.has(K(k)))) return this.ponerTerreno(lista);
     }
   }
-  objetivoCpu() {
-    if (this.cpu.lleva) return this.cpu.bandera;            // ya la tiene: a casa
-    if (this.jugador.lleva) return this.jugador.posicion;   // le robaron: a perseguir
-    return this.jugador.bandera;                            // nada en juego: a robar
+  objetivoDe(personaje, rival) {
+    if (personaje.lleva) return personaje.bandera;     // ya la tiene: a casa
+    if (rival.lleva) return rival.posicion;            // le robaron: a perseguir
+    return rival.bandera;                              // nada en juego: a robar
+  }
+  moverCpu(personaje, rival, dt) {
+    personaje.avanzar(dt, this.cuad);
+    // Solo vuelve a planear cuando cambia su objetivo o el terreno. Si planeara en cada casilla,
+    // un algoritmo como DFS elegiría un camino distinto a cada paso y no llegaría nunca.
+    const objetivo = this.objetivoDe(personaje, rival), plan = K(objetivo) + ':' + this.versionTerreno;
+    if (!personaje.camino.length || (personaje.avance === 0 && personaje.plan !== plan)) { personaje.irA(this.cuad, objetivo); personaje.plan = plan; }
   }
   revisar(personaje, rival) {
-    const esJugador = personaje === this.jugador;
+    const esJugador = !this.soloVer && personaje === this.jugador;
     if (igual(personaje.posicion, rival.bandera) && !personaje.lleva) {
       personaje.lleva = true;
       this.emitir('robo', rival.bandera, rival.color, {quien: personaje.id, esJugador});
@@ -585,10 +651,11 @@ class Bandera extends Modo {
       personaje.lleva = rival.lleva = false;
       this.ronda++;
       this.colocarBanderas();
-      if (Bandera.rival === 'Azar') {
-        // En el modo al azar la CPU cambia de algoritmo después de cada punto.
-        const anterior = this.cpu;
-        this.cpu = Object.assign(this.nuevoRival(anterior.posicion), {base: anterior.base, puntos: anterior.puntos, lleva: false, bandera: anterior.bandera});
+      // En el modo al azar, quien juega al azar cambia de algoritmo después de cada punto.
+      for (const [lado, eleccion, color] of [['cpu', Bandera.rival], ['jugador', this.soloVer ? Bandera.izquierda : null, ROJO]]) {
+        if (eleccion !== 'Azar') continue;
+        const anterior = this[lado];
+        this[lado] = Object.assign(this.nuevoRival(anterior.posicion, eleccion, color), {base: anterior.base, puntos: anterior.puntos, lleva: false, bandera: anterior.bandera});
       }
       this.cambiarMapa();
     }
@@ -604,53 +671,239 @@ class Bandera extends Modo {
     this.cambiarMapa();
   }
   actualizar(dt) {
+    if (this.soloVer) this.moverCpu(this.jugador, this.cpu, dt); else this.moverJugador(this.jugador, dt);
+    this.moverCpu(this.cpu, this.jugador, dt);
+    // Tras un punto en modo al azar los personajes pueden ser otros: siempre se leen de nuevo.
+    for (const lado of ['jugador', 'cpu']) {
+      const p = this[lado], rival = this[lado === 'cpu' ? 'jugador' : 'cpu'];
+      if (!p.camino.length || p.avance === 0) this.revisar(p, rival);
+    }
     const j = this.jugador, cpu = this.cpu;
-    this.moverJugador(j, dt);
-    cpu.avanzar(dt, this.cuad);
-    // La CPU solo vuelve a planear cuando cambia su objetivo o el terreno. Si planeara en cada
-    // casilla, un algoritmo como DFS elegiría un camino distinto a cada paso y no llegaría nunca.
-    const objetivo = this.objetivoCpu(), plan = K(objetivo) + ':' + this.versionTerreno;
-    if (!cpu.camino.length || (cpu.avance === 0 && cpu.plan !== plan)) { cpu.irA(this.cuad, objetivo); cpu.plan = plan; }
-    if (!j.camino.length || j.avance === 0) this.revisar(j, cpu);
-    // En el modo al azar un punto cambia de rival, así que desde aquí se usa this.cpu.
-    if (!this.cpu.camino.length || this.cpu.avance === 0) this.revisar(this.cpu, j);
-    const rival = this.cpu;
     // El choque solo cuenta cuando alguien lleva una bandera: así se defiende la propia.
-    if (distancia(j.visual(), rival.visual()) < CONTACTO && (j.lleva || rival.lleva)) this.choque();
-    if (j.puntos === this.metaPuntos) this.terminar(true, '¡GANASTE!', `${j.puntos} A ${rival.puntos}`, j.visual());
-    else if (rival.puntos === this.metaPuntos) this.terminar(false, 'GANÓ LA CPU', `${rival.puntos} A ${j.puntos}`, rival.visual());
+    if (distancia(j.visual(), cpu.visual()) < CONTACTO && (j.lleva || cpu.lleva)) this.choque();
+    const ganador = [j, cpu].find(p => p.puntos === this.metaPuntos);
+    if (!ganador) return;
+    this.ganador = ganador;
+    const otro = ganador === j ? cpu : j, marcador = `${ganador.puntos} A ${otro.puntos}`;
+    if (this.soloVer) this.terminar(true, 'GANÓ ' + ganador.nombre.toUpperCase(), marcador, ganador.visual());
+    else if (ganador === j) this.terminar(true, '¡GANASTE!', marcador, j.visual());
+    else this.terminar(false, 'GANÓ LA CPU', marcador, cpu.visual());
   }
   escena() {
     const banderas = [];
     for (const [dueno, ladron] of [[this.jugador, this.cpu], [this.cpu, this.jugador]]) {
       banderas.push(ladron.lleva ? {pos: ladron.visual(), color: dueno.color, llevada: true} : {pos: dueno.bandera, color: dueno.color, marco: true});
     }
-    const rutas = [this.cpu];
+    const rutas = this.soloVer ? [this.cpu, this.jugador] : [this.cpu];
     let destino = null;
-    if (this.jugador.lleva) {
+    if (this.jugador.lleva && !this.soloVer) {
       // Con la bandera rival en las manos se marca a dónde hay que llevarla y la ruta más corta hasta ahí.
       destino = this.jugador.bandera;
       const guia = aEstrella(this.cuad, this.jugador.camino[0] || this.jugador.posicion, destino);
       if (guia) rutas.push({color: DORADO, camino: guia.slice(1)});
     }
-    return {personajes: [{p: this.cpu, etiqueta: this.cpu.nombre, baila: this.estado === 'perdido'}, {p: this.jugador, etiqueta: 'Tú', baila: this.estado === 'ganado'}], banderas, ...this.vistaTerreno(), rutas, destino, lineaMedia: this.mitad};
+    return {personajes: [{p: this.cpu, etiqueta: this.cpu.nombre, baila: this.ganador === this.cpu}, {p: this.jugador, etiqueta: this.soloVer ? this.jugador.nombre : 'Tú', baila: this.ganador === this.jugador}], banderas, ...this.vistaTerreno(), rutas, destino, lineaMedia: this.mitad};
   }
   hud() {
+    const j = this.jugador, cpu = this.cpu;
+    let aviso = '';
+    if (this.soloVer) aviso = [j, cpu].filter(p => p.lleva).map(p => p.nombre.toUpperCase() + ' LLEVA BANDERA').join('   ');
+    else if (j.lleva) aviso = cpu.lleva ? '¡LLÉVALA A TU BANDERA ANTES QUE LA CPU!' : '¡LLÉVALA A TU BANDERA!';
+    else if (cpu.lleva) aviso = '¡TE ROBARON LA BANDERA!';
     return {
-      tipo: 'duelo', meta: this.metaPuntos,
-      lados: [{nombre: 'TÚ', color: ROJO, puntos: this.jugador.puntos}, {nombre: 'CPU ' + this.cpu.nombre.toUpperCase(), color: this.cpu.color, puntos: this.cpu.puntos}],
-      opciones: Bandera.OPCIONES, elegido: Bandera.rival,
-      aviso: this.jugador.lleva && this.cpu.lleva ? '¡LLÉVALA A TU BANDERA ANTES QUE LA CPU!' : this.jugador.lleva ? '¡LLÉVALA A TU BANDERA!' : this.cpu.lleva ? '¡TE ROBARON LA BANDERA!' : '',
+      tipo: 'duelo', meta: this.metaPuntos, aviso,
+      lados: [{nombre: this.soloVer ? j.nombre.toUpperCase() : 'TÚ', color: ROJO, puntos: j.puntos}, {nombre: (this.soloVer ? '' : 'CPU ') + cpu.nombre.toUpperCase(), color: cpu.color, puntos: cpu.puntos}],
+      // Selectores de algoritmo: el del lado izquierdo solo existe cuando se mira.
+      selectores: [...(this.soloVer ? [{lado: 'izquierda', titulo: 'ROJO', elegido: Bandera.izquierda}] : []), {lado: 'rival', titulo: 'RIVAL', elegido: Bandera.rival}],
+      opciones: Bandera.OPCIONES,
     };
   }
 }
 Bandera.titulo = 'CAPTURA LA BANDERA';
 Bandera.OPCIONES = [...RIVALES.map(r => r[0]), 'Azar'];
-Bandera.rival = 'A*';      // contra quién se juega; se conserva de una partida a otra
+Bandera.rival = 'A*';          // algoritmo del lado derecho; se conserva de una partida a otra
+Bandera.izquierda = 'BFS';     // algoritmo del lado izquierdo cuando solo se mira
 Bandera.resumen = 'Roba la bandera de la CPU y llévala a la tuya. Tú eliges contra qué algoritmo juegas, o lo dejas al azar.';
-Bandera.ayuda = 'FLECHAS O WASD   1 A 6: RIVAL   CHOQUE CON BANDERA: LOS DOS A SU SALIDA   R: REINICIAR   ESC: MENÚ';
+Bandera.ayuda = 'FLECHAS O WASD   C: ACERCAR   1 A 6: RIVAL   CHOQUE CON BANDERA: LOS DOS A SU SALIDA   R: REINICIAR   ESC: MENÚ';
 
-const MODOS = [AtrapaGemas, Bandera];
+// ---------------------------------------------------------------------------
+// Modo 3: maze runner
+// ---------------------------------------------------------------------------
+const CELDAS_ALTO = 10, CELDAS_ANCHO = 15;      // el laberinto mide 10 x 15 celdas: un tablero de 21 x 31 casillas
+const CADA_CAMBIO = 3;           // segundos entre un cambio del laberinto y el siguiente
+const PASILLOS_EXTRA = 22;       // pasillos de más sobre el árbol generador: crean rutas alternativas
+const MUROS_POR_CAMBIO = 8;
+const CELDAS_LENTAS = 30;        // celdas con agua o bosque
+
+class MazeRunner extends Modo {
+  // Carrera para salir de un laberinto gigante que cambia cada pocos segundos. Todos corren
+  // en el mismo laberinto: salen juntos de una esquina y gana quien llegue antes a la contraria.
+  //
+  // El laberinto es un grafo: cada celda es un vértice y cada pasillo entre dos celdas
+  // vecinas una arista. Al empezar se excava un árbol generador (un solo camino entre dos
+  // celdas) y se abren unos pasillos extra para que haya ciclos. En cada cambio se cierran
+  // pasillos sin desconectar el grafo y se abren otros tantos.
+  cargar() {
+    const alto = 2 * CELDAS_ALTO + 1, ancho = 2 * CELDAS_ANCHO + 1;
+    // Tablero base: las celdas y los pasillos son suelo; el borde y las esquinas entre
+    // celdas son muro fijo. Los pasillos cerrados se añaden después como muros que cambian.
+    const base = [];
+    for (let f = 0; f < alto; f++) {
+      let fila = '';
+      for (let c = 0; c < ancho; c++) {
+        const interior = f > 0 && f < alto - 1 && c > 0 && c < ancho - 1;
+        fila += interior && (f % 2 === 1 || c % 2 === 1) ? '.' : '#';
+      }
+      base.push(fila);
+    }
+    this.usarMapa(base.join('\n'));
+    // Aristas posibles: de cada celda a su vecina de la derecha y a la de abajo.
+    // 'muro' es la casilla del tablero que queda entre las dos celdas.
+    this.aristas = [];
+    for (let i = 0; i < CELDAS_ALTO; i++) for (let j = 0; j < CELDAS_ANCHO; j++) {
+      const celda = i * CELDAS_ANCHO + j;
+      if (j < CELDAS_ANCHO - 1) this.aristas.push({a: celda, b: celda + 1, muro: [2 * i + 1, 2 * j + 2]});
+      if (i < CELDAS_ALTO - 1) this.aristas.push({a: celda, b: celda + CELDAS_ANCHO, muro: [2 * i + 2, 2 * j + 1]});
+    }
+    // Árbol generador con un recorrido en profundidad aleatorio, como en la fase 1.
+    this.abiertas = new Set();
+    const deCelda = Array.from({length: CELDAS_ALTO * CELDAS_ANCHO}, () => []);
+    this.aristas.forEach((x, k) => { deCelda[x.a].push(k); deCelda[x.b].push(k); });
+    const visitadas = new Set([0]), pila = [0];
+    while (pila.length) {
+      const celda = pila[pila.length - 1];
+      const salidas = deCelda[celda].filter(k => !visitadas.has(this.aristas[k].a === celda ? this.aristas[k].b : this.aristas[k].a));
+      if (!salidas.length) { pila.pop(); continue; }
+      const k = salidas[Math.floor(Math.random() * salidas.length)], destino = this.aristas[k].a === celda ? this.aristas[k].b : this.aristas[k].a;
+      this.abiertas.add(k); visitadas.add(destino); pila.push(destino);
+    }
+    muestra(this.aristas.map((x, k) => k).filter(k => !this.abiertas.has(k)), PASILLOS_EXTRA).forEach(k => this.abiertas.add(k));
+    // Agua y bosque en algunas celdas, para que el camino con menos pasos no sea siempre el más rápido.
+    const celdas = [];
+    for (let i = 0; i < CELDAS_ALTO; i++) for (let j = 0; j < CELDAS_ANCHO; j++) if (i + j > 1 && i + j < CELDAS_ALTO + CELDAS_ANCHO - 3) celdas.push([2 * i + 1, 2 * j + 1]);
+    this.lento = muestra(celdas, CELDAS_LENTAS).map((pos, k) => ({tipo: k < CELDAS_LENTAS / 2 ? 'a' : 'b', pos}));
+    const quienes = [...(this.soloVer ? [] : [['Tú', aEstrella, ROJO, VELOCIDAD_JUGADOR]]), ...RIVALES.map(r => [...r, VELOCIDAD_RIVAL])];
+    this.todos = quienes.map(([nombre, algoritmo, color, velocidad]) => {
+      const p = new Personaje([1, 1], color, nombre, algoritmo, velocidad);
+      p.desvio = [0, 0]; p.salida = [alto - 2, ancho - 2]; p.tiempoFinal = null;
+      p.porCasilla = SEGUNDOS_POR_CASILLA / 2;      // el laberinto es mucho más grande: pensar cuesta la mitad por casilla
+      return p;
+    });
+    this.jugador = this.soloVer ? null : this.todos[0];
+    this.rivales = this.soloVer ? this.todos : this.todos.slice(1);
+    this.reloj = 0; this.llegadas = []; this.cambio = CADA_CAMBIO;
+    this.aplicar();
+  }
+  conectado(abiertas) {
+    // Recorrido en anchura sobre las celdas: comprueba que desde la primera se llega a todas.
+    const vecinas = new Map();
+    for (const k of abiertas) {
+      const x = this.aristas[k];
+      for (const [de, a] of [[x.a, x.b], [x.b, x.a]]) { if (!vecinas.has(de)) vecinas.set(de, []); vecinas.get(de).push(a); }
+    }
+    const vistas = new Set([0]), cola = [0];
+    for (let i = 0; i < cola.length; i++) for (const otra of vecinas.get(cola[i]) || []) {
+      if (!vistas.has(otra)) { vistas.add(otra); cola.push(otra); }
+    }
+    return vistas.size === CELDAS_ALTO * CELDAS_ANCHO;
+  }
+  aplicar() {
+    // Pone en el tablero los pasillos cerrados y el terreno lento, y hace que los rivales vuelvan a planear.
+    const lista = [];
+    this.aristas.forEach((x, k) => { if (!this.abiertas.has(k)) lista.push({id: k, tipo: '#', pos: x.muro}); });
+    this.lento.forEach((x, k) => lista.push({id: 10000 + k, tipo: x.tipo, pos: x.pos}));
+    this.ponerTerreno(lista);
+    // Un rival solo vuelve a planear si el cambio le cerró el camino que llevaba. Así no
+    // pierde tiempo pensando de más, pero tampoco aprovecha los atajos que se abren.
+    for (const r of this.rivales) {
+      const bloqueado = !r.camino.length || r.camino.some(pos => !this.transitable(pos));
+      if (r.tiempoFinal === null && bloqueado) r.irA(this.cuad, r.salida);
+    }
+  }
+  cambiarLaberinto() {
+    // Casillas ocupadas por algún competidor: ahí no puede cerrarse un pasillo.
+    const ocupadas = new Set();
+    for (const p of this.todos) for (const pos of [p.posicion, ...p.camino.slice(0, 1)]) ocupadas.add(K([pos[0] - p.desvio[0], pos[1] - p.desvio[1]]));
+    const cerradas = [];
+    for (const k of muestra([...this.abiertas], this.abiertas.size)) {
+      if (cerradas.length === MUROS_POR_CAMBIO) break;
+      if (ocupadas.has(K(this.aristas[k].muro))) continue;
+      // Un pasillo solo se cierra si el laberinto sigue conectado sin él.
+      this.abiertas.delete(k);
+      if (this.conectado(this.abiertas)) cerradas.push(k); else this.abiertas.add(k);
+    }
+    // Se abren tantos pasillos como se cerraron, elegidos entre los que ya estaban cerrados.
+    const candidatas = this.aristas.map((x, k) => k).filter(k => !this.abiertas.has(k) && !cerradas.includes(k));
+    muestra(candidatas, cerradas.length).forEach(k => this.abiertas.add(k));
+    this.aplicar();
+    this.emitir('cambio');
+  }
+  actualizar(dt) {
+    this.reloj += dt;
+    this.cambio -= dt;
+    if (this.cambio <= 0) { this.cambio = CADA_CAMBIO; this.cambiarLaberinto(); }
+    if (this.jugador && this.jugador.tiempoFinal === null) this.moverJugador(this.jugador, dt);
+    this.rivales.forEach(r => r.avanzar(dt, this.cuad));
+    for (const p of this.todos) {
+      if (p.tiempoFinal !== null || !igual(p.posicion, p.salida)) continue;
+      p.tiempoFinal = this.reloj; this.llegadas.push(p);
+      const esJugador = p === this.jugador;
+      this.emitir('meta', p.salida, p.color, {quien: p.id, esJugador});
+      // El resultado se anuncia cuando llega el jugador o, si solo se mira, cuando llega el primero.
+      if (esJugador || (this.soloVer && this.llegadas.length === 1)) this.cerrar();
+    }
+  }
+  orden() {
+    // Clasificación: primero quien ya salió, luego quien está más cerca de la salida.
+    return this.todos.slice().sort((a, b) => (a.tiempoFinal ?? Infinity) - (b.tiempoFinal ?? Infinity) || distancia(a.visual(), a.salida) - distancia(b.visual(), b.salida));
+  }
+  cerrar() {
+    const tabla = this.llegadas.map((p, i) => `${i + 1}. ${p.nombre} ${p.tiempoFinal.toFixed(1)} s`).join('   ');
+    if (this.soloVer) return this.terminar(true, 'GANÓ ' + this.llegadas[0].nombre.toUpperCase(), tabla, this.llegadas[0].visual());
+    const lugar = this.llegadas.indexOf(this.jugador) + 1;
+    this.terminar(lugar === 1, lugar === 1 ? '¡ESCAPASTE PRIMERO!' : `LUGAR ${lugar}`, tabla, this.jugador.visual());
+  }
+  escena() {
+    return {
+      // Como salen de la misma casilla, cada uno se dibuja un poco corrido para que no se tapen.
+      personajes: this.todos.map((p, i) => ({p, etiqueta: p.nombre, baila: p.tiempoFinal !== null,
+        dx: Math.cos(i * 2 * Math.PI / this.todos.length) * 0.24, dz: Math.sin(i * 2 * Math.PI / this.todos.length) * 0.24})),
+      banderas: [{pos: this.todos[0].salida, color: DORADO, marco: true}],
+      ...this.vistaTerreno(), rutas: this.rivales,
+    };
+  }
+  hud() {
+    const orden = this.orden();
+    return {
+      tipo: 'carrera', lugar: this.jugador ? orden.indexOf(this.jugador) + 1 : null, tiempo: this.reloj,
+      contador: ['CAMBIA EN', String(Math.max(0, Math.ceil(this.cambio)))],
+      filas: orden.map(p => ({id: p.id, nombre: p.nombre.toUpperCase(), color: p.color, yo: p === this.jugador, listo: p.tiempoFinal !== null,
+        avance: p.tiempoFinal !== null ? p.tiempoFinal.toFixed(1) + ' s' : 'A ' + Math.round(distancia(p.visual(), p.salida))})),
+    };
+  }
+}
+MazeRunner.prototype.sigueTrasFinal = true;
+MazeRunner.titulo = 'MAZE RUNNER';
+MazeRunner.resumen = 'Un laberinto gigante para todos. Sal antes que los cinco algoritmos mientras los pasillos se cierran y se abren.';
+MazeRunner.ayuda = 'FLECHAS O WASD   C: ACERCAR LA CÁMARA   LLEGA A LA BANDERA DORADA   R: REINICIAR   ESC: MENÚ';
+
+// Modos de espectador: las mismas reglas, pero todos los personajes los maneja la CPU
+// y las teclas y el ratón quedan libres para mover la cámara.
+class VerGemas extends AtrapaGemas {}
+VerGemas.prototype.soloVer = true;
+VerGemas.titulo = 'VER: ATRAPA GEMAS';
+VerGemas.resumen = 'Mira competir a los cinco algoritmos en tableros idénticos, con la cámara libre.';
+class VerBandera extends Bandera {}
+VerBandera.prototype.soloVer = true;
+VerBandera.titulo = 'VER: CAPTURA LA BANDERA';
+VerBandera.resumen = 'Elige dos algoritmos y mira cómo se roban la bandera, con la cámara libre.';
+class VerMaze extends MazeRunner {}
+VerMaze.prototype.soloVer = true;
+VerMaze.titulo = 'VER: MAZE RUNNER';
+VerMaze.resumen = 'Mira a los cinco algoritmos buscar la salida del laberinto gigante que cambia, con la cámara libre.';
+VerGemas.ayuda = VerBandera.ayuda = VerMaze.ayuda = 'RUEDA: ZOOM   ARRASTRAR: GIRAR   WASD: MOVER   TAB O FLECHAS DE PANTALLA: SEGUIR A OTRO   0: VISTA GENERAL   R: OTRA   ESC: MENÚ';
+
+const MODOS = [AtrapaGemas, Bandera, MazeRunner, VerGemas, VerBandera, VerMaze];
 
 class Demo extends AtrapaGemas {
   // Partida que se juega sola detrás de la portada: el personaje rojo también lo maneja la CPU.
@@ -668,7 +921,7 @@ class Demo extends AtrapaGemas {
 // partículas, fuegos artificiales y cámara
 // ---------------------------------------------------------------------------
 const PALETA = {
-  suelo: [0xFFFFFF, 0xE2E2E7], bosque: [0xCDD2CE, 0xBFC6C1], agua: [0x7DC4F5, 0x69B2E6],
+  suelo: [0x86CF5C, 0x76C150], bosque: [0x58A548, 0x4D9940], agua: [0x7DC4F5, 0x69B2E6],
   muro: 0x8A8A90, borde: 0x1B1B1E, tronco: 0x6B4A35, copa: [0x2E6B50, 0x3F8A66], piel: 0xF3C9A5, contorno: 0x111111,
 };
 const vista = {};
@@ -688,13 +941,15 @@ function iniciarVista() {
   cielo.fog = new THREE.Fog(0xD7282F, 45, 150);      // las nubes lejanas se funden con el rojo
   const solCielo = new THREE.DirectionalLight(0xff6f5c, 0.75);
   solCielo.position.set(-11, 13, -7);
-  cielo.add(new THREE.HemisphereLight(0xffffff, 0xd98a84, 0.35), solCielo);
+  const hemiCielo = new THREE.HemisphereLight(0xffffff, 0xd98a84, 0.35);
+  cielo.add(hemiCielo, solCielo);
 
   const escena = new THREE.Scene();
   const camara = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
   // Iluminación: un sol rojo que da la luz principal y las sombras, y una luz
   // blanca desde el lado contrario que marca el contraste.
-  escena.add(new THREE.HemisphereLight(0xffffff, 0xd98a84, 0.2));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xd98a84, 0.2);
+  escena.add(hemi);
   const sol = new THREE.DirectionalLight(0xff6f5c, 0.62);
   sol.position.set(-11, 13, -7);
   sol.castShadow = true;
@@ -717,7 +972,9 @@ function iniciarVista() {
 
   Object.assign(vista, {render, renderCielo, cielo, escena, camara, tonos, materiales: new Map(), mapa: new THREE.Group(), cosas: new THREE.Group(),
     version: -1, versionTerreno: -1, losas: new Map(), arboles: new Map(), personajes: new Map(), gemas: new Map(), muros: new Map(), banderas: [], marcas: [],
-    particulas: [], cohetes: [], pendientes: [], zoom: 1, orbita: null, tiempo: 0, mira: new THREE.Vector3(), pos: new THREE.Vector3(0, 14, 10)});
+    particulas: [], cohetes: [], pendientes: [], zoom: 1, orbita: null, libre: null, tiempo: 0, mira: new THREE.Vector3(), pos: new THREE.Vector3(0, 14, 10)});
+  vista.luces = {hemi, sol, contraste, hemiCielo, solCielo};
+  vista.astros = {disco, halo};
   // Todo lo que pertenece al tablero cuelga de un mismo grupo, para poder hacerlo flotar.
   vista.mundo = new THREE.Group();
   escena.add(vista.mundo);
@@ -749,25 +1006,274 @@ function iniciarVista() {
   aroFaro.rotation.x = Math.PI / 2; aroFaro.position.y = 0.04;
   vista.faro.add(flecha, aroFaro); vista.faro.visible = false;
   vista.mundo.add(vista.faro);
-  // Mar de nubes low poly bajo el tablero: cada nube es un racimo de bolas achatadas.
-  vista.nubes = new THREE.Group();
-  const bola = plana(new THREE.IcosahedronGeometry(1, 0));
-  for (let i = -5; i <= 5; i++) for (let j = -5; j <= 5; j++) {
-    const nube = new THREE.Group();
-    for (let k = 0; k < 3; k++) {
-      const trozo = new THREE.Mesh(bola, material(0xFFE4DE));
-      trozo.position.set((k - 1) * 2.6 + Math.random(), Math.random() * 0.8, Math.random() * 2 - 1);
-      trozo.scale.set(2.2 + Math.random() * 1.6, 1.0 + Math.random() * 0.7, 2.0 + Math.random() * 1.4);
-      trozo.rotation.y = Math.random() * 6;
-      nube.add(trozo);
-    }
-    nube.position.set(i * 13 + Math.random() * 8, -11 - Math.random() * 6, j * 13 + Math.random() * 8);
-    vista.nubes.add(nube);
-  }
-  cielo.add(vista.nubes);
+  crearCielo(cielo);
+  // Luz de linterna: una mancha de luz en el suelo que se suma a lo que haya debajo.
+  vista.geo.plano = new THREE.PlaneGeometry(1, 1);
+  const lienzoLuz = document.createElement('canvas'); lienzoLuz.width = lienzoLuz.height = 128;
+  const pincel = lienzoLuz.getContext('2d'), degradado = pincel.createRadialGradient(64, 64, 0, 64, 64, 64);
+  degradado.addColorStop(0, 'rgba(255,255,255,1)'); degradado.addColorStop(0.45, 'rgba(255,255,255,.35)'); degradado.addColorStop(1, 'rgba(255,255,255,0)');
+  pincel.fillStyle = degradado; pincel.fillRect(0, 0, 128, 128);
+  vista.texLuz = new THREE.CanvasTexture(lienzoLuz);
+  // Una sola luz de verdad, para la linterna del jugador; las demás son manchas pintadas.
+  vista.farol = new THREE.PointLight(0xFFD27A, 0, 7, 2);
+  vista.mundo.add(vista.farol);
   ajustarTamano();
   addEventListener('resize', ajustarTamano);
 }
+function charcoDeLuz(radio, color) {
+  // Mancha de luz acostada sobre el suelo. Empieza apagada; se enciende de noche.
+  const m = new THREE.Mesh(vista.geo.plano, new THREE.MeshBasicMaterial({map: vista.texLuz, color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false}));
+  m.rotation.x = -Math.PI / 2; m.scale.setScalar(radio * 2); m.position.y = 0.05; m.renderOrder = 2;
+  return m;
+}
+
+function crearCielo(cielo) {
+  // Todo lo que se ve detrás del tablero: nubes, estrellas, luna, aves, cometas y dos criaturas raras.
+  const azar = (a, b) => a + Math.random() * (b - a);
+  // Nubes en dos capas. Usan bolas redondeadas y sombreado continuo para verse suaves.
+  vista.nubes = new THREE.Group();
+  const bola = new THREE.IcosahedronGeometry(1, 1), blanco = new THREE.MeshLambertMaterial({color: 0xFFF3EE});
+  for (const capa of [{y: -12, paso: 11, n: 6, tam: 1}, {y: -25, paso: 19, n: 4, tam: 2.1}]) {
+    for (let i = -capa.n; i <= capa.n; i++) for (let j = -capa.n; j <= capa.n; j++) {
+      const nube = new THREE.Group();
+      for (let k = 0; k < 5; k++) {
+        const trozo = new THREE.Mesh(bola, blanco);
+        trozo.position.set((k - 2) * 1.7 + azar(-0.5, 0.5), azar(0, 0.9) * (k === 2 ? 1.6 : 1), azar(-1.2, 1.2));
+        trozo.scale.set(azar(1.9, 3.1), azar(1.0, 1.7), azar(1.7, 2.7));
+        nube.add(trozo);
+      }
+      nube.scale.setScalar(capa.tam);
+      nube.position.set(i * capa.paso + azar(0, 7), capa.y - azar(0, 5), j * capa.paso + azar(0, 7));
+      nube.userData = {v: azar(0.3, 0.7), limite: capa.n * capa.paso + 12};
+      vista.nubes.add(nube);
+    }
+  }
+  cielo.add(vista.nubes);
+  // Estrellas: puntos repartidos en una esfera enorme. De día son invisibles.
+  const puntos = [];
+  for (let i = 0; i < 900; i++) {
+    const a = Math.random() * Math.PI * 2, b = Math.acos(2 * Math.random() - 1);
+    puntos.push(Math.sin(b) * Math.cos(a) * 170, Math.cos(b) * 170, Math.sin(b) * Math.sin(a) * 170);
+  }
+  const geoEstrellas = new THREE.BufferGeometry();
+  geoEstrellas.setAttribute('position', new THREE.Float32BufferAttribute(puntos, 3));
+  vista.estrellas = new THREE.Points(geoEstrellas, new THREE.PointsMaterial({color: 0xffffff, size: 1.7, sizeAttenuation: false, transparent: true, opacity: 0, fog: false}));
+  vista.luna = new THREE.Mesh(new THREE.IcosahedronGeometry(8, 1), new THREE.MeshBasicMaterial({color: 0xF1EEFF, fog: false}));
+  cielo.add(vista.estrellas, vista.luna);
+  // Bandadas de aves en formación de V, con alas que aletean.
+  const oscuro = new THREE.MeshBasicMaterial({color: 0x2B1A1F});
+  vista.bandadas = [0, 1, 2].map(n => {
+    const bandada = new THREE.Group(), aves = [];
+    for (let k = 0; k < 5; k++) {
+      const ave = new THREE.Group(), fila = Math.ceil(k / 2), lado = k % 2 ? 1 : -1;
+      const cuerpo = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.7, 4), oscuro); cuerpo.rotation.z = -Math.PI / 2;
+      const alas = [1, -1].map(s => { const eje = new THREE.Group(), ala = new THREE.Mesh(vista.geo.caja, oscuro); ala.scale.set(0.3, 0.04, 0.8); ala.position.z = s * 0.4; eje.add(ala); return eje; });
+      ave.add(cuerpo, ...alas);
+      ave.position.set(-fila * 1.3, 0, k ? lado * fila * 1.1 : 0);
+      bandada.add(ave); aves.push({alas, fase: Math.random() * 6});
+    }
+    bandada.position.set(azar(-90, 90), azar(-7, -3), azar(-30, 30));
+    cielo.add(bandada);
+    return {grupo: bandada, aves, v: azar(5, 9) * (n % 2 ? -1 : 1)};
+  });
+  for (const b of vista.bandadas) b.grupo.rotation.y = b.v < 0 ? Math.PI : 0;
+  // Cometa: una cabeza brillante y una cola que se adelgaza.
+  const cometa = new THREE.Group();
+  const cola = new THREE.Mesh(new THREE.ConeGeometry(0.55, 11, 6), new THREE.MeshBasicMaterial({color: 0xFFD9A8, transparent: true, opacity: 0.55, fog: false}));
+  cola.rotation.z = -Math.PI / 2; cola.position.x = -5.5;      // la punta de la cola queda atrás
+  cometa.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.7, 1), new THREE.MeshBasicMaterial({color: 0xFFFBE8, fog: false})), cola);
+  cometa.visible = false; cielo.add(cometa);
+  vista.cometa = {grupo: cometa, vida: 0, v: new THREE.Vector3(), proximo: 6};
+  // Dragón y leviatán: serpientes hechas de segmentos que siguen a la cabeza.
+  const serpiente = (segmentos, color, tam, alas) => {
+    const grupo = new THREE.Group(), cuerpo = [], material = new THREE.MeshLambertMaterial({color, flatShading: true});
+    for (let i = 0; i < segmentos; i++) {
+      const grosor = (i === 0 ? 1.25 : 1 - i / segmentos * 0.8) * tam;
+      const s = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), material);
+      s.scale.set(grosor * 1.25, grosor, grosor);
+      // Cuernos en la cabeza y aletas a lo largo del lomo.
+      const pico = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.1, 4), material);
+      pico.position.set(i === 0 ? 0.3 : 0, 0.95, 0); pico.rotation.z = i === 0 ? -0.5 : 0.35;
+      if (i === 0 || i % 2 === 0) s.add(pico);
+      grupo.add(s); cuerpo.push(s);
+    }
+    const ejes = [];
+    if (alas) for (const lado of [1, -1]) {
+      // Ala: un triángulo grande que sale del tercer segmento.
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -2.2, 0, lado * 4.6, 1.6, 0, lado * 3.2], 3));
+      geo.computeVertexNormals();
+      const eje = new THREE.Group();
+      eje.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color: 0xA3202B, side: THREE.DoubleSide, flatShading: true})));
+      grupo.add(eje); ejes.push({eje, lado});
+    }
+    grupo.visible = false; cielo.add(grupo);
+    return {grupo, cuerpo, ejes, activo: false, s: 0};
+  };
+  vista.dragon = Object.assign(serpiente(15, 0x7A0F18, 1.0, true), {proximo: 30, paso: 1.35, v: 13});
+  vista.leviatan = Object.assign(serpiente(24, 0x1F4558, 2.3, false), {proximo: 70, paso: 2.6, v: 7});
+}
+
+function decorar(modo) {
+  // Adornos que no afectan al juego: flores, rocas y lámparas en salientes del borde, y
+  // luciérnagas, abejas y motas flotando. Se sortean por tablero, así que ninguno queda igual.
+  const azar = (a, b) => a + Math.random() * (b - a), uno = lista => lista[Math.floor(Math.random() * lista.length)];
+  vista.luciernagas = []; vista.abejas = []; vista.motas = []; vista.lamparas = [];
+  const esTablero = (f, c) => f >= 0 && f < modo.filas && c >= 0 && c < modo.columnas && modo.cuadBase[f][c] !== '_';
+  // Cada tablero es un grupo de casillas conectadas: se encuentran con un recorrido en anchura.
+  const vistas = new Set(), tableros = [];
+  for (let f = 0; f < modo.filas; f++) for (let c = 0; c < modo.columnas; c++) {
+    if (!esTablero(f, c) || vistas.has(K([f, c]))) continue;
+    const casillas = [[f, c]]; vistas.add(K([f, c]));
+    for (let i = 0; i < casillas.length; i++) for (const [df, dc] of [[-1, 0], [0, 1], [1, 0], [0, -1]]) {
+      const v = [casillas[i][0] + df, casillas[i][1] + dc];
+      if (esTablero(v[0], v[1]) && !vistas.has(K(v))) { vistas.add(K(v)); casillas.push(v); }
+    }
+    tableros.push(casillas);
+  }
+  const verde = material(0x5FAE48), gris = [material(0x8E9096), material(0xA6A8AE), material(0x74767C)];
+  const colores = [0xFFFFFF, 0xFFE066, 0xFF8FB1, 0xC9A0FF, 0xFF9A4A];
+  for (const casillas of tableros) {
+    const suelo = casillas.filter(([f, c]) => modo.cuadBase[f][c] === '.'), flores = [];
+    // Flores: un botón de color con su centro, en una esquina de la casilla para no estorbar.
+    for (let i = 0; i < Math.min(26, Math.max(5, suelo.length / 9)); i++) {
+      const [f, c] = uno(suelo), flor = new THREE.Group();
+      const petalos = new THREE.Mesh(vista.geo.gema, material(uno(colores))); petalos.scale.set(0.45, 0.16, 0.45);
+      const centro = new THREE.Mesh(vista.geo.marca, material(0xF2B632)); centro.position.y = 0.04;
+      flor.add(petalos, centro);
+      flor.position.set(mundoX(c) + uno([-0.3, 0.3]) + azar(-0.06, 0.06), 0.04, mundoZ(f) + uno([-0.3, 0.3]) + azar(-0.06, 0.06));
+      vista.mapa.add(flor); flores.push(flor.position);
+    }
+    // Salientes: pequeños bloques de pasto pegados por fuera del borde, con una roca o una lámpara.
+    const bordes = [];
+    for (const [f, c] of casillas) for (const [df, dc] of [[-1, 0], [0, 1], [1, 0], [0, -1]]) if (!esTablero(f + df, c + dc)) bordes.push([f, c, df, dc]);
+    const cuantas = Math.min(16, Math.max(4, Math.round(bordes.length / 7)));
+    muestra(bordes, cuantas).forEach(([f, c, df, dc], n) => {
+      const saliente = new THREE.Group();
+      const bloque = pieza(vista.geo.caja, 0x5FAE48, 0, -0.26, 0, 0.05); bloque.scale.set(0.62, 0.52, 0.62);
+      saliente.add(bloque);
+      if (n % 4 === 0) {
+        // Lámpara: poste y cabeza que se enciende de noche, con su mancha de luz.
+        const poste = pieza(vista.geo.asta, 0x2B2B2E, 0, 0.45, 0, 0.3);
+        const cabeza = new THREE.Mesh(vista.geo.caja, new THREE.MeshBasicMaterial({color: 0x8A8A8A}));
+        cabeza.scale.set(0.22, 0.22, 0.22); cabeza.position.y = 0.98;
+        const charco = charcoDeLuz(2.6, 0xFFC56B);
+        saliente.add(poste, cabeza, charco);
+        vista.lamparas.push({cabeza, charco});
+      } else {
+        // Rocas: de una a tres piedras, unas mucho más altas que otras.
+        for (let k = 0; k < 1 + Math.floor(Math.random() * 3); k++) {
+          const alto = k === 0 ? azar(0.25, 1.1) : azar(0.15, 0.4);
+          const roca = pieza(vista.geo.gema, 0x8E9096, k ? azar(-0.18, 0.18) : 0, alto * 0.42, k ? azar(-0.18, 0.18) : 0, 0.07);
+          roca.material = uno(gris); roca.scale.set(azar(0.9, 1.3), alto * 4.2, azar(0.9, 1.3)); roca.rotation.y = azar(0, 3);
+          saliente.add(roca);
+        }
+      }
+      saliente.position.set(mundoX(c) + dc * 0.84, 0, mundoZ(f) + df * 0.84);
+      vista.mapa.add(saliente);
+    });
+    // Luciérnagas (de noche), abejas (de día) y motas que suben despacio.
+    const minF = Math.min(...casillas.map(x => x[0])), maxF = Math.max(...casillas.map(x => x[0]));
+    const minC = Math.min(...casillas.map(x => x[1])), maxC = Math.max(...casillas.map(x => x[1]));
+    const punto = () => [mundoX(azar(minC, maxC)), mundoZ(azar(minF, maxF))];
+    const volador = (color, tam) => { const m = new THREE.Mesh(vista.geo.marca, new THREE.MeshBasicMaterial({color, transparent: true})); m.scale.setScalar(tam); vista.mapa.add(m); return m; };
+    for (let i = 0; i < Math.min(22, Math.max(5, suelo.length / 12)); i++) { const [x, z] = punto(); vista.luciernagas.push({m: volador(0xE9FF7A, 0.75), casa: [x, azar(0.5, 1.5), z], fase: azar(0, 9)}); }
+    for (let i = 0; i < Math.min(8, Math.max(2, flores.length / 4)); i++) vista.abejas.push({m: volador(0xFFC400, 0.8), flor: uno(flores), fase: azar(0, 9)});
+    for (let i = 0; i < Math.min(18, Math.max(5, suelo.length / 14)); i++) { const [x, z] = punto(); vista.motas.push({m: volador(0xFFFFFF, 0.42), x, z, fase: azar(0, 3), v: azar(0.18, 0.4)}); }
+  }
+}
+
+const CICLO = 80;      // segundos que dura un día completo, con su noche
+function ambientar(modo, dt) {
+  // Lo que pasa alrededor del juego: hora del día, luces, adornos y criaturas del cielo.
+  const t = vista.tiempo, azar = (a, b) => a + Math.random() * (b - a);
+  const sube = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+  for (const nube of vista.nubes.children) { nube.position.x += dt * nube.userData.v; if (nube.position.x > nube.userData.limite) nube.position.x -= nube.userData.limite * 2; }
+
+  // Ciclo de día y noche. 'noche' va de 0 (pleno día) a 1 (plena noche) y 'ocaso' marca el paso de uno a otro.
+  const fase = (t / CICLO) % 1, noche = sube(0.44, 0.54, fase) - sube(0.9, 1, fase), ocaso = 1 - Math.abs(noche * 2 - 1);
+  vista.noche = noche;
+  const L = vista.luces, mezcla = (dia, deNoche) => dia + (deNoche - dia) * noche;
+  // De día el sol es cálido; al atardecer se pone rojo; de noche queda una luz azul tenue.
+  const colorSol = new THREE.Color(0xFFC4AE).lerp(new THREE.Color(0x8FA2FF), noche).lerp(new THREE.Color(0xFF4A2E), ocaso * 0.75);
+  L.sol.color.copy(colorSol); L.solCielo.color.copy(colorSol);
+  L.sol.intensity = mezcla(0.68, 0.2); L.solCielo.intensity = mezcla(0.75, 0.3);
+  L.hemi.intensity = mezcla(0.3, 0.2); L.hemiCielo.intensity = mezcla(0.4, 0.22);
+  L.hemi.color.setHex(0xffffff).lerp(new THREE.Color(0x8793FF), noche); L.hemiCielo.color.copy(L.hemi.color);
+  L.contraste.intensity = mezcla(0.34, 0.12);
+  // El cielo de la página cambia con la hora: rojo de día, morado oscuro de noche.
+  if (Math.abs(noche - (vista.nochePintada ?? -1)) > 0.01) {
+    vista.nochePintada = noche;
+    const tono = (dia, deNoche) => '#' + new THREE.Color(dia).lerp(new THREE.Color(deNoche), noche).getHexString();
+    document.body.style.background = `linear-gradient(${tono(0x5A0C14, 0x04030D)} 0%, ${tono(0xB01E27, 0x120A2B)} 38%, ${tono(0xD7282F, 0x2A1140)} 62%, ${tono(0xF47C74, 0x5C1D43)} 100%)`;
+    vista.cielo.fog.color.set(0xD7282F).lerp(new THREE.Color(0x1B0D30), noche);
+  }
+  vista.estrellas.material.opacity = noche;
+  vista.astros.disco.position.y = vista.astros.halo.position.y = 42 - noche * 110;      // el sol se pone
+  vista.luna.position.set(58, -70 + noche * 112, -82);                                   // y sale la luna
+
+  // Lámparas y linterna del jugador.
+  for (const lampara of vista.lamparas) {
+    lampara.cabeza.material.color.setHex(0x8A8A8A).lerp(new THREE.Color(0xFFD27A), noche);
+    lampara.charco.material.opacity = noche * 0.6;
+  }
+  const guia = modo.jugador || (vista.libre && modo.escena().personajes.map(x => x.p).find(p => p.id === vista.libre.seguir));
+  const figura = guia && vista.personajes.get(guia.id);
+  vista.farol.intensity = figura ? noche * 1.2 : 0;
+  if (figura) vista.farol.position.set(figura.position.x, 1.1, figura.position.z);
+
+  // Luciérnagas de noche, abejas de día y motas a toda hora.
+  for (const l of vista.luciernagas) {
+    l.m.visible = noche > 0.08;
+    l.m.position.set(l.casa[0] + Math.sin(t * 0.7 + l.fase) * 0.7, l.casa[1] + Math.sin(t * 1.3 + l.fase) * 0.25, l.casa[2] + Math.cos(t * 0.9 + l.fase) * 0.7);
+    l.m.material.opacity = noche * (0.55 + 0.45 * Math.sin(t * 3 + l.fase * 3));      // parpadean
+  }
+  for (const a of vista.abejas) {
+    a.m.visible = noche < 0.6;
+    a.m.position.set(a.flor.x + Math.cos(t * 2.6 + a.fase) * 0.38, 0.32 + Math.sin(t * 5 + a.fase) * 0.07, a.flor.z + Math.sin(t * 2.6 + a.fase) * 0.38);
+  }
+  for (const mota of vista.motas) {
+    const y = (t * mota.v + mota.fase) % 2.4;
+    mota.m.position.set(mota.x + Math.sin(t * 0.6 + mota.fase) * 0.3, 0.1 + y, mota.z);
+    mota.m.material.opacity = Math.sin(y / 2.4 * Math.PI) * 0.7;
+  }
+
+  // Aves: solo de día. Cruzan de lado a lado y al salir reaparecen por el otro extremo.
+  for (const b of vista.bandadas) {
+    b.grupo.visible = noche < 0.7;
+    b.grupo.position.x += b.v * dt;
+    if (Math.abs(b.grupo.position.x) > 95) b.grupo.position.set(-95 * Math.sign(b.v), azar(-7, -3), azar(-32, 32));
+    for (const ave of b.aves) ave.alas.forEach((eje, i) => { eje.rotation.x = (i ? -1 : 1) * Math.sin(t * 9 + ave.fase) * 0.75; });
+  }
+  // Cometas: cada tantos segundos pasa uno a toda velocidad.
+  const cometa = vista.cometa;
+  if (cometa.vida > 0) {
+    cometa.vida -= dt; cometa.grupo.position.addScaledVector(cometa.v, dt);
+    if (cometa.vida <= 0) { cometa.grupo.visible = false; cometa.proximo = t + azar(7, 15); }
+  } else if (t > cometa.proximo) {
+    cometa.grupo.position.set(-95, azar(-9, -2), azar(-34, 34));
+    cometa.v.set(62, azar(-2.5, 0.5), azar(-9, 9));
+    cometa.grupo.rotation.y = Math.atan2(-cometa.v.z, cometa.v.x);
+    cometa.vida = 3.1; cometa.grupo.visible = true;
+  }
+  // Dragón (aparece muy de vez en cuando) y leviatán (más raro todavía, nadando entre las nubes).
+  for (const [bicho, base, ondaY, ondaZ, espera] of [[vista.dragon, -4, 1.7, 6, [95, 210]], [vista.leviatan, -15, 5.5, 4, [170, 300]]]) {
+    if (!bicho.activo) {
+      if (t < bicho.proximo) continue;
+      Object.assign(bicho, {activo: true, s: 0, z: (Math.random() < 0.5 ? -1 : 1) * (modo.filas / 2 + azar(8, 15))});
+      bicho.grupo.visible = true;
+    }
+    bicho.s += dt * bicho.v;
+    bicho.cuerpo.forEach((segmento, i) => {
+      // Cada segmento va un poco atrás del anterior sobre la misma curva ondulada.
+      const u = bicho.s - i * bicho.paso;
+      segmento.position.set(-100 + u, base + Math.sin(u * 0.33) * ondaY, bicho.z + Math.sin(u * 0.11) * ondaZ);
+    });
+    for (const {eje, lado} of bicho.ejes) { eje.position.copy(bicho.cuerpo[3].position); eje.rotation.x = lado * Math.sin(t * 5) * 0.55; }
+    if (bicho.s - bicho.cuerpo.length * bicho.paso > 200) { bicho.activo = false; bicho.grupo.visible = false; bicho.proximo = t + azar(...espera); }
+  }
+}
+
 function ajustarTamano() {
   vista.render.setSize(innerWidth, innerHeight);
   vista.renderCielo.setSize(innerWidth, innerHeight);
@@ -804,11 +1310,20 @@ function construirMapa(modo) {
     // Bloque negro bajo cada casilla: juntos forman la base del tablero flotante.
     const base = new THREE.Mesh(vista.geo.caja, material(PALETA.borde));
     base.scale.set(1.06, 0.55, 1.06); base.position.set(x, -0.56, z);
+    vista.mapa.add(base);
+    if (modo.cuadBase[f][c] === '#') {
+      // Muro fijo: forma parte del tablero y no cambia durante la partida.
+      const muro = pieza(vista.geo.caja, PALETA.muro, x, 0.1, z, 0.035);
+      muro.scale.set(1, 0.7, 1); muro.receiveShadow = true;
+      vista.mapa.add(muro);
+      continue;
+    }
     const losa = new THREE.Mesh(vista.geo.caja, material(PALETA.suelo[(f + c) % 2]));
     losa.scale.set(1, 0.3, 1); losa.position.set(x, -0.15, z); losa.receiveShadow = true;
     losa.userData = {f, c, tipo: '.'};
-    vista.mapa.add(base, losa); vista.losas.set(f + ',' + c, losa);
+    vista.mapa.add(losa); vista.losas.set(f + ',' + c, losa);
   }
+  decorar(modo);
   encuadrar();
 }
 function encuadrar() {
@@ -827,14 +1342,14 @@ function encuadrar() {
   }
 }
 
-function etiqueta(texto, fondo) {
+function etiqueta(texto, fondo, tinta = '#fff') {
   // Texto en un lienzo, usado como imagen que siempre mira a la cámara.
   const lienzo = document.createElement('canvas'); lienzo.width = 128; lienzo.height = 64;
   const g = lienzo.getContext('2d');
   g.fillStyle = '#' + fondo.toString(16).padStart(6, '0'); g.strokeStyle = '#111'; g.lineWidth = 6;
   g.beginPath(); g.roundRect ? g.roundRect(8, 8, 112, 48, 14) : g.rect(8, 8, 112, 48); g.fill(); g.stroke();
   g.font = 'italic 900 32px Arial Black, Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillStyle = '#fff'; g.fillText(texto, 64, 34);
+  g.fillStyle = tinta; g.fillText(texto, 64, 34);
   const s = new THREE.Sprite(new THREE.SpriteMaterial({map: new THREE.CanvasTexture(lienzo), depthTest: false}));
   s.scale.set(0.9, 0.45, 1); s.renderOrder = 10;
   return s;
@@ -866,6 +1381,12 @@ function crearPersonaje(dato) {
   g.add(cuerpo);
   g.userData = {cuerpo, contorno, bordes, piernas, brazos, giro: 0, previo: null, brillo: 0, colorBrillo: new THREE.Color(0xffffff)};
   if (dato.etiqueta) { const e = etiqueta(dato.etiqueta, dato.p.color); e.position.y = 1.5; g.add(e); }
+  // Linterna: un farolito a un costado y la mancha de luz que deja en el suelo. Solo se ve de noche.
+  const farolito = new THREE.Mesh(vista.geo.caja, new THREE.MeshBasicMaterial({color: 0xFFD27A}));
+  farolito.scale.set(0.13, 0.17, 0.13); farolito.position.set(0.36, 0.52, 0.12);
+  const luzSuelo = charcoDeLuz(1.9, 0xFFC56B);
+  g.add(farolito, luzSuelo);
+  Object.assign(g.userData, {farolito, luzSuelo});
   vista.cosas.add(g);
   return g;
 }
@@ -944,10 +1465,12 @@ const ESTILOS = {
     camina: z => ({salto: Math.abs(Math.sin(z)) * 0.19, pierna: Math.sin(z) * 1.25, brazos: [-1.45 + Math.sin(z * 2) * 0.15, -1.45 - Math.sin(z * 2) * 0.15], alza: [0.1, 0.1], inclina: 0.3}),
     festeja: c => ({salto: Math.abs(Math.sin(c * 0.8)) * 0.5, alza: [2.9, 2.9], brazos: [Math.sin(c * 3) * 0.2, -Math.sin(c * 3) * 0.2], pierna: Math.sin(c * 0.8) * 0.25}),
   },
-  // A* va directo y sin desperdicio: trote atlético, y festeja con pose de campeón alternando un brazo arriba.
+  // A* sabe hacia dónde queda la meta: corre con paso largo y firme señalándola con un brazo, y
+  // festeja con los pies en el suelo, apuntando al cielo con un brazo y luego con el otro.
   'A*': {
-    camina: z => ({salto: Math.abs(Math.sin(z)) * 0.11, pierna: Math.sin(z) * 0.95, brazos: [-Math.sin(z) * 1.05, Math.sin(z) * 1.05], alza: [0.25, 0.25], inclina: 0.12}),
-    festeja: c => { const lado = Math.sin(c * 0.5) > 0; return {salto: Math.abs(Math.sin(c)) * 0.1, alza: lado ? [2.7, 0.75] : [0.75, 2.7], brazos: lado ? [0, -0.5] : [-0.5, 0], ladeo: lado ? -0.22 : 0.22, abre: 0.22}; },
+    camina: z => ({salto: Math.abs(Math.sin(z)) * 0.07, pierna: Math.sin(z) * 0.95, brazos: [-1.5, Math.sin(z) * 0.9], alza: [0.05, 0.1], inclina: 0.16}),
+    festeja: c => { const lado = Math.sin(c * 0.5), arriba = Math.max(0, lado), otro = Math.max(0, -lado);
+      return {salto: Math.abs(Math.sin(c)) * 0.09, abre: 0.3, ladeo: lado * 0.2, alza: [0.4 + arriba * 2.3, 0.4 + otro * 2.3], brazos: [0, 0]}; },
   },
 };
 ESTILOS.Rojo = ESTILOS.base;
@@ -958,7 +1481,7 @@ function sincronizar(modo, dt) {
   const t = vista.tiempo, e = modo.escena(), suave = 1 - Math.exp(-dt * 12);
   // El tablero flota: sube y baja muy despacio. Las nubes se deslizan y reaparecen del otro lado.
   vista.mundo.position.y = Math.sin(t * 0.9) * 0.09;
-  for (const nube of vista.nubes.children) { nube.position.x += dt * 0.5; if (nube.position.x > 72) nube.position.x -= 144; }
+  ambientar(modo, dt);
 
   // Eventos del juego: brillo de contorno, fuegos artificiales y golpes de cámara.
   for (const ev of modo.eventos.splice(0)) {
@@ -977,12 +1500,15 @@ function sincronizar(modo, dt) {
       if (!modo.esDemo) vista.zoom = 0.86;
     } else if (ev.tipo === 'golpe') {
       chispas(mundoX(ev.pos[1]), 0.5, mundoZ(ev.pos[0]), [ev.color, 0xffffff], 16, 2.6, false);
-    } else if (ev.tipo === 'fin' && !modo.esDemo) {
+    } else if (ev.tipo === 'cambio') {
+      if (!modo.esDemo && !camaraLibre()) vista.zoom = 0.96;      // un leve golpe de cámara avisa del cambio
+    } else if (ev.tipo === 'fin' && !modo.esDemo && !modo.soloVer) {
       // Evento especial: la cámara se acerca y gira alrededor de quien terminó la partida.
       vista.orbita = {foco: ev.pos, angulo: 0.6, t: 0, ganado: ev.ganado};
     }
   }
   if (modo.estado === 'jugando') vista.orbita = null;
+  if (modo.estado === 'jugando' && !modo.soloVer) vista.mirando = false;
   for (const p of vista.pendientes) { p.t -= dt; if (p.t <= 0) p.hacer(); }
   vista.pendientes = vista.pendientes.filter(p => p.t > 0);
 
@@ -1040,7 +1566,7 @@ function sincronizar(modo, dt) {
     const p = dato.p; vivos.add(p.id);
     let g = vista.personajes.get(p.id);
     if (!g) { g = crearPersonaje(dato); vista.personajes.set(p.id, g); g.scale.setScalar(0.01); }
-    const [f, c] = p.visual(), x = mundoX(c), z = mundoZ(f), u = g.userData;
+    const [f, c] = p.visual(), x = mundoX(c) + (dato.dx || 0), z = mundoZ(f) + (dato.dz || 0), u = g.userData;
     const paso = u.previo ? Math.abs(x - u.previo[0]) + Math.abs(z - u.previo[1]) : 0;
     if (paso > 0.0005) u.destinoGiro = Math.atan2(x - u.previo[0], z - u.previo[1]);
     if (paso > 2) g.position.set(x, 0, z);      // regresó de golpe a su salida
@@ -1049,7 +1575,10 @@ function sincronizar(modo, dt) {
       let d = u.destinoGiro - u.giro; d = Math.atan2(Math.sin(d), Math.cos(d));
       u.giro += d * suave;
     }
-    const caminando = p.camino.length > 0 && !dato.baila;
+    const caminando = p.camino.length > 0 && !dato.baila && !(p.pensando > 0);
+    // Globo de puntos suspensivos sobre quien está pensando.
+    if (p.pensando > 0 && !u.globo) { u.globo = etiqueta('...', 0xffffff, '#111'); u.globo.position.y = 2.05; u.globo.scale.set(0.7, 0.35, 1); g.add(u.globo); }
+    if (u.globo) u.globo.visible = p.pensando > 0 && !dato.baila;
     g.position.x += (x - g.position.x) * Math.min(1, suave * 2.5); g.position.z += (z - g.position.z) * Math.min(1, suave * 2.5);
     // Cada algoritmo camina y festeja a su manera: la pose sale de su estilo.
     const estilo = ESTILOS[p.nombre] || ESTILOS.base;
@@ -1057,6 +1586,9 @@ function sincronizar(modo, dt) {
     if (dato.baila) {
       pose = estilo.festeja(t * 9 + p.id);
       u.destinoGiro = pose.mece || 0;                      // de frente a la cámara
+    } else if (p.pensando > 0) {
+      // Pensando la ruta: quieto, con una mano en la cabeza y meciéndose.
+      pose = {brazos: [-2.5, 0], alza: [0.55, 0.12], ladeo: Math.sin(t * 7 + p.id) * 0.1};
     } else if (caminando) pose = estilo.camina(p.avance * Math.PI * 2);
     pose = Object.assign({salto: 0, pierna: 0, abre: 0, brazos: [0, 0], alza: [0.12, 0.12], inclina: 0, ladeo: 0, gira: 0}, pose);
     g.position.y = pose.salto - (modo.cuad[Math.round(f)][Math.round(c)] === 'a' ? 0.14 : 0);
@@ -1070,6 +1602,7 @@ function sincronizar(modo, dt) {
     g.rotation.y = u.giro + u.vuelta;
     g.scale.setScalar(g.scale.x + (1 - g.scale.x) * suave * 0.6);       // aparece creciendo
     // Brillo del contorno: pasa del color encendido al negro y se adelgaza mientras se apaga.
+    u.farolito.visible = vista.noche > 0.06; u.luzSuelo.material.opacity = vista.noche * 0.55;
     u.brillo = Math.max(0, u.brillo - dt * 1.1);
     u.contorno.color.set(PALETA.contorno).lerp(u.colorBrillo, u.brillo);
     const grueso = 1 + u.brillo * 2.2;
@@ -1150,6 +1683,37 @@ function sincronizar(modo, dt) {
   vista.render.render(vista.escena, vista.camara);
 }
 
+function vistaGeneral() {
+  // Posición inicial de la cámara libre: la misma inclinación que al jugar, con todo el tablero a la vista.
+  vista.libre = {azimut: 0, elevacion: 1.03, zoom: 1, foco: new THREE.Vector3(0, 0, DESVIO), seguir: null};
+}
+const camaraLibre = () => !!modo && (modo.soloVer || vista.mirando);
+function seguirSiguiente(sentido = 1) {
+  // Pasa a seguir al personaje siguiente o al anterior. Entre el último y el primero
+  // está la vista general, así que dando la vuelta completa se regresa a ella.
+  const ids = [null, ...modo.escena().personajes.map(x => x.p.id)];
+  const i = (ids.indexOf(vista.libre.seguir) + sentido + ids.length) % ids.length;
+  if (ids[i] === null) return vistaGeneral();
+  vista.libre.seguir = ids[i];
+  vista.libre.zoom = Math.min(vista.libre.zoom, Math.max(0.3, 9 / vista.distancia));      // se acerca para ver al personaje
+}
+function verOtro(sentido) {
+  // Tras terminar la partida, deja la cámara de celebración y pasa a mirar a los demás.
+  vista.orbita = null; vista.mirando = true;
+  if (!vista.libre) vistaGeneral();
+  seguirSiguiente(sentido);
+}
+function desplazarCamara(dt) {
+  // WASD o flechas mueven el punto que mira la cámara, en la dirección en que está girada.
+  let adelante = 0, lado = 0;
+  for (const t of pulsadas) { const d = DIRECCIONES[t]; if (d) { adelante -= d[0]; lado += d[1]; } }
+  if (!adelante && !lado) return;
+  const L = vista.libre, paso = vista.distancia * L.zoom * 0.9 * dt;
+  L.seguir = null;      // al mover la cámara a mano se deja de seguir
+  L.foco.x += (-Math.sin(L.azimut) * adelante + Math.cos(L.azimut) * lado) * paso;
+  L.foco.z += (-Math.cos(L.azimut) * adelante - Math.sin(L.azimut) * lado) * paso;
+}
+
 function moverCamara(modo, dt) {
   // La cámara siempre se desliza hacia donde debe estar, nunca salta.
   const destino = new THREE.Vector3(), mira = new THREE.Vector3();
@@ -1161,6 +1725,14 @@ function moverCamara(modo, dt) {
     // Mirar por encima del tablero lo baja en la pantalla y deja libre la franja del título.
     mira.set(0, d * 0.15, 0);
     destino.set(Math.sin(vista.paseo) * d, d * 0.62, Math.cos(vista.paseo) * d);
+  } else if (camaraLibre() && !vista.orbita) {
+    // Cámara libre del espectador: gira alrededor de un punto, se acerca y se aleja,
+    // y puede quedarse siguiendo a un personaje.
+    const L = vista.libre, seguido = vista.personajes.get(L.seguir);
+    if (seguido) L.foco.lerp(new THREE.Vector3(seguido.position.x, 0, seguido.position.z), 1 - Math.exp(-dt * 6));
+    const d = vista.distancia * L.zoom;
+    mira.copy(L.foco);
+    destino.set(mira.x + Math.sin(L.azimut) * Math.cos(L.elevacion) * d, Math.sin(L.elevacion) * d, mira.z + Math.cos(L.azimut) * Math.cos(L.elevacion) * d);
   } else if (vista.orbita) {
     const o = vista.orbita;
     o.t += dt; o.angulo += dt * 0.55;
@@ -1170,9 +1742,11 @@ function moverCamara(modo, dt) {
     if (o.ganado && Math.floor(o.t * 2.5) !== Math.floor((o.t - dt) * 2.5) && o.t < 6) cohete(o.foco, [ROJO, 0xffffff, DORADO], true);
   } else {
     // Vista normal: desde arriba e inclinada, con un leve seguimiento del jugador.
-    const jugador = modo.jugador.visual();
-    mira.set(mundoX(jugador[1]) * 0.1, 0, mundoZ(jugador[0]) * 0.1 + DESVIO);
-    const d = vista.distancia * vista.zoom;
+    const jugador = modo.jugador ? modo.jugador.visual() : [modo.filas / 2, modo.columnas / 2];
+    // Con la cámara acercada se centra en el jugador; si no, apenas lo acompaña.
+    const peso = vista.cerca ? 1 : 0.1;
+    mira.set(mundoX(jugador[1]) * peso, 0, mundoZ(jugador[0]) * peso + (vista.cerca ? 0 : DESVIO));
+    const d = vista.distancia * vista.zoom * (vista.cerca ? Math.max(0.3, 9 / vista.distancia) : 1);
     destino.set(mira.x, d * 0.86, mira.z + d * 0.52);
   }
   // Justo después del hipersalto la cámara llega muy rápido y luego frena.
@@ -1212,8 +1786,9 @@ function reloj(segundos) {
 
 function actualizarInterfaz() {
   const h = modo.hud(), carrera = h.tipo === 'carrera';
-  for (const id of ['posiciones', 'lugar', 'contador', 'tiempo']) $(id).hidden = !carrera;
-  for (const id of ['marcador', 'aviso', 'rivales']) $(id).hidden = carrera;
+  for (const id of ['posiciones', 'contador', 'tiempo']) $(id).hidden = !carrera;
+  $('lugar').hidden = !carrera || !h.lugar;      // sin jugador no hay lugar propio que mostrar
+  for (const id of ['marcador', 'rivales']) $(id).hidden = carrera;
   if (carrera) {
     // Clasificación: las filas se quedan en la página y solo cambia su altura, así se ven adelantarse.
     const lista = $('posiciones');
@@ -1230,7 +1805,7 @@ function actualizarInterfaz() {
       if (poner(el.children[3], fila.avance)) saltar(el.children[3]);
     });
     [...lista.children].forEach(el => { if (!h.filas.some(f => String(f.id) === el.dataset.id)) el.remove(); });
-    if (poner($('lugar'), `${h.lugar}<sup>º</sup>`)) saltar($('lugar'));
+    if (h.lugar && poner($('lugar'), `${h.lugar}<sup>º</sup>`)) saltar($('lugar'));
     $('lugar').classList.toggle('primero', h.lugar === 1);
     $('contador').children[0].textContent = h.contador[0];
     if (poner($('contador').children[1], h.contador[1])) saltar($('contador').children[1]);
@@ -1239,11 +1814,26 @@ function actualizarInterfaz() {
     const [a, b] = h.lados;
     const lado = l => `<div class="lado" style="background:${hex(l.color)}"><span>${l.nombre}</span><b>${l.puntos}</b></div>`;
     if (poner($('marcador'), lado(a) + `<span class="entre">A ${h.meta}</span>` + lado(b))) { saltar($('marcador').children[0]); saltar($('marcador').children[2]); }
-    if (poner($('aviso'), h.aviso) && h.aviso) saltar($('aviso'));
-    // Selector de rival: se puede cambiar con un clic o con las teclas 1 a 6.
-    poner($('rivales'), '<b class="carrera">RIVAL</b>' + h.opciones.map((nombre, i) =>
-      `<button data-tecla="${i + 1}"${nombre === h.elegido ? ' class="elegido"' : ''}>${i + 1}  ${nombre.toUpperCase()}</button>`).join(''));
+    // Selectores de algoritmo: con un clic, o con las teclas 1 a 6 para el lado derecho.
+    poner($('rivales'), h.selectores.map(s => `<div><b class="carrera">${s.titulo}</b>` + h.opciones.map((nombre, i) =>
+      `<button data-lado="${s.lado}" data-i="${i}"${nombre === s.elegido ? ' class="elegido"' : ''}>${s.lado === 'rival' ? i + 1 + '  ' : ''}${nombre.toUpperCase()}</button>`).join('') + '</div>').join(''));
   }
+  // Aviso central: lo que pasa en la partida y, al mirar, a quién sigue la cámara.
+  const seguido = camaraLibre() && modo.escena().personajes.find(x => x.p.id === vista.libre.seguir);
+  const aviso = [h.aviso, seguido ? 'SIGUIENDO A ' + seguido.p.nombre.toUpperCase() : ''].filter(Boolean).join('   ');
+  if (poner($('aviso'), aviso) && aviso) saltar($('aviso'));
+  // Botón de acercar: solo cuando se juega. Flechas: al mirar, o cuando el jugador ya terminó.
+  const terminado = modo.estado !== 'jugando';
+  $('acercar').hidden = modo.soloVer || terminado;
+  $('acercar').classList.toggle('activo', !!vista.cerca);
+  $('acercar').textContent = vista.cerca ? 'ALEJAR (C)' : 'ACERCAR (C)';
+  $('flechas').hidden = !(modo.soloVer || (terminado && carrera));
+  // El letrero reducido va arriba (bajo el marcador, si lo hay) y el aviso se recorre
+  // para quedar debajo de él en lugar de encimarse.
+  const chico = !!(modo.soloVer || vista.mirando);
+  $('fin').classList.toggle('chico', chico);
+  $('fin').style.paddingTop = chico ? (carrera ? '12px' : '104px') : '';
+  $('aviso').style.top = chico && terminado ? (carrera ? '152px' : '244px') : '';
   // Cuenta regresiva de salida.
   const cuenta = modo.espera > 0 ? String(Math.ceil(modo.espera)) : modo.tiempo - modo.salida < 0.8 ? '¡YA!' : '';
   if (poner($('cuenta'), cuenta) && cuenta) saltar($('cuenta'));
@@ -1264,6 +1854,7 @@ function abrir(indice) {
   // Llegada: la cámara viene de muy lejos a toda velocidad y frena sobre el tablero.
   if (!calmado) animar([{transform: 'scale(1.7)'}, {transform: 'scale(1)'}], {duration: 520, easing: 'cubic-bezier(.1,.9,.2,1)'});
   vista.pos.set(0, 170, 150); vista.impulso = 1.1;
+  vistaGeneral(); vista.mirando = false; vista.cerca = false;
 }
 function mostrarModos() {
   modo = null; pantalla = 'modos'; pulsadas.clear();
@@ -1341,13 +1932,14 @@ function avanzar(dt) {
   // Sin modo elegido corre la partida de demostración, que se reinicia sola al terminar.
   if (!modo && (!demo || demo.estado !== 'jugando')) demo = new Demo();
   const activo = modo || demo;
-  if (modo) { const ultima = [...pulsadas].pop(); modo.direccion = ultima ? DIRECCIONES[ultima] : null; }
+  if (camaraLibre()) desplazarCamara(dt);
+  else if (modo) { const ultima = [...pulsadas].pop(); modo.direccion = ultima ? DIRECCIONES[ultima] : null; }
   activo.tiempo += dt;
   if (activo.espera > 0) {
     // Durante la cuenta regresiva nadie se mueve, así todos salen a la vez.
     activo.espera -= dt;
     if (activo.espera <= 0) activo.salida = activo.tiempo;
-  } else if (activo.estado === 'jugando') activo.actualizar(dt);
+  } else if (activo.estado === 'jugando' || activo.sigueTrasFinal) activo.actualizar(dt);      // las carreras siguen tras anunciar el resultado
   sincronizar(activo, dt);
   if (modo) actualizarInterfaz();
 }
@@ -1356,7 +1948,9 @@ function iniciar() {
   $('modos').innerHTML = MODOS.map((m, i) => `<button data-i="${i}"><b>${i + 1}. ${m.titulo}</b><span>${m.resumen}</span></button>`).join('');
   $('modos').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) elegir(Number(b.dataset.i)); });
   $('portada').addEventListener('click', dejarPortada);
-  $('rivales').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo) modo.tecla(b.dataset.tecla); });
+  $('acercar').addEventListener('click', () => { vista.cerca = !vista.cerca; });
+  $('flechas').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo) verOtro(Number(b.dataset.sentido)); });
+  $('rivales').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo) modo.elegir(b.dataset.lado, Number(b.dataset.i)); });
   if (typeof THREE === 'undefined') { $('sinVista').hidden = false; return; }
   try { iniciarVista(); } catch (error) { $('sinVista').hidden = false; console.error(error); return; }
   addEventListener('keydown', ev => {
@@ -1364,12 +1958,31 @@ function iniciar() {
     if (pantalla === 'portada') return dejarPortada();
     if (pantalla === 'modos') { if (t >= '1' && t <= String(MODOS.length)) elegir(Number(t) - 1); return; }
     if (t === 'escape') return mostrarModos();
+    if (camaraLibre() && (t === 'tab' || t === '0')) { ev.preventDefault(); return t === 'tab' ? seguirSiguiente() : vistaGeneral(); }
+    // Con la partida terminada, las flechas izquierda y derecha pasan a mirar a otro competidor.
+    if (modo.estado !== 'jugando' && !modo.soloVer && modo.hud().tipo === 'carrera' && (t === 'arrowleft' || t === 'arrowright')) { ev.preventDefault(); return verOtro(t === 'arrowright' ? 1 : -1); }
+    if (t === 'c' && !modo.soloVer) { vista.cerca = !vista.cerca; return; }
     if (t in DIRECCIONES || t === ' ') ev.preventDefault();
     if (t in DIRECCIONES) pulsadas.add(t);
     else if (!ev.repeat) modo.tecla(t);
   });
   addEventListener('keyup', ev => pulsadas.delete(ev.key.toLowerCase()));
   addEventListener('blur', () => pulsadas.clear());
+  // Ratón del espectador: la rueda acerca y aleja, y arrastrar gira la cámara.
+  let arrastre = null;
+  addEventListener('wheel', ev => {
+    if (!camaraLibre()) return;
+    vista.libre.zoom = Math.min(1.7, Math.max(0.12, vista.libre.zoom * Math.exp(ev.deltaY * 0.0012)));
+  }, {passive: true});
+  vista.render.domElement.addEventListener('pointerdown', ev => { if (camaraLibre()) arrastre = [ev.clientX, ev.clientY]; });
+  addEventListener('pointermove', ev => {
+    if (!arrastre || !camaraLibre()) return;
+    vista.libre.azimut -= (ev.clientX - arrastre[0]) * 0.006;
+    // La inclinación se limita para no pasar por debajo del tablero ni quedar justo encima.
+    vista.libre.elevacion = Math.min(1.5, Math.max(0.2, vista.libre.elevacion + (ev.clientY - arrastre[1]) * 0.005));
+    arrastre = [ev.clientX, ev.clientY];
+  });
+  addEventListener('pointerup', () => { arrastre = null; });
   const cronometro = new THREE.Clock();
   (function cuadro() {
     requestAnimationFrame(cuadro);
