@@ -65,6 +65,41 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 @keyframes saltar{from{transform:scale(2.1);opacity:0}}
 #cuenta.salta{animation:saltarCentro .5s cubic-bezier(.2,1.6,.4,1)}
 @keyframes saltarCentro{from{transform:translate(-50%,-50%) scale(2.4);opacity:0}}
+/* Modo aprender: panel de código y estructura a la derecha, leyenda y comparación a la izquierda. */
+#aprender > div{position:absolute;background:rgba(27,27,30,.94);color:var(--blanco);border:5px solid var(--carbon);border-radius:16px;box-shadow:6px 6px 0 rgba(0,0,0,.35);padding:12px 14px;pointer-events:auto;font-size:14px;line-height:1.35}
+#aprender{--panel:min(470px,46vw)}
+#leccion{right:14px;top:14px;bottom:14px;width:var(--panel);box-sizing:border-box;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+#leyenda{left:14px;right:calc(var(--panel) + 28px);top:14px;display:flex;flex-wrap:wrap;gap:3px 16px;font-weight:700;font-size:13px;padding:8px 12px}
+#resultado{left:14px;right:calc(var(--panel) + 28px);bottom:14px;display:flex;gap:18px;align-items:flex-start}
+#resultado > div:first-child{flex:none}
+#aprender h4{margin:0;font-family:var(--titular);font-style:italic;font-size:15px;color:var(--oro)}
+#aprender p{margin:0}
+#aprender small{color:#B9B9C2;font-size:12px}
+#aprender button{font:inherit;font-weight:800;font-size:13px;color:var(--blanco);background:#3A3A40;border:2px solid #5A5A62;border-radius:8px;padding:3px 9px;cursor:pointer}
+#aprender button:hover,#aprender button:focus-visible{border-color:var(--oro);outline:none}
+#aprender button.elegido{background:var(--oro);color:var(--carbon);border-color:var(--oro)}
+#aprender .grupo{display:flex;flex-wrap:wrap;gap:5px}
+#codigo{margin:0;font:12px/1.45 Consolas,"Courier New",monospace;background:#111114;border-radius:10px;padding:8px 0;white-space:pre;overflow-x:auto}
+#codigo span{display:block;padding:0 10px}
+#codigo span.ahora{background:var(--oro);color:var(--carbon);font-weight:700}
+.dato{display:inline-block;background:#FFE066;color:var(--carbon);font-weight:800;font-size:12.5px;border-radius:7px;padding:2px 7px;margin:0 5px 5px 0}
+.dato i{font-style:normal;font-weight:600;opacity:.75}
+.dato.sale{background:var(--blanco);box-shadow:0 0 0 3px var(--oro)}
+/* La pila es un vaso abierto por arriba; la cola, un tubo abierto por los dos lados. */
+.pila{display:flex;gap:12px;align-items:stretch;margin-top:6px}
+.vaso{flex:none;width:150px;border:4px solid #B9B9C2;border-top:none;border-radius:0 0 12px 12px;padding:8px 8px 6px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;min-height:150px}
+.vaso .dato{display:block;margin:0;text-align:center}
+.pila .rotulos{display:flex;flex-direction:column;justify-content:space-between}
+.tubo{border-top:4px solid #B9B9C2;border-bottom:4px solid #B9B9C2;padding:8px 4px 3px;min-height:30px}
+.extremos{display:flex;justify-content:space-between;gap:10px;margin:6px 0 3px}
+.rotulo{font-weight:800;font-size:12px;color:var(--oro)}
+.rotulo b{color:var(--blanco)}
+.muestra{display:inline-block;width:14px;height:14px;border-radius:4px;border:2px solid #000;vertical-align:-3px;margin-right:7px}
+#resultado table{border-collapse:collapse;margin:4px 0 0}
+#resultado td,#resultado th{padding:2px 8px;text-align:right}
+#resultado td:first-child,#resultado th:first-child{text-align:left}
+#resultado tr.este{background:#3A3A40}
+#resultado .mejor{color:#7CFF8A;font-weight:800}
 #ayuda{position:fixed;left:0;right:0;bottom:14px;text-align:center;font-size:17px;-webkit-text-stroke-width:5px;pointer-events:none;white-space:pre-wrap}
 
 .capa{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
@@ -91,6 +126,7 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 #menu.entrando #modos button:nth-child(4){animation-delay:.24s}
 #menu.entrando #modos button:nth-child(5){animation-delay:.32s}
 #menu.entrando #modos button:nth-child(6){animation-delay:.4s}
+#menu.entrando #modos button:nth-child(7){animation-delay:.48s}
 @keyframes entrar{from{opacity:0;transform:skewX(-7deg) translateY(40px) scale(.8)}}
 #menu.saliendo h2,#menu.saliendo p,#menu.saliendo button{opacity:0;transition:opacity .3s}
 #fin{pointer-events:none;justify-content:flex-end;padding-bottom:12vh}
@@ -116,6 +152,7 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
   <button id="acercar" class="boton">ACERCAR (C)</button>
   <div id="flechas"><button class="boton" data-sentido="-1" aria-label="Ver al anterior">&#9664;</button><span class="carrera">VER A LOS DEMÁS</span><button class="boton" data-sentido="1" aria-label="Ver al siguiente">&#9654;</button></div>
   <div id="cuenta" class="carrera"></div>
+  <div id="aprender" hidden><div id="leyenda"></div><div id="resultado"></div><div id="leccion"></div></div>
 </div>
 <div id="ayuda" class="carrera" hidden></div>
 <div id="fin" class="capa" hidden><h3 id="finTitulo" class="carrera"></h3><p id="finDetalle" class="carrera"></p><p class="carrera">ESPACIO: OTRA VEZ   ESC: MENÚ</p></div>
@@ -127,7 +164,7 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 <div id="menu" class="capa" hidden>
   <h2 class="carrera">ELIGE UN MODO</h2>
   <div id="modos"></div>
-  <p class="carrera">CLIC O TECLAS 1 A 6</p>
+  <p class="carrera">CLIC O TECLAS 1 A 7</p>
 </div>
 <canvas id="salto" hidden></canvas>
 <div id="sinVista" class="carrera" hidden>No se pudo iniciar la vista 3D. Revisa la conexión a internet o que el navegador permita WebGL.</div>
@@ -903,7 +940,261 @@ VerMaze.titulo = 'VER: MAZE RUNNER';
 VerMaze.resumen = 'Mira a los cinco algoritmos buscar la salida del laberinto gigante que cambia, con la cámara libre.';
 VerGemas.ayuda = VerBandera.ayuda = VerMaze.ayuda = 'RUEDA: ZOOM   ARRASTRAR: GIRAR   WASD: MOVER   TAB O FLECHAS DE PANTALLA: SEGUIR A OTRO   0: VISTA GENERAL   R: OTRA   ESC: MENÚ';
 
-const MODOS = [AtrapaGemas, Bandera, MazeRunner, VerGemas, VerBandera, VerMaze];
+// ---------------------------------------------------------------------------
+// Modo aprender: cada algoritmo paso a paso, con su código y su estructura de datos
+// ---------------------------------------------------------------------------
+// Receta de cada algoritmo. Los cinco siguen el mismo esquema (sacar una casilla de la
+// frontera, revisar sus vecinos y meter los que convienen) y solo cambian tres cosas:
+//   saca:  de qué extremo sale la siguiente casilla ('frente' o 'tope')
+//   clave: con qué valor se ordena la frontera (g = costo acumulado, h = estimado a la meta)
+//   entra: cuándo un vecino entra a la frontera ('sin padre', 'sin explorar' o 'más barato')
+// codigo es el programa en Python que se muestra, y lineas dice qué renglones corresponden
+// a cada tipo de paso para poder resaltarlos.
+const RECETAS = {
+  'BFS': {
+    estructura: 'COLA (FIFO)', regla: 'La primera que entra es la primera que sale.', saca: 'frente', entra: 'sin padre',
+    idea: 'Explora por capas: primero todo lo que está a 1 paso, luego a 2, luego a 3. Encuentra la ruta con menos pasos, pero no mira el costo del terreno.',
+    valor: () => '',
+    porque: () => 'Sale del frente de la cola: es la que lleva más tiempo esperando. Por eso BFS avanza parejo, por capas.',
+    codigo: ['frontera = deque([inicio])', 'padres = {inicio: None}', 'while frontera:', '    actual = frontera.popleft()', '    if actual == meta:', '        return reconstruir(padres, meta)',
+      '    for vecino in vecinos(mapa, actual):', '        if vecino not in padres:', '            padres[vecino] = actual', '            frontera.append(vecino)', 'return None'],
+    lineas: {inicio: [0, 1], sacar: [3, 3], meta: [4, 5], vecinos: [6, 9], ruta: [5, 5], sinRuta: [10, 10]},
+  },
+  'DFS': {
+    estructura: 'PILA (LIFO)', regla: 'La última que entra es la primera que sale.', saca: 'tope', entra: 'sin explorar',
+    idea: 'Se mete hasta el fondo por un solo camino y solo regresa cuando se topa con pared. Usa poca memoria, pero su ruta suele dar muchas vueltas.',
+    valor: () => '',
+    porque: () => 'Sale del tope de la pila: es la última que entró. Por eso DFS sigue de frente por el mismo camino.',
+    codigo: ['frontera = [inicio]', 'padres = {inicio: None}', 'explorados = set()', 'while frontera:', '    actual = frontera.pop()', '    if actual in explorados:', '        continue', '    explorados.add(actual)',
+      '    if actual == meta:', '        return reconstruir(padres, meta)', '    for vecino in vecinos(mapa, actual):', '        if vecino not in explorados:', '            padres[vecino] = actual', '            frontera.append(vecino)', 'return None'],
+    lineas: {inicio: [0, 2], sacar: [4, 4], saltar: [5, 6], meta: [8, 9], vecinos: [10, 13], ruta: [9, 9], sinRuta: [14, 14]},
+  },
+  'Dijkstra': {
+    estructura: 'COLA DE PRIORIDAD', regla: 'Sale la de menor costo acumulado g.', saca: 'frente', entra: 'más barato', clave: (e, n) => [e.g, n],
+    idea: 'Siempre explora la casilla más barata de alcanzar desde el inicio. Garantiza la ruta de menor costo, pero busca en todas direcciones.',
+    valor: e => 'g=' + e.g,
+    porque: e => `Sale la de menor costo acumulado: llegar hasta aquí cuesta g = ${e.g}. Nada de lo que queda en la cola es más barato.`,
+    codigo: ['frontera = [(0, inicio)]', 'costos = {inicio: 0}', 'padres = {inicio: None}', 'while frontera:', '    costo, actual = heappop(frontera)', '    if costo > costos[actual]:', '        continue',
+      '    if actual == meta:', '        return reconstruir(padres, meta)', '    for vecino, peso in vecinos(mapa, actual):', '        nuevo = costo + peso', '        if vecino not in costos or nuevo < costos[vecino]:',
+      '            costos[vecino] = nuevo', '            padres[vecino] = actual', '            heappush(frontera, (nuevo, vecino))', 'return None'],
+    lineas: {inicio: [0, 2], sacar: [4, 4], saltar: [5, 6], meta: [7, 8], vecinos: [9, 14], ruta: [8, 8], sinRuta: [15, 15]},
+  },
+  'Voraz': {
+    estructura: 'COLA DE PRIORIDAD', regla: 'Sale la que parece más cerca de la meta (menor h).', saca: 'frente', entra: 'sin padre', clave: (e, n) => [e.h, n],
+    idea: 'Solo mira cuánto parece faltar para la meta y se lanza hacia allá. Es rápido en campo abierto, pero ignora el costo y cae en trampas.',
+    valor: e => 'h=' + e.h,
+    porque: e => `Sale la que parece más cerca de la meta: le faltan h = ${e.h} casillas en línea recta. No le importa cuánto costó llegar aquí.`,
+    codigo: ['frontera = [(heuristica(inicio, meta), inicio)]', 'padres = {inicio: None}', 'while frontera:', '    _, actual = heappop(frontera)', '    if actual == meta:', '        return reconstruir(padres, meta)',
+      '    for vecino, peso in vecinos(mapa, actual):', '        if vecino not in padres:', '            padres[vecino] = actual', '            h = heuristica(vecino, meta)', '            heappush(frontera, (h, vecino))', 'return None'],
+    lineas: {inicio: [0, 1], sacar: [3, 3], meta: [4, 5], vecinos: [6, 10], ruta: [5, 5], sinRuta: [11, 11]},
+  },
+  'A*': {
+    estructura: 'COLA DE PRIORIDAD', regla: 'Sale la de menor f = g + h.', saca: 'frente', entra: 'más barato', clave: e => [e.g + e.h, e.h],
+    idea: 'Suma lo que ya gastó (g) y lo que estima que falta (h). Encuentra la ruta de menor costo como Dijkstra, pero explorando solo hacia la meta.',
+    valor: e => `${e.g}+${e.h}=${e.g + e.h}`,
+    porque: e => `Sale la de menor f = g + h = ${e.g} + ${e.h} = ${e.g + e.h}: lo que ya costó llegar más lo que se estima que falta.`,
+    codigo: ['frontera = [(heuristica(inicio, meta), inicio)]', 'costos = {inicio: 0}', 'padres = {inicio: None}', 'cerrados = set()', 'while frontera:', '    _, actual = heappop(frontera)', '    if actual in cerrados:', '        continue',
+      '    cerrados.add(actual)', '    if actual == meta:', '        return reconstruir(padres, meta)', '    for vecino, peso in vecinos(mapa, actual):', '        nuevo = costos[actual] + peso', '        if vecino not in costos or nuevo < costos[vecino]:',
+      '            costos[vecino] = nuevo', '            padres[vecino] = actual', '            f = nuevo + heuristica(vecino, meta)', '            heappush(frontera, (f, vecino))', 'return None'],
+    lineas: {inicio: [0, 3], sacar: [5, 5], saltar: [6, 7], meta: [9, 10], vecinos: [11, 17], ruta: [10, 10], sinRuta: [18, 18]},
+  },
+};
+const nombreDe = pos => `(${pos[0]},${pos[1]})`;      // una casilla escrita como (fila, columna)
+const costoDeRuta = (cuad, ruta) => ruta.slice(1).reduce((suma, [f, c]) => suma + COSTOS[cuad[f][c]], 0);
+
+function pasosDe(nombre, cuad, inicio, meta) {
+  // Corre la búsqueda completa y guarda una foto de cada paso, para poder ir hacia
+  // adelante y hacia atrás. Devuelve {pasos, orden, ruta}: orden es la lista de casillas
+  // exploradas, en el orden en que salieron de la frontera.
+  const r = RECETAS[nombre], pasos = [], orden = [];
+  const padres = new Map([[K(inicio), null]]), costos = new Map([[K(inicio), 0]]), explorados = new Set();
+  // Cada elemento de la frontera es [clave, desempate, casilla]; la casilla lleva su g y su h.
+  const primero = {pos: inicio, g: 0, h: heuristica(inicio, meta)};
+  const frontera = [[...(r.clave ? r.clave(primero, 0) : [0, 0]), primero]];
+  let n = 0, ruta = null;
+  const foto = (tipo, texto, extra) => pasos.push(Object.assign({tipo, texto, actual: null, nuevos: [], ruta: null,
+    frontera: frontera.map(x => x[2]), exploradas: orden.length}, extra));
+  foto('inicio', `Se mete el inicio ${nombreDe(inicio)} a la frontera. Todavía no se ha explorado nada.`);
+  while (frontera.length) {
+    const actual = (r.saca === 'tope' ? frontera.pop() : frontera.shift())[2];
+    if (r.entra !== 'sin padre' && explorados.has(K(actual.pos))) {
+      foto('saltar', `${nombreDe(actual.pos)} ya se había explorado por otro camino. Se descarta y se saca la siguiente.`, {actual: actual.pos});
+      continue;
+    }
+    explorados.add(K(actual.pos)); orden.push(actual.pos);
+    foto('sacar', `${nombreDe(actual.pos)}: ${r.porque(actual)}`, {actual: actual.pos});
+    if (igual(actual.pos, meta)) {
+      ruta = reconstruir(padres, meta);
+      foto('meta', `${nombreDe(actual.pos)} es la meta. La búsqueda termina aquí.`, {actual: actual.pos});
+      break;
+    }
+    const nuevos = [];
+    for (const [v, peso] of vecinos(cuad, actual.pos)) {
+      const g = costos.get(K(actual.pos)) + peso;
+      const entra = r.entra === 'sin padre' ? !padres.has(K(v)) : r.entra === 'sin explorar' ? !explorados.has(K(v)) : !costos.has(K(v)) || g < costos.get(K(v));
+      if (!entra) continue;
+      costos.set(K(v), g); padres.set(K(v), actual.pos);
+      const e = {pos: v, g, h: heuristica(v, meta)};
+      if (r.clave) meter(frontera, [...r.clave(e, ++n), e]); else frontera.push([0, 0, e]);
+      nuevos.push(v);
+    }
+    foto('vecinos', nuevos.length ? `Se revisan los vecinos de ${nombreDe(actual.pos)}. Entran a la frontera: ${nuevos.map(nombreDe).join(', ')}.`
+      : `Se revisan los vecinos de ${nombreDe(actual.pos)}. Ninguno entra: son muros o ya estaban anotados.`, {actual: actual.pos, nuevos});
+  }
+  if (ruta) foto('ruta', `Se reconstruye la ruta siguiendo los padres desde la meta hasta el inicio: ${ruta.length - 1} pasos, costo ${costoDeRuta(cuad, ruta)}.`, {ruta});
+  else foto('sinRuta', 'La frontera quedó vacía sin llegar a la meta: no existe ninguna ruta.');
+  return {pasos, orden, ruta};
+}
+
+// Mapas de práctica. Cada uno está hecho para que se note una diferencia entre los
+// algoritmos, y 'porque' la explica. I es el inicio y M la meta.
+const LECCIONES = [
+  {nombre: 'Campo abierto', mapa: `
+.............
+.............
+.............
+.............
+I...........M
+.............
+.............
+.............
+.............`,
+    porque: 'Sin obstáculos, la línea recta es la mejor ruta. Voraz y A* van directo porque la heurística les dice hacia dónde queda la meta. BFS y Dijkstra no saben dónde está, así que revisan casi todo el mapa para llegar a la misma ruta. DFS llega, pero dando un rodeo enorme.'},
+  {nombre: 'Pantano', mapa: `
+.............
+.............
+....aaaaa....
+....aaaaa....
+I...aaaaa...M
+....aaaaa....
+....aaaaa....
+.............
+.............`,
+    porque: 'El agua cuesta 5 por casilla y el llano 1. BFS y Voraz no miran el costo: cruzan el pantano porque son menos pasos y pagan casi el doble. Dijkstra y A* lo rodean y encuentran la ruta más barata, pero A* explora mucho menos porque no pierde tiempo buscando hacia atrás.'},
+  {nombre: 'Trampa', mapa: `
+.............
+.............
+........M....
+....########.
+.....I.......
+.............
+.............`,
+    porque: 'La meta está justo detrás de la pared. Voraz corre hacia donde la meta parece más cerca y termina rodeando la pared por el lado largo. A* siente la misma atracción, pero como también suma lo que ya gastó, descubre que el lado corto sale más barato. Esa es la diferencia entre mirar solo h y mirar g + h.'},
+  {nombre: 'Laberinto', mapa: `
+I.#.....#....
+.##.###.#.##.
+....#...#..#.
+.####.###.##.
+.#....#....#.
+.#.####.####.
+.#......#....
+.######.#.##.
+........#..#M`,
+    porque: 'En los pasillos de un laberinto casi no hay de dónde escoger, así que todos terminan con una ruta del mismo largo. La heurística ayuda poco, porque el camino obliga a alejarse de la meta: A* explora casi lo mismo que BFS. Voraz explora menos porque no reparte su atención, y aquí no tiene forma de equivocarse de ruta.'},
+  {nombre: 'Sin salida', mapa: `
+.............
+.........###.
+.........#.#.
+....I....#M#.
+.........#.#.
+.........###.
+.............`,
+    porque: 'La meta está encerrada. Ningún algoritmo puede saberlo de antemano: todos tienen que explorar cada casilla alcanzable hasta que la frontera se vacía. Ni la mejor heurística ayuda cuando no existe ruta.'},
+];
+const RITMOS = [['LENTA', 0.7], ['NORMAL', 0.3], ['RÁPIDA', 0.07]];      // segundos entre pasos en automático
+
+class Aprender extends Modo {
+  // No es una partida: se elige un algoritmo y un mapa, y la búsqueda se recorre paso a
+  // paso. Todos los pasos se calculan al cargar; avanzar o retroceder solo cambia 'indice'.
+  cargar() {
+    const leccion = LECCIONES[Aprender.mapa], [nombre, , color] = RIVALES[Aprender.algoritmo];
+    this.usarMapa(leccion.mapa);
+    this.espera = 0;      // sin cuenta regresiva
+    this.nombre = nombre; this.leccion = leccion;
+    this.inicio = this.puntos.I[0]; this.meta = this.puntos.M[0];
+    Object.assign(this, pasosDe(nombre, this.cuad, this.inicio, this.meta));      // pasos, orden y ruta
+    // turno: en qué momento se exploró cada casilla, para saber cuáles ya van en cada paso.
+    this.turno = new Map(this.orden.map((pos, i) => [K(pos), i]));
+    // Resultado de los cinco algoritmos en este mapa, para compararlos al final.
+    this.tabla = RIVALES.map(([otro]) => {
+      const r = pasosDe(otro, this.cuad, this.inicio, this.meta);
+      return {nombre: otro, exploradas: r.orden.length, pasos: r.ruta ? r.ruta.length - 1 : null, costo: r.ruta ? costoDeRuta(this.cuad, r.ruta) : null};
+    });
+    // Un personaje espera en el inicio y recorre la ruta cuando la búsqueda termina.
+    this.caminante = new Personaje(this.inicio, color, nombre, null, VELOCIDAD_RIVAL);
+    this.indice = 0; this.auto = false; this.reloj = 0; this.cambios = 0; this.festejo = false;
+  }
+  ir(indice) {
+    // Salta al paso indicado, sin salirse de la lista.
+    indice = Math.max(0, Math.min(this.pasos.length - 1, indice));
+    if (indice === this.pasos.length - 1) this.auto = false;
+    this.cambios++;
+    if (indice === this.indice) return;
+    this.indice = indice;
+    this.versionTerreno++;      // la vista vuelve a pintar las casillas
+    this.caminante.regresar(); this.festejo = false;
+    if (this.terminado() && this.ruta) this.caminante.camino = this.ruta.slice(1);
+  }
+  terminado() { return this.indice === this.pasos.length - 1; }
+  accion(nombre, valor) {
+    // Lo que se puede pedir desde los botones del panel o desde el teclado.
+    if (nombre === 'paso') this.ir(this.indice + valor);
+    else if (nombre === 'ir') this.ir(valor < 0 ? this.pasos.length - 1 : valor);
+    else if (nombre === 'auto') { if (this.terminado()) this.ir(0); this.auto = !this.auto; this.reloj = 0; this.cambios++; }
+    else if (nombre === 'ritmo') { Aprender.ritmo = (Aprender.ritmo + 1) % RITMOS.length; this.cambios++; }
+    else if (nombre === 'algoritmo' && RIVALES[valor]) { Aprender.algoritmo = valor; this.cargar(); }
+    else if (nombre === 'mapa' && LECCIONES[valor]) { Aprender.mapa = valor; this.cargar(); }
+  }
+  teclaPropia(t) {
+    // Devuelve true si la tecla era de este modo. Las flechas aquí cambian de paso en lugar de mover la cámara.
+    const teclas = {arrowright: ['paso', 1], ' ': ['paso', 1], arrowleft: ['paso', -1], p: ['auto'], enter: ['auto'], v: ['ritmo'],
+      home: ['ir', 0], end: ['ir', -1], r: ['ir', 0], m: ['mapa', (Aprender.mapa + 1) % LECCIONES.length]};
+    const pedida = teclas[t] || (t >= '1' && t <= String(RIVALES.length) ? ['algoritmo', Number(t) - 1] : null);
+    if (pedida) this.accion(...pedida);
+    return !!pedida;
+  }
+  actualizar(dt) {
+    if (this.auto) {
+      this.reloj += dt;
+      while (this.auto && this.reloj >= RITMOS[Aprender.ritmo][1]) { this.reloj -= RITMOS[Aprender.ritmo][1]; this.ir(this.indice + 1); }
+    }
+    // Al llegar a la meta, el personaje festeja con fuegos artificiales.
+    if (this.caminante.avanzar(dt, this.cuad) && igual(this.caminante.posicion, this.meta) && !this.festejo) {
+      this.festejo = true;
+      this.emitir('meta', this.meta, this.caminante.color, {quien: this.caminante.id});
+    }
+  }
+  marcaDe(f, c) {
+    // Qué papel tiene una casilla en el paso actual, para pintarla. null: no ha sido tocada.
+    const paso = this.pasos[this.indice], clave = K([f, c]), esta = pos => K(pos) === clave;
+    if (paso.ruta && paso.ruta.some(esta)) return 'ruta';
+    if (paso.actual && esta(paso.actual)) return 'actual';
+    if (paso.nuevos.some(esta)) return 'nueva';
+    if (paso.frontera.some(e => esta(e.pos))) return 'frontera';
+    if (this.turno.has(clave) && this.turno.get(clave) < paso.exploradas) return 'explorada';
+    return null;
+  }
+  escena() {
+    const arboles = [];
+    this.cuad.forEach((fila, f) => [...fila].forEach((s, c) => { if (s === 'b') arboles.push([f, c]); }));
+    return {
+      personajes: [{p: this.caminante, etiqueta: this.nombre, baila: this.festejo}],
+      banderas: [{pos: this.meta, color: DORADO, marco: true}],
+      letreros: [{pos: this.inicio, texto: 'INICIO', color: ROJO, alto: 2.35}, {pos: this.meta, texto: 'META', color: CARBON, alto: 1.75}],
+      muros: [], arboles,
+    };
+  }
+  hud() { return {tipo: 'aprender'}; }
+}
+Aprender.algoritmo = 0; Aprender.mapa = 0; Aprender.ritmo = 1;      // se conservan al cambiar de mapa o de algoritmo
+Aprender.prototype.soloVer = true;          // cámara libre con rueda y arrastre
+Aprender.prototype.siempreDia = true;       // de noche no se distinguirían los colores de las casillas
+Aprender.prototype.panelDerecho = true;     // el tablero se recorre a la izquierda para dejar sitio al panel
+Aprender.titulo = 'APRENDER';
+Aprender.resumen = 'Recorre cada algoritmo paso a paso: su código, su estructura de datos y por qué gana o pierde en cada mapa.';
+Aprender.ayuda = '';
+
+const MODOS = [AtrapaGemas, Bandera, MazeRunner, VerGemas, VerBandera, VerMaze, Aprender];
 
 class Demo extends AtrapaGemas {
   // Partida que se juega sola detrás de la portada: el personaje rojo también lo maneja la CPU.
@@ -922,6 +1213,8 @@ class Demo extends AtrapaGemas {
 // ---------------------------------------------------------------------------
 const PALETA = {
   suelo: [0x86CF5C, 0x76C150], bosque: [0x58A548, 0x4D9940], agua: [0x7DC4F5, 0x69B2E6],
+  // Colores del modo aprender: el papel de cada casilla en el paso actual de la búsqueda.
+  busqueda: {actual: [0xFFFFFF, 0xF0F0F0], nueva: [0xFFA640, 0xF59A36], frontera: [0xFFE066, 0xF5D655], explorada: [0xA99BE0, 0x9D8FD6], ruta: [0xE8434A, 0xD7282F]},
   muro: 0x8A8A90, borde: 0x1B1B1E, tronco: 0x6B4A35, copa: [0x2E6B50, 0x3F8A66], piel: 0xF3C9A5, contorno: 0x111111,
 };
 const vista = {};
@@ -1030,19 +1323,29 @@ function charcoDeLuz(radio, color) {
 function crearCielo(cielo) {
   // Todo lo que se ve detrás del tablero: nubes, estrellas, luna, aves, cometas y dos criaturas raras.
   const azar = (a, b) => a + Math.random() * (b - a);
-  // Nubes en dos capas. Usan bolas redondeadas y sombreado continuo para verse suaves.
+  // Nubes en dos capas, suaves y translúcidas.
   vista.nubes = new THREE.Group();
-  const bola = new THREE.IcosahedronGeometry(1, 1), blanco = new THREE.MeshLambertMaterial({color: 0xFFF3EE});
-  for (const capa of [{y: -12, paso: 11, n: 6, tam: 1}, {y: -25, paso: 19, n: 4, tam: 2.1}]) {
+  // Cada nube es una sola pieza: una bola a la que se le abultan y hunden zonas y se le
+  // aplana la panza. Al no estar hecha de varias bolas encimadas, puede ser translúcida
+  // sin que se le noten las uniones.
+  const forma = semilla => {
+    const geo = new THREE.IcosahedronGeometry(1, 2), puntos = geo.attributes.position, normales = [];
+    for (let i = 0; i < puntos.count; i++) {
+      const x = puntos.getX(i), y = puntos.getY(i), z = puntos.getZ(i);
+      const r = 1 + 0.22 * Math.sin(x * 3.1 + semilla) * Math.cos(z * 2.7 + semilla * 2) + 0.14 * Math.sin(y * 4 + x * 2 + semilla * 3);
+      puntos.setXYZ(i, x * r, (y < 0 ? y * 0.45 : y) * r, z * r);
+      normales.push(x, y, z);      // normales de esfera: la luz la recorre sin marcar las caras
+    }
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normales, 3));
+    return geo;
+  };
+  const formas = [1, 2.3, 3.9, 5.2].map(forma), blanco = new THREE.MeshLambertMaterial({color: 0xFFF3EE, transparent: true, opacity: 0.5});
+  // Las nubes van espaciadas para que casi no se tapen entre sí.
+  for (const capa of [{y: -12, paso: 17, n: 4, tam: 1}, {y: -26, paso: 30, n: 3, tam: 2.1}]) {
     for (let i = -capa.n; i <= capa.n; i++) for (let j = -capa.n; j <= capa.n; j++) {
-      const nube = new THREE.Group();
-      for (let k = 0; k < 5; k++) {
-        const trozo = new THREE.Mesh(bola, blanco);
-        trozo.position.set((k - 2) * 1.7 + azar(-0.5, 0.5), azar(0, 0.9) * (k === 2 ? 1.6 : 1), azar(-1.2, 1.2));
-        trozo.scale.set(azar(1.9, 3.1), azar(1.0, 1.7), azar(1.7, 2.7));
-        nube.add(trozo);
-      }
-      nube.scale.setScalar(capa.tam);
+      const nube = new THREE.Mesh(formas[Math.floor(Math.random() * formas.length)], blanco);
+      nube.scale.set(azar(4.5, 7) * capa.tam, azar(1.3, 2) * capa.tam, azar(3, 4.5) * capa.tam);
+      nube.rotation.y = azar(0, Math.PI * 2);
       nube.position.set(i * capa.paso + azar(0, 7), capa.y - azar(0, 5), j * capa.paso + azar(0, 7));
       nube.userData = {v: azar(0.3, 0.7), limite: capa.n * capa.paso + 12};
       vista.nubes.add(nube);
@@ -1191,7 +1494,7 @@ function ambientar(modo, dt) {
   for (const nube of vista.nubes.children) { nube.position.x += dt * nube.userData.v; if (nube.position.x > nube.userData.limite) nube.position.x -= nube.userData.limite * 2; }
 
   // Ciclo de día y noche. 'noche' va de 0 (pleno día) a 1 (plena noche) y 'ocaso' marca el paso de uno a otro.
-  const fase = (t / CICLO) % 1, noche = sube(0.44, 0.54, fase) - sube(0.9, 1, fase), ocaso = 1 - Math.abs(noche * 2 - 1);
+  const fase = (t / CICLO) % 1, noche = modo.siempreDia ? 0 : sube(0.44, 0.54, fase) - sube(0.9, 1, fase), ocaso = 1 - Math.abs(noche * 2 - 1);
   vista.noche = noche;
   const L = vista.luces, mezcla = (dia, deNoche) => dia + (deNoche - dia) * noche;
   // De día el sol es cálido; al atardecer se pone rojo; de noche queda una luz azul tenue.
@@ -1278,6 +1581,10 @@ function ajustarTamano() {
   vista.render.setSize(innerWidth, innerHeight);
   vista.renderCielo.setSize(innerWidth, innerHeight);
   vista.camara.aspect = innerWidth / innerHeight;
+  // vista.panel es la fracción del ancho que tapa un panel a la derecha. La imagen se
+  // recorre la mitad de esa franja para que el tablero quede centrado en lo que sobra.
+  if (vista.panel) vista.camara.setViewOffset(innerWidth, innerHeight, vista.panel * innerWidth / 2, 0, innerWidth, innerHeight);
+  else vista.camara.clearViewOffset();
   vista.camara.updateProjectionMatrix();
   if (vista.filas) encuadrar();
 }
@@ -1302,7 +1609,7 @@ function construirMapa(modo) {
   vista.version = modo.version; vista.filas = modo.filas; vista.columnas = modo.columnas;
   for (const grupo of [vista.mapa, vista.cosas]) while (grupo.children.length) grupo.remove(grupo.children[0]);
   for (const m of [vista.personajes, vista.gemas, vista.muros, vista.losas, vista.arboles]) m.clear();
-  vista.banderas = []; vista.cohetes = []; vista.pendientes = []; vista.orbita = null; vista.zoom = 1; vista.versionTerreno = -1;
+  vista.banderas = []; vista.letreros = []; vista.cohetes = []; vista.pendientes = []; vista.orbita = null; vista.zoom = 1; vista.versionTerreno = -1;
   // Solo se construye el suelo: muros, árboles y agua se dibujan aparte porque van cambiando.
   for (let f = 0; f < modo.filas; f++) for (let c = 0; c < modo.columnas; c++) {
     if (modo.cuadBase[f][c] === '_') continue;      // vacío: ahí no hay tablero
@@ -1329,6 +1636,9 @@ function construirMapa(modo) {
 function encuadrar() {
   // Aleja la cámara hasta que las cuatro esquinas del tablero caben en pantalla.
   const prueba = vista.camara.clone(), mx = vista.columnas / 2 + 0.4, mz = vista.filas / 2 + 0.4;
+  prueba.clearViewOffset();
+  // Con panel, el tablero debe caber en el ancho que sobra y dejar abajo sitio para la comparación.
+  const ancho = 0.93 * (1 - (vista.panel || 0)), bajo = vista.panel ? -0.5 : -0.84;
   const esquinas = [[-mx, -mz], [mx, -mz], [-mx, mz], [mx, mz]];
   for (vista.distancia = 6; vista.distancia < 90; vista.distancia += 0.5) {
     prueba.position.set(0, vista.distancia * 0.86, vista.distancia * 0.52 + DESVIO);
@@ -1336,7 +1646,7 @@ function encuadrar() {
     prueba.updateMatrixWorld();
     const caben = esquinas.every(([x, z]) => {
       const v = new THREE.Vector3(x, 0.7, z).project(prueba);
-      return Math.abs(v.x) < 0.93 && v.y > -0.84 && v.y < 0.8;
+      return Math.abs(v.x) < ancho && v.y > bajo && v.y < 0.8;
     });
     if (caben) break;
   }
@@ -1349,7 +1659,7 @@ function etiqueta(texto, fondo, tinta = '#fff') {
   g.fillStyle = '#' + fondo.toString(16).padStart(6, '0'); g.strokeStyle = '#111'; g.lineWidth = 6;
   g.beginPath(); g.roundRect ? g.roundRect(8, 8, 112, 48, 14) : g.rect(8, 8, 112, 48); g.fill(); g.stroke();
   g.font = 'italic 900 32px Arial Black, Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillStyle = tinta; g.fillText(texto, 64, 34);
+  g.fillStyle = tinta; g.fillText(texto, 64, 34, 100);      // el texto largo se comprime para caber
   const s = new THREE.Sprite(new THREE.SpriteMaterial({map: new THREE.CanvasTexture(lienzo), depthTest: false}));
   s.scale.set(0.9, 0.45, 1); s.renderOrder = 10;
   return s;
@@ -1530,7 +1840,8 @@ function sincronizar(modo, dt) {
     for (const losa of vista.losas.values()) {
       const {f, c} = losa.userData, tipo = modo.cuad[f][c], par = (f + c) % 2;
       losa.userData.tipo = tipo;
-      losa.material = material(tipo === 'a' ? PALETA.agua[par] : tipo === 'b' ? PALETA.bosque[par] : PALETA.suelo[par]);
+      const marca = modo.marcaDe ? modo.marcaDe(f, c) : null;      // en el modo aprender, el avance de la búsqueda
+      losa.material = material(marca ? PALETA.busqueda[marca][par] : tipo === 'a' ? PALETA.agua[par] : tipo === 'b' ? PALETA.bosque[par] : PALETA.suelo[par]);
     }
   }
   // El agua aparece hundiendo su losa y desaparece cuando la losa vuelve a subir.
@@ -1651,6 +1962,18 @@ function sincronizar(modo, dt) {
     g.userData.marco.visible = !!dato.marco; g.userData.marco.material = material(dato.color);
   });
   vista.banderas.forEach((g, i) => { if (i >= banderas.length) g.visible = false; });
+
+  // Letreros fijos sobre una casilla, como INICIO y META.
+  (e.letreros || []).forEach((dato, i) => {
+    let letrero = vista.letreros[i];
+    if (!letrero || letrero.userData.texto !== dato.texto) {
+      if (letrero) vista.cosas.remove(letrero);
+      letrero = vista.letreros[i] = etiqueta(dato.texto, dato.color);
+      letrero.userData.texto = dato.texto; letrero.scale.set(1.5, 0.75, 1);
+      vista.cosas.add(letrero);
+    }
+    letrero.position.set(mundoX(dato.pos[1]), dato.alto + Math.sin(t * 2 + i) * 0.05, mundoZ(dato.pos[0]));
+  });
 
   // Marcas de las rutas que planean los rivales.
   let n = 0;
@@ -1801,10 +2124,12 @@ function reloj(segundos) {
 }
 
 function actualizarInterfaz() {
-  const h = modo.hud(), carrera = h.tipo === 'carrera';
+  const h = modo.hud(), carrera = h.tipo === 'carrera', aprender = h.tipo === 'aprender';
+  $('aprender').hidden = !aprender;
+  if (aprender) pintarLeccion();
   for (const id of ['posiciones', 'contador', 'tiempo']) $(id).hidden = !carrera;
   $('lugar').hidden = !carrera || !h.lugar;      // sin jugador no hay lugar propio que mostrar
-  for (const id of ['marcador', 'rivales']) $(id).hidden = carrera;
+  for (const id of ['marcador', 'rivales']) $(id).hidden = carrera || aprender;
   if (carrera) {
     // Clasificación: las filas se quedan en la página y solo cambia su altura, así se ven adelantarse.
     const lista = $('posiciones');
@@ -1826,7 +2151,7 @@ function actualizarInterfaz() {
     $('contador').children[0].textContent = h.contador[0];
     if (poner($('contador').children[1], h.contador[1])) saltar($('contador').children[1]);
     $('tiempo').textContent = reloj(h.tiempo);
-  } else {
+  } else if (!aprender) {
     const [a, b] = h.lados;
     const lado = l => `<div class="lado" style="background:${hex(l.color)}"><span>${l.nombre}</span><b>${l.puntos}</b></div>`;
     if (poner($('marcador'), lado(a) + `<span class="entre">A ${h.meta}</span>` + lado(b))) { saltar($('marcador').children[0]); saltar($('marcador').children[2]); }
@@ -1843,7 +2168,7 @@ function actualizarInterfaz() {
   $('acercar').hidden = modo.soloVer || terminado;
   $('acercar').classList.toggle('activo', !!vista.cerca);
   $('acercar').textContent = vista.cerca ? 'ALEJAR (C)' : 'ACERCAR (C)';
-  $('flechas').hidden = !(modo.soloVer || (terminado && carrera));
+  $('flechas').hidden = aprender || !(modo.soloVer || (terminado && carrera));
   // El letrero reducido va arriba (bajo el marcador, si lo hay) y el aviso se recorre
   // para quedar debajo de él en lugar de encimarse.
   const chico = !!(modo.soloVer || vista.mirando);
@@ -1861,6 +2186,58 @@ function actualizarInterfaz() {
   } else if (!fin && !$('fin').hidden) { $('fin').hidden = true; $('fin').classList.remove('ver'); }
 }
 
+function pintarLeccion() {
+  // Paneles del modo aprender: selectores, código con el renglón actual resaltado, la
+  // estructura de datos, la explicación del paso y, al final, la comparación entre los
+  // cinco algoritmos. Solo se vuelven a escribir cuando algo cambió.
+  const sello = modo.version + ':' + modo.cambios;
+  if ($('leccion').dataset.sello === sello) return;
+  $('leccion').dataset.sello = sello;
+  const receta = RECETAS[modo.nombre], paso = modo.pasos[modo.indice];
+  const limpio = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const botones = (accion, nombres, elegido, numerados) => nombres.map((n, i) =>
+    `<button data-accion="${accion}" data-valor="${i}"${i === elegido ? ' class="elegido"' : ''}>${numerados ? i + 1 + ' ' : ''}${limpio(n)}</button>`).join('');
+  const [desde, hasta] = receta.lineas[paso.tipo];
+  const codigo = receta.codigo.map((renglon, i) => `<span${i >= desde && i <= hasta ? ' class="ahora"' : ''}>${limpio(renglon)}</span>`).join('');
+  // La frontera se dibuja como un contenedor con cajas. La próxima en salir va primero:
+  // en la pila es la última que entró, así que la lista se voltea.
+  const esPila = receta.saca === 'tope', fila = esPila ? paso.frontera.slice().reverse() : paso.frontera, CABEN = esPila ? 6 : 12;
+  const cajas = fila.slice(0, CABEN).map((e, i) => `<span class="dato${i === 0 ? ' sale' : ''}">${nombreDe(e.pos)}${receta.valor(e) ? ' <i>' + receta.valor(e) + '</i>' : ''}</span>`).join('');
+  const resto = fila.length > CABEN ? `<small>y ${fila.length - CABEN} más ${esPila ? 'abajo' : 'detrás'}</small>` : fila.length ? '' : '<small>vacía</small>';
+  const rotulo = (titulo, texto) => `<span class="rotulo">${titulo} <b>${texto}</b></span>`;
+  const estructura = esPila
+    ? `<div class="pila"><div class="vaso">${cajas}${resto}</div><div class="rotulos">
+        ${rotulo('&#9664; TOPE:', 'por aquí ENTRA cada casilla nueva y de aquí SALE la siguiente. Es el único lado abierto.')}
+        ${rotulo('&#9664; FONDO:', 'la primera que entró. Será la última en salir.')}</div></div>`
+    : `<div class="extremos">${rotulo('&#9664; SALE', receta.clave ? 'la de menor valor' : 'por el frente')}${rotulo('ENTRA &#9664;', receta.clave ? 'y se acomoda según su valor' : 'por el final')}</div>
+       <div class="tubo">${cajas}${resto}</div>`;
+  $('leccion').innerHTML = `
+    <div><h4>ALGORITMO</h4><div class="grupo">${botones('algoritmo', RIVALES.map(r => r[0]), Aprender.algoritmo, true)}</div></div>
+    <div><h4>MAPA</h4><div class="grupo">${botones('mapa', LECCIONES.map(l => l.nombre), Aprender.mapa)}</div></div>
+    <div><h4>PASO ${modo.indice + 1} DE ${modo.pasos.length}</h4><p style="min-height:4.1em">${limpio(paso.texto)}</p><small>Casillas exploradas: ${paso.exploradas}</small></div>
+    <div class="grupo"><button data-accion="ir" data-valor="0">INICIO</button><button data-accion="paso" data-valor="-1">&#9664; ATRÁS</button><button data-accion="paso" data-valor="1">SIGUIENTE &#9654;</button>
+      <button data-accion="ir" data-valor="-1">FINAL</button><button data-accion="auto"${modo.auto ? ' class="elegido"' : ''}>${modo.auto ? 'PAUSA' : 'AUTOMÁTICO'}</button><button data-accion="ritmo">VELOCIDAD ${RITMOS[Aprender.ritmo][0]}</button></div>
+    <div><h4>CÓDIGO</h4><pre id="codigo">${codigo}</pre></div>
+    <div><h4>FRONTERA: ${receta.estructura}</h4><small>${limpio(receta.regla)} La caja de borde dorado es la próxima en salir. ${paso.frontera.length} en espera.</small>${estructura}</div>
+    <p>${limpio(receta.idea)}</p>
+    <small>Teclas: flecha derecha o espacio avanza, flecha izquierda regresa, P automático, V velocidad, 1 a 5 algoritmo, M mapa, Fin último paso. Rueda y arrastrar mueven la cámara. Esc regresa al menú.</small>`;
+  const muestra = (color, texto) => `<span><span class="muestra" style="background:${hex(color)}"></span>${texto}</span>`;
+  poner($('leyenda'), [muestra(PALETA.busqueda.actual[0], 'Se está explorando'), muestra(PALETA.busqueda.nueva[0], 'Acaba de entrar a la frontera'), muestra(PALETA.busqueda.frontera[0], 'Espera en la frontera'),
+    muestra(PALETA.busqueda.explorada[0], 'Ya explorada'), muestra(PALETA.busqueda.ruta[1], 'Ruta encontrada'), muestra(PALETA.suelo[0], 'Llano: costo 1'), muestra(PALETA.copa[0], 'Bosque (árbol): costo 3'),
+    muestra(PALETA.agua[0], 'Agua (hundida): costo 5'), muestra(PALETA.muro, 'Muro: no se pasa')].join(''));
+  // Comparación de los cinco en este mapa: se ve desde el primer paso.
+  const conRuta = modo.tabla.filter(x => x.costo !== null);
+  const barato = Math.min(...conRuta.map(x => x.costo)), poco = Math.min(...modo.tabla.map(x => x.exploradas));
+  const nombres = lista => lista.map(x => x.nombre).join(', ');
+  const celda = (valor, mejor) => `<td${mejor ? ' class="mejor"' : ''}>${valor ?? 'sin ruta'}</td>`;
+  const filas = modo.tabla.map(x => `<tr${x.nombre === modo.nombre ? ' class="este"' : ''}><td>${limpio(x.nombre)}</td>${celda(x.exploradas, x.exploradas === poco)}${celda(x.pasos, false)}${celda(x.costo, x.costo === barato)}</tr>`).join('');
+  const veredicto = conRuta.length ? `Ruta más barata: ${nombres(conRuta.filter(x => x.costo === barato))} (costo ${barato}). ` : 'Ninguno encontró ruta. ';
+  $('resultado').innerHTML = `<div><h4>LOS CINCO EN EL MAPA ${limpio(modo.leccion.nombre.toUpperCase())}</h4>
+    <table><tr><th>Algoritmo</th><th>Exploradas</th><th>Pasos</th><th>Costo</th></tr>${filas}</table></div>
+    <div><h4>POR QUÉ</h4><p><b>${limpio(veredicto)}Menos exploración: ${limpio(nombres(modo.tabla.filter(x => x.exploradas === poco)))} (${poco} casillas).</b></p>
+    <p style="margin-top:6px">${limpio(modo.leccion.porque)}</p></div>`;
+}
+
 function abrir(indice) {
   modo = new MODOS[indice](); pantalla = 'juego';
   $('portada').hidden = true; $('menu').hidden = true; $('hud').hidden = false; $('ayuda').hidden = false;
@@ -1871,9 +2248,13 @@ function abrir(indice) {
   if (!calmado) animar([{transform: 'scale(1.7)'}, {transform: 'scale(1)'}], {duration: 520, easing: 'cubic-bezier(.1,.9,.2,1)'});
   vista.pos.set(0, 170, 150); vista.impulso = 1.1;
   vistaGeneral(); vista.mirando = false; vista.cerca = false;
+  // El panel mide min(470px, 46vw) más sus márgenes; ver la regla de #leccion.
+  vista.panel = modo.panelDerecho ? (Math.min(470, innerWidth * 0.46) + 28) / innerWidth : 0;
+  ajustarTamano();
 }
 function mostrarModos() {
   modo = null; pantalla = 'modos'; pulsadas.clear();
+  if (vista.panel) { vista.panel = 0; ajustarTamano(); }
   $('hud').hidden = true; $('ayuda').hidden = true; $('fin').hidden = true; $('fin').classList.remove('ver');
   $('menu').hidden = false;
   // Quitar y volver a poner la clase reinicia la animación de entrada de las cajas.
@@ -1966,6 +2347,7 @@ function iniciar() {
   $('portada').addEventListener('click', dejarPortada);
   $('acercar').addEventListener('click', () => { vista.cerca = !vista.cerca; });
   $('flechas').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo) verOtro(Number(b.dataset.sentido)); });
+  $('aprender').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo && modo.accion) modo.accion(b.dataset.accion, Number(b.dataset.valor)); });
   $('rivales').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo) modo.elegir(b.dataset.lado, Number(b.dataset.i)); });
   if (typeof THREE === 'undefined') { $('sinVista').hidden = false; return; }
   try { iniciarVista(); } catch (error) { $('sinVista').hidden = false; console.error(error); return; }
@@ -1974,6 +2356,8 @@ function iniciar() {
     if (pantalla === 'portada') return dejarPortada();
     if (pantalla === 'modos') { if (t >= '1' && t <= String(MODOS.length)) elegir(Number(t) - 1); return; }
     if (t === 'escape') return mostrarModos();
+    // Un modo puede quedarse con sus propias teclas antes que la cámara o el movimiento.
+    if (modo.teclaPropia && modo.teclaPropia(t)) return ev.preventDefault();
     if (camaraLibre() && (t === 'tab' || t === '0')) { ev.preventDefault(); return t === 'tab' ? seguirSiguiente() : vistaGeneral(); }
     // Con la partida terminada, las flechas izquierda y derecha pasan a mirar a otro competidor.
     if (modo.estado !== 'jugando' && !modo.soloVer && modo.hud().tipo === 'carrera' && (t === 'arrowleft' || t === 'arrowright')) { ev.preventDefault(); return verOtro(t === 'arrowright' ? 1 : -1); }
@@ -1987,7 +2371,7 @@ function iniciar() {
   // Ratón del espectador: la rueda acerca y aleja, y arrastrar gira la cámara.
   let arrastre = null;
   addEventListener('wheel', ev => {
-    if (!camaraLibre()) return;
+    if (!camaraLibre() || ev.target.closest('#aprender')) return;      // sobre un panel, la rueda lo desplaza
     vista.libre.zoom = Math.min(1.7, Math.max(0.12, vista.libre.zoom * Math.exp(ev.deltaY * 0.0012)));
   }, {passive: true});
   vista.render.domElement.addEventListener('pointerdown', ev => { if (camaraLibre()) arrastre = [ev.clientX, ev.clientY]; });
