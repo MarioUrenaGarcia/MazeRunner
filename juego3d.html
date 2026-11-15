@@ -80,6 +80,7 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 #aprender button.elegido{background:var(--oro);color:var(--carbon);border-color:var(--oro)}
 #aprender .grupo{display:flex;flex-wrap:wrap;gap:5px}
 /* El número de paso y sus botones se quedan pegados arriba del panel al desplazarlo. */
+#leccion [data-parte=anexo]{display:flex;flex-direction:column;gap:8px}
 #leccion .fijo{position:sticky;top:-12px;z-index:2;background:#1B1B1E;padding:8px 0 7px;margin:-4px 0;border-bottom:2px solid #3A3A40;display:flex;flex-direction:column;gap:5px}
 #codigo{margin:0;font:12px/1.45 Consolas,"Courier New",monospace;background:#111114;border-radius:10px;padding:8px 0;white-space:pre;overflow-x:auto}
 #codigo span{display:block;padding:0 10px}
@@ -182,7 +183,12 @@ body.tactil #rivales{zoom:1.35}
   <button id="acercar" class="boton">ACERCAR (C)</button>
   <div id="flechas"><button class="boton" data-sentido="-1" aria-label="Ver al anterior">&#9664;</button><span class="carrera">VER A LOS DEMÁS</span><button class="boton" data-sentido="1" aria-label="Ver al siguiente">&#9654;</button></div>
   <div id="cuenta" class="carrera"></div>
-  <div id="aprender" hidden><div id="leyenda"></div><div id="resultado"></div><div id="leccion"></div></div>
+  <div id="aprender" hidden><div id="leyenda"></div><div id="resultado"></div><div id="leccion">
+    <div data-parte="selectores"></div>
+    <div class="fijo"><div data-parte="paso"></div><div data-parte="controles" class="grupo"></div></div>
+    <div data-parte="texto"></div><div data-parte="extras" class="grupo"></div><div data-parte="codigo"></div>
+    <div data-parte="frontera"></div><div data-parte="idea"></div><div data-parte="anexo"></div>
+  </div></div>
 </div>
 <div id="ayuda" class="carrera" hidden></div>
 <div id="fin" class="capa" hidden><h3 id="finTitulo" class="carrera"></h3><p id="finDetalle" class="carrera"></p><p class="carrera teclas">ESPACIO: OTRA VEZ   ESC: MENÚ</p></div>
@@ -2279,18 +2285,21 @@ function pintarLeccion() {
         ${rotulo('&#9664; INICIO (fondo):', 'la primera que entró. Será la última en salir.')}</div></div>`
     : `<div class="extremos">${rotulo('INICIO (frente):', receta.clave ? 'de aquí SALE la de menor valor' : 'de aquí SALE')}${rotulo('FIN (final):', receta.clave ? 'la de mayor valor. La que ENTRA se acomoda según su valor' : 'por aquí ENTRA')}</div>
        <div class="tubo"><span class="punta">INICIO &#9654;</span>${cajas}${resto}<span class="punta">&#9664; FIN</span></div>`;
-  $('leccion').innerHTML = `
-    <div><h4>ALGORITMO</h4><div class="grupo">${botones('algoritmo', RIVALES.map(r => r[0]), Aprender.algoritmo, true)}</div></div>
-    <div><h4>MAPA</h4><div class="grupo">${botones('mapa', LECCIONES.map(l => l.nombre), Aprender.mapa)}</div></div>
-    <div class="fijo"><h4>PASO ${modo.indice + 1} DE ${modo.pasos.length}</h4>
-    <div class="grupo"><button data-accion="paso" data-valor="-1">&#9664; ATRÁS</button><button data-accion="paso" data-valor="1">SIGUIENTE &#9654;</button>
-      <button data-accion="auto"${modo.auto ? ' class="elegido"' : ''}>${modo.auto ? 'PAUSA' : 'AUTOMÁTICO'}</button></div></div>
-    <div><p style="min-height:4.1em">${limpio(paso.texto)}</p><small>Casillas exploradas: ${paso.exploradas}</small></div>
-    <div class="grupo"><button data-accion="ir" data-valor="0">INICIO</button><button data-accion="ir" data-valor="-1">FINAL</button><button data-accion="ritmo">VELOCIDAD ${RITMOS[Aprender.ritmo][0]}</button></div>
-    <div><h4>CÓDIGO</h4><pre id="codigo">${codigo}</pre></div>
-    <div><h4>FRONTERA: ${receta.estructura}</h4><small>${limpio(receta.regla)} La caja de borde dorado es la próxima en salir. ${paso.frontera.length} en espera.</small>${estructura}</div>
-    <p>${limpio(receta.idea)}</p>
-    <small class="teclas">Teclas: flecha derecha o espacio avanza, flecha izquierda regresa, P automático, V velocidad, 1 a 5 algoritmo, M mapa, Fin último paso. Rueda y arrastrar mueven la cámara. Esc regresa al menú.</small>`;
+  // El panel tiene partes fijas y cada una se reescribe solo si su contenido cambió. Así
+  // los botones no se reemplazan en cada paso y un toque no se pierde a media reproducción.
+  const partes = {
+    selectores: `<h4>ALGORITMO</h4><div class="grupo">${botones('algoritmo', RIVALES.map(r => r[0]), Aprender.algoritmo, true)}</div>
+      <h4 style="margin-top:8px">MAPA</h4><div class="grupo">${botones('mapa', LECCIONES.map(l => l.nombre), Aprender.mapa)}</div>`,
+    paso: `<h4>PASO ${modo.indice + 1} DE ${modo.pasos.length}</h4>`,
+    controles: `<button data-accion="paso" data-valor="-1">&#9664; ATRÁS</button><button data-accion="paso" data-valor="1">SIGUIENTE &#9654;</button>
+      <button data-accion="auto"${modo.auto ? ' class="elegido"' : ''}>${modo.auto ? 'PAUSA' : 'AUTOMÁTICO'}</button><button data-accion="ritmo">VELOCIDAD ${RITMOS[Aprender.ritmo][0]}</button>`,
+    texto: `<p style="min-height:4.1em">${limpio(paso.texto)}</p><small>Casillas exploradas: ${paso.exploradas}</small>`,
+    extras: `<button data-accion="ir" data-valor="0">INICIO</button><button data-accion="ir" data-valor="-1">FINAL</button>`,
+    codigo: `<h4>CÓDIGO</h4><pre id="codigo">${codigo}</pre>`,
+    frontera: `<h4>FRONTERA: ${receta.estructura}</h4><small>${limpio(receta.regla)} La caja de borde dorado es la próxima en salir. ${paso.frontera.length} en espera.</small>${estructura}`,
+    idea: `<p>${limpio(receta.idea)}</p>
+      <small class="teclas">Teclas: flecha derecha o espacio avanza, flecha izquierda regresa, P automático, V velocidad, 1 a 5 algoritmo, M mapa, Fin último paso. Rueda y arrastrar mueven la cámara. Esc regresa al menú.</small>`,
+  };
   const muestra = (color, texto) => `<span><span class="muestra" style="background:${hex(color)}"></span>${texto}</span>`;
   const leyenda = [muestra(PALETA.busqueda.actual[0], 'Se está explorando'), muestra(PALETA.busqueda.nueva[0], 'Acaba de entrar a la frontera'), muestra(PALETA.busqueda.frontera[0], 'Espera en la frontera'),
     muestra(PALETA.busqueda.explorada[0], 'Ya explorada'), muestra(PALETA.busqueda.ruta[1], 'Ruta encontrada'), muestra(PALETA.suelo[0], 'Llano: costo 1'), muestra(PALETA.copa[0], 'Bosque (árbol): costo 3'),
@@ -2309,8 +2318,9 @@ function pintarLeccion() {
   // En pantallas bajas la comparación y la leyenda van dentro del panel, que se puede
   // desplazar, para no tapar el tablero.
   $('leyenda').hidden = $('resultado').hidden = vista.compacto;
-  if (vista.compacto) $('leccion').insertAdjacentHTML('beforeend', comparacion + `<div><h4>COLORES</h4><div class="colores">${leyenda}</div></div>`);
-  else { $('leyenda').innerHTML = leyenda; $('resultado').innerHTML = comparacion; }
+  partes.anexo = vista.compacto ? comparacion + `<div><h4>COLORES</h4><div class="colores">${leyenda}</div></div>` : '';
+  if (!vista.compacto) { poner($('leyenda'), leyenda); poner($('resultado'), comparacion); }
+  for (const parte of $('leccion').querySelectorAll('[data-parte]')) poner(parte, partes[parte.dataset.parte]);
 }
 
 function abrir(indice) {
