@@ -43,6 +43,10 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 #marcador .lado b{font-size:56px}
 #marcador .entre{font-size:30px;color:var(--oro)}
 #aviso{position:absolute;left:50%;top:118px;transform:translateX(-50%) skewX(-9deg);font-size:30px;color:var(--oro);white-space:nowrap}
+#rivales{position:absolute;left:20px;top:20px;display:flex;flex-direction:column;gap:7px;align-items:flex-start;pointer-events:auto}
+#rivales b{font-size:20px;color:var(--oro);transform:skewX(-9deg)}
+#rivales button{font:inherit;font-family:var(--titular);font-style:italic;font-size:17px;color:var(--blanco);background:var(--carbon);border:4px solid var(--carbon);border-radius:10px;padding:3px 12px;cursor:pointer;transform:skewX(-9deg);box-shadow:3px 3px 0 var(--carbon);opacity:.78}
+#rivales button.elegido{background:var(--oro);color:var(--carbon);opacity:1;transform:skewX(-9deg) scale(1.1);transform-origin:left center}
 #cuenta{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);font-size:230px;-webkit-text-stroke-width:16px;color:var(--oro)}
 .salta{animation:saltar .45s cubic-bezier(.2,1.6,.4,1)}
 @keyframes saltar{from{transform:scale(2.1);opacity:0}}
@@ -91,6 +95,7 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
   <div id="tiempo" class="carrera"></div>
   <div id="marcador" class="carrera"></div>
   <div id="aviso" class="carrera"></div>
+  <div id="rivales"></div>
   <div id="cuenta" class="carrera"></div>
 </div>
 <div id="ayuda" class="carrera" hidden></div>
@@ -117,7 +122,7 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 const COSTOS = {'.': 1, 'b': 3, 'a': 5};
 
 // Colores de los personajes. El jugador lleva el rojo institucional.
-const ROJO = 0xD7282F, CARBON = 0x26262A, AMBAR = 0xE98A15, VIOLETA = 0x7A4FB5, DORADO = 0xF2B632, GRIS = 0x9A9A9F;
+const ROJO = 0xD7282F, CARBON = 0x26262A, AMBAR = 0xE98A15, VIOLETA = 0x7A4FB5, TURQUESA = 0x2A9D8F, AZUL = 0x2F6CB0, DORADO = 0xF2B632, GRIS = 0x9A9A9F;
 
 function leerMapa(texto) {
   // Devuelve la cuadrícula de terreno y un diccionario símbolo -> posiciones.
@@ -167,6 +172,33 @@ function bfs(cuad, inicio, meta) {
     const actual = frontera[i];
     if (igual(actual, meta)) return reconstruir(padres, meta);
     for (const [v] of vecinos(cuad, actual)) if (!padres.has(K(v))) { padres.set(K(v), actual); frontera.push(v); }
+  }
+  return null;
+}
+function dfs(cuad, inicio, meta) {
+  // Primera ruta que aparece al avanzar siempre por el último camino abierto. Suele dar muchas vueltas.
+  const frontera = [inicio], padres = new Map([[K(inicio), null]]), explorados = new Set();
+  while (frontera.length) {
+    const actual = frontera.pop();
+    if (explorados.has(K(actual))) continue;
+    explorados.add(K(actual));
+    if (igual(actual, meta)) return reconstruir(padres, meta);
+    for (const [v] of vecinos(cuad, actual)) if (!explorados.has(K(v))) { padres.set(K(v), actual); frontera.push(v); }
+  }
+  return null;
+}
+function dijkstra(cuad, inicio, meta) {
+  // Ruta de menor costo: sale siempre la casilla más barata de alcanzar desde el inicio.
+  const frontera = [[0, 0, inicio]], costos = new Map([[K(inicio), 0]]), padres = new Map([[K(inicio), null]]);
+  let n = 0;
+  while (frontera.length) {
+    const [costo, , actual] = frontera.shift();
+    if (costo > costos.get(K(actual))) continue;      // entrada vieja: ya había un camino más barato
+    if (igual(actual, meta)) return reconstruir(padres, meta);
+    for (const [v, peso] of vecinos(cuad, actual)) {
+      const nuevo = costo + peso;
+      if (!costos.has(K(v)) || nuevo < costos.get(K(v))) { costos.set(K(v), nuevo); padres.set(K(v), actual); meter(frontera, [nuevo, ++n, v]); }
+    }
   }
   return null;
 }
@@ -240,7 +272,8 @@ function terrenoAlAzar(libres, cuantos) {
 }
 
 // Cada tipo de rival: nombre, algoritmo y color.
-const RIVALES = [['BFS', bfs, AMBAR], ['Voraz', voraz, VIOLETA], ['A*', aEstrella, CARBON]];
+// Son los cinco algoritmos comparados en la fase 1.
+const RIVALES = [['BFS', bfs, AMBAR], ['DFS', dfs, TURQUESA], ['Dijkstra', dijkstra, AZUL], ['Voraz', voraz, VIOLETA], ['A*', aEstrella, CARBON]];
 
 // ---------------------------------------------------------------------------
 // Piezas comunes a los dos modos
@@ -326,18 +359,19 @@ class Modo {
 // ---------------------------------------------------------------------------
 // Modo 1: atrapa gemas
 // ---------------------------------------------------------------------------
-// Tablero de un competidor: empieza vacío. En la partida hay cuatro copias idénticas.
+// Tablero de un competidor: empieza vacío. En la partida hay seis copias idénticas,
+// una para el jugador y una por cada algoritmo.
 const MAPA_GEMAS = `
-I..........
-...........
-...........
-...........
-...........
-...........
-...........
-...........
-...........`;
-const PIEZAS_POR_TIPO = 6;      // muros, árboles y charcos que hay en cada tablero
+I........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........`;
+const PIEZAS_POR_TIPO = 5;      // muros, árboles y charcos que hay en cada tablero
 
 class AtrapaGemas extends Modo {
   // Cada competidor corre en su propio tablero, igual a los demás, y recoge la misma
@@ -347,15 +381,15 @@ class AtrapaGemas extends Modo {
   // que todos enfrentan exactamente lo mismo y lo único que cambia es el algoritmo.
   cargar() {
     const base = MAPA_GEMAS.trim().split('\n'), ancho = base[0].length;
-    // Cuatro copias en dos filas, separadas por una franja vacía.
+    // Seis copias en dos filas de tres, separadas por franjas vacías.
     const filas = [];
     for (let bloque = 0; bloque < 2; bloque++) {
-      base.forEach(fila => filas.push(fila + '_' + fila));
-      if (bloque === 0) filas.push('_'.repeat(2 * ancho + 1));
+      base.forEach(fila => filas.push([fila, fila, fila].join('_')));
+      if (bloque === 0) filas.push('_'.repeat(3 * ancho + 2));
     }
     this.usarMapa(filas.join('\n'));
     this.total = 8;
-    // Todo se sortea una vez, en coordenadas del tablero base, y vale para los cuatro.
+    // Todo se sortea una vez, en coordenadas del tablero base, y vale para los seis.
     const local = leerMapa(MAPA_GEMAS), inicio = local.puntos.I[0], llano = [];
     local.cuad.forEach((fila, f) => [...fila].forEach((s, c) => { if (s === '.' && !igual([f, c], inicio)) llano.push([f, c]); }));
     this.secuencia = [];
@@ -453,7 +487,7 @@ class AtrapaGemas extends Modo {
   }
 }
 AtrapaGemas.titulo = 'ATRAPA GEMAS';
-AtrapaGemas.resumen = 'Mismo tablero, mismas gemas y mismo terreno cambiante para todos. Termina antes que BFS, voraz y A*.';
+AtrapaGemas.resumen = 'Mismo tablero, mismas gemas y mismo terreno cambiante para todos. Termina antes que los cinco algoritmos.';
 AtrapaGemas.ayuda = 'FLECHAS O WASD   TU TABLERO ES EL DE ARRIBA A LA IZQUIERDA   R: REINICIAR   ESC: MENÚ';
 
 // ---------------------------------------------------------------------------
@@ -483,7 +517,7 @@ class Bandera extends Modo {
     this.usarMapa(MAPA_BANDERA);
     this.metaPuntos = 3;
     this.jugador = new Personaje(this.puntos.I[0], ROJO, 'Tú', aEstrella, VELOCIDAD_JUGADOR);
-    this.cpu = new Personaje(this.puntos['3'][0], CARBON, 'A*', aEstrella, 4.3);
+    this.cpu = this.nuevoRival(this.puntos['3'][0]);
     for (const p of [this.jugador, this.cpu]) { p.lleva = false; p.puntos = 0; }
     this.mitad = Math.floor(this.columnas / 2);
     // Se sortea una sola secuencia de posiciones, en la mitad del jugador. La bandera
@@ -492,10 +526,21 @@ class Bandera extends Modo {
     for (let f = 0; f < this.filas; f++) for (let c = 0; c < this.mitad - 1; c++) {
       if (this.cuadBase[f][c] === '.' && distancia([f, c], this.jugador.base) >= 3) candidatas.push([f, c]);
     }
-    this.secuencia = muestra(candidatas, 2 * this.metaPuntos - 1);
+    this.secuencia = muestra(candidatas, 16);      // de sobra: se avanza una con cada punto y con cada choque
     this.ronda = 0;
     this.colocarBanderas();
     this.cambiarMapa();
+  }
+  nuevoRival(posicion) {
+    // Crea a la CPU con el algoritmo elegido. En 'Azar' se sortea uno cualquiera.
+    const opciones = RIVALES.filter(r => r[0] === Bandera.rival);
+    const [nombre, algoritmo, color] = opciones.length ? opciones[0] : RIVALES[Math.floor(Math.random() * RIVALES.length)];
+    return new Personaje(posicion, color, nombre, algoritmo, 4.3);
+  }
+  tecla(t) {
+    // Las teclas 1 a 6 eligen contra qué algoritmo jugar y empiezan una partida nueva.
+    if (t >= '1' && t <= String(Bandera.OPCIONES.length)) { Bandera.rival = Bandera.OPCIONES[Number(t) - 1]; this.cargar(); }
+    else super.tecla(t);
   }
   espejo(x) { return [x[0], this.columnas - 1 - x[1]]; }
   colocarBanderas() {
@@ -540,29 +585,40 @@ class Bandera extends Modo {
       personaje.lleva = rival.lleva = false;
       this.ronda++;
       this.colocarBanderas();
+      if (Bandera.rival === 'Azar') {
+        // En el modo al azar la CPU cambia de algoritmo después de cada punto.
+        const anterior = this.cpu;
+        this.cpu = Object.assign(this.nuevoRival(anterior.posicion), {base: anterior.base, puntos: anterior.puntos, lleva: false, bandera: anterior.bandera});
+      }
       this.cambiarMapa();
     }
   }
   choque() {
-    // Al chocar, los dos vuelven a su salida, sueltan lo que cargaban y el mapa cambia.
+    // Al chocar, los dos vuelven a su salida, sueltan lo que cargaban, y cambian de lugar las banderas y el terreno.
     for (const p of [this.jugador, this.cpu]) {
       this.emitir('golpe', p.visual(), p.color);
       p.regresar(); p.lleva = false;
     }
+    this.ronda++;
+    this.colocarBanderas();
     this.cambiarMapa();
   }
   actualizar(dt) {
     const j = this.jugador, cpu = this.cpu;
     this.moverJugador(j, dt);
     cpu.avanzar(dt, this.cuad);
-    // La CPU vuelve a planear en cada casilla: el objetivo y los muros cambian.
-    if (!cpu.camino.length || cpu.avance === 0) cpu.irA(this.cuad, this.objetivoCpu());
+    // La CPU solo vuelve a planear cuando cambia su objetivo o el terreno. Si planeara en cada
+    // casilla, un algoritmo como DFS elegiría un camino distinto a cada paso y no llegaría nunca.
+    const objetivo = this.objetivoCpu(), plan = K(objetivo) + ':' + this.versionTerreno;
+    if (!cpu.camino.length || (cpu.avance === 0 && cpu.plan !== plan)) { cpu.irA(this.cuad, objetivo); cpu.plan = plan; }
     if (!j.camino.length || j.avance === 0) this.revisar(j, cpu);
-    if (!cpu.camino.length || cpu.avance === 0) this.revisar(cpu, j);
+    // En el modo al azar un punto cambia de rival, así que desde aquí se usa this.cpu.
+    if (!this.cpu.camino.length || this.cpu.avance === 0) this.revisar(this.cpu, j);
+    const rival = this.cpu;
     // El choque solo cuenta cuando alguien lleva una bandera: así se defiende la propia.
-    if (distancia(j.visual(), cpu.visual()) < CONTACTO && (j.lleva || cpu.lleva)) this.choque();
-    if (j.puntos === this.metaPuntos) this.terminar(true, '¡GANASTE!', `${j.puntos} A ${cpu.puntos}`, j.visual());
-    else if (cpu.puntos === this.metaPuntos) this.terminar(false, 'GANÓ LA CPU', `${cpu.puntos} A ${j.puntos}`, cpu.visual());
+    if (distancia(j.visual(), rival.visual()) < CONTACTO && (j.lleva || rival.lleva)) this.choque();
+    if (j.puntos === this.metaPuntos) this.terminar(true, '¡GANASTE!', `${j.puntos} A ${rival.puntos}`, j.visual());
+    else if (rival.puntos === this.metaPuntos) this.terminar(false, 'GANÓ LA CPU', `${rival.puntos} A ${j.puntos}`, rival.visual());
   }
   escena() {
     const banderas = [];
@@ -577,19 +633,22 @@ class Bandera extends Modo {
       const guia = aEstrella(this.cuad, this.jugador.camino[0] || this.jugador.posicion, destino);
       if (guia) rutas.push({color: DORADO, camino: guia.slice(1)});
     }
-    return {personajes: [{p: this.cpu, etiqueta: 'A*', baila: this.estado === 'perdido'}, {p: this.jugador, etiqueta: 'Tú', baila: this.estado === 'ganado'}], banderas, ...this.vistaTerreno(), rutas, destino, lineaMedia: this.mitad};
+    return {personajes: [{p: this.cpu, etiqueta: this.cpu.nombre, baila: this.estado === 'perdido'}, {p: this.jugador, etiqueta: 'Tú', baila: this.estado === 'ganado'}], banderas, ...this.vistaTerreno(), rutas, destino, lineaMedia: this.mitad};
   }
   hud() {
     return {
       tipo: 'duelo', meta: this.metaPuntos,
-      lados: [{nombre: 'TÚ', color: ROJO, puntos: this.jugador.puntos}, {nombre: 'CPU A*', color: CARBON, puntos: this.cpu.puntos}],
+      lados: [{nombre: 'TÚ', color: ROJO, puntos: this.jugador.puntos}, {nombre: 'CPU ' + this.cpu.nombre.toUpperCase(), color: this.cpu.color, puntos: this.cpu.puntos}],
+      opciones: Bandera.OPCIONES, elegido: Bandera.rival,
       aviso: this.jugador.lleva && this.cpu.lleva ? '¡LLÉVALA A TU BANDERA ANTES QUE LA CPU!' : this.jugador.lleva ? '¡LLÉVALA A TU BANDERA!' : this.cpu.lleva ? '¡TE ROBARON LA BANDERA!' : '',
     };
   }
 }
 Bandera.titulo = 'CAPTURA LA BANDERA';
-Bandera.resumen = 'Roba la bandera de la CPU y llévala a la tuya. Banderas y terreno cambian, siempre en espejo.';
-Bandera.ayuda = 'FLECHAS O WASD   SI HAY CHOQUE CON UNA BANDERA EN JUEGO, LOS DOS VUELVEN A SU SALIDA   R: REINICIAR   ESC: MENÚ';
+Bandera.OPCIONES = [...RIVALES.map(r => r[0]), 'Azar'];
+Bandera.rival = 'A*';      // contra quién se juega; se conserva de una partida a otra
+Bandera.resumen = 'Roba la bandera de la CPU y llévala a la tuya. Tú eliges contra qué algoritmo juegas, o lo dejas al azar.';
+Bandera.ayuda = 'FLECHAS O WASD   1 A 6: RIVAL   CHOQUE CON BANDERA: LOS DOS A SU SALIDA   R: REINICIAR   ESC: MENÚ';
 
 const MODOS = [AtrapaGemas, Bandera];
 
@@ -853,6 +912,46 @@ function cohete(pos, colores, grande, retraso = 0) {
     y: 0.9, v: grande ? 11 : 7.5, t: grande ? 0.6 : 0.42, colores, cuantas: grande ? 46 : 16, fuerza: grande ? 5.5 : 3})});
 }
 
+// Estilos de animación: cada algoritmo se mueve y festeja según su "personalidad".
+// camina recibe la fase de la zancada (dos zancadas por casilla) y festeja el compás del baile.
+// Una pose puede fijar: salto, pierna (zancada), abre (piernas separadas), brazos [izq, der]
+// (giro adelante o atrás; negativo es al frente), alza [izq, der] (brazo levantado hacia el
+// lado), inclina (cuerpo al frente), ladeo, gira (vueltas por segundo) y mece.
+const ESTILOS = {
+  // El jugador: caminata normal y baile con los brazos arriba.
+  base: {
+    camina: z => ({salto: Math.abs(Math.sin(z)) * 0.13, pierna: Math.sin(z) * 0.85, brazos: [-Math.sin(z) * 0.7, Math.sin(z) * 0.7]}),
+    festeja: c => ({salto: Math.abs(Math.sin(c)) * 0.22, pierna: Math.sin(c) * 0.9, brazos: [Math.sin(c * 2) * 0.5, Math.sin(c * 2) * 0.5],
+      alza: [2.5 + Math.sin(c * 2) * 0.5, 2.5 - Math.sin(c * 2) * 0.5], ladeo: Math.sin(c * 0.5) * 0.3, mece: Math.sin(c * 0.25) * 0.9}),
+  },
+  // BFS avanza por capas, parejo y ordenado: marcha de soldado, y festeja con saltos de tijera bien medidos.
+  'BFS': {
+    camina: z => ({salto: Math.abs(Math.sin(z)) * 0.05, pierna: Math.sin(z) * 0.6, brazos: [-Math.sin(z) * 1.1, Math.sin(z) * 1.1], alza: [0.02, 0.02]}),
+    festeja: c => { const abre = (Math.sin(c) + 1) / 2; return {salto: abre * 0.2, abre: abre * 0.55, alza: [0.2 + abre * 2.6, 0.2 + abre * 2.6]}; },
+  },
+  // DFS se lanza de cabeza por un camino: corre inclinado con los brazos hacia atrás, y festeja girando como trompo.
+  'DFS': {
+    camina: z => ({salto: Math.abs(Math.sin(z)) * 0.1, pierna: Math.sin(z) * 1.15, brazos: [1.25, 1.25], alza: [0.35, 0.35], inclina: 0.5}),
+    festeja: c => ({salto: Math.abs(Math.sin(c * 2)) * 0.1, alza: [1.55, 1.55], abre: 0.25, gira: 9, ladeo: Math.sin(c) * 0.12}),
+  },
+  // Dijkstra mide cada paso: camina de puntillas equilibrándose con los brazos, y festeja con una reverencia.
+  'Dijkstra': {
+    camina: z => ({salto: Math.abs(Math.sin(z)) * 0.035, pierna: Math.sin(z) * 0.45, alza: [0.95 + Math.sin(z) * 0.25, 0.95 - Math.sin(z) * 0.25], ladeo: Math.sin(z) * 0.07}),
+    festeja: c => { const baja = (Math.sin(c * 0.45) + 1) / 2; return {inclina: baja * 0.95, brazos: [-baja * 1.3, 0.5 * baja], alza: [0.15, 0.7 * baja + 0.15], pierna: baja * 0.2}; },
+  },
+  // Voraz se abalanza hacia lo que quiere: zancadas enormes con los brazos estirados al frente, y festeja a grandes brincos.
+  'Voraz': {
+    camina: z => ({salto: Math.abs(Math.sin(z)) * 0.19, pierna: Math.sin(z) * 1.25, brazos: [-1.45 + Math.sin(z * 2) * 0.15, -1.45 - Math.sin(z * 2) * 0.15], alza: [0.1, 0.1], inclina: 0.3}),
+    festeja: c => ({salto: Math.abs(Math.sin(c * 0.8)) * 0.5, alza: [2.9, 2.9], brazos: [Math.sin(c * 3) * 0.2, -Math.sin(c * 3) * 0.2], pierna: Math.sin(c * 0.8) * 0.25}),
+  },
+  // A* va directo y sin desperdicio: trote atlético, y festeja con pose de campeón alternando un brazo arriba.
+  'A*': {
+    camina: z => ({salto: Math.abs(Math.sin(z)) * 0.11, pierna: Math.sin(z) * 0.95, brazos: [-Math.sin(z) * 1.05, Math.sin(z) * 1.05], alza: [0.25, 0.25], inclina: 0.12}),
+    festeja: c => { const lado = Math.sin(c * 0.5) > 0; return {salto: Math.abs(Math.sin(c)) * 0.1, alza: lado ? [2.7, 0.75] : [0.75, 2.7], brazos: lado ? [0, -0.5] : [-0.5, 0], ladeo: lado ? -0.22 : 0.22, abre: 0.22}; },
+  },
+};
+ESTILOS.Rojo = ESTILOS.base;
+
 function sincronizar(modo, dt) {
   if (vista.version !== modo.version) construirMapa(modo);
   vista.tiempo += dt;
@@ -948,32 +1047,27 @@ function sincronizar(modo, dt) {
     u.previo = [x, z];
     if (u.destinoGiro !== undefined) {
       let d = u.destinoGiro - u.giro; d = Math.atan2(Math.sin(d), Math.cos(d));
-      u.giro += d * suave; g.rotation.y = u.giro;
+      u.giro += d * suave;
     }
     const caminando = p.camino.length > 0 && !dato.baila;
     g.position.x += (x - g.position.x) * Math.min(1, suave * 2.5); g.position.z += (z - g.position.z) * Math.min(1, suave * 2.5);
-    let salto = 0, pierna = 0, brazo = 0, alzados = 0, ladeo = 0;
+    // Cada algoritmo camina y festeja a su manera: la pose sale de su estilo.
+    const estilo = ESTILOS[p.nombre] || ESTILOS.base;
+    let pose = {brazos: [Math.sin(t * 2 + p.id) * 0.08, -Math.sin(t * 2 + p.id) * 0.08]};      // quieto: apenas balancea los brazos
     if (dato.baila) {
-      // Baile de victoria: brazos arriba que se agitan, patadas alternadas, rebote y balanceo.
-      const compas = t * 9 + p.id;
-      salto = Math.abs(Math.sin(compas)) * 0.22; pierna = Math.sin(compas) * 0.9; brazo = Math.sin(compas * 2) * 0.5;
-      alzados = 2.5; ladeo = Math.sin(compas * 0.5) * 0.3;
-      u.destinoGiro = Math.sin(compas * 0.25) * 0.9;      // de frente a la cámara, girando a un lado y al otro
-    } else if (caminando) {
-      // Dos zancadas por casilla, y en cada una un saltito. Los brazos van al revés que las piernas.
-      const zancada = p.avance * Math.PI * 2;
-      salto = Math.abs(Math.sin(zancada)) * 0.13; pierna = Math.sin(zancada) * 0.85; brazo = -Math.sin(zancada) * 0.7;
-    } else brazo = Math.sin(t * 2 + p.id) * 0.08;         // quieto: apenas balancea los brazos
-    g.position.y = salto - (modo.cuad[Math.round(f)][Math.round(c)] === 'a' ? 0.14 : 0);
+      pose = estilo.festeja(t * 9 + p.id);
+      u.destinoGiro = pose.mece || 0;                      // de frente a la cámara
+    } else if (caminando) pose = estilo.camina(p.avance * Math.PI * 2);
+    pose = Object.assign({salto: 0, pierna: 0, abre: 0, brazos: [0, 0], alza: [0.12, 0.12], inclina: 0, ladeo: 0, gira: 0}, pose);
+    g.position.y = pose.salto - (modo.cuad[Math.round(f)][Math.round(c)] === 'a' ? 0.14 : 0);
     // Cada articulación gira poco a poco hacia su ángulo, para que el cambio de pose no sea brusco.
-    const mezcla = 1 - Math.exp(-dt * 18);
-    u.piernas.forEach((eje, i) => { eje.rotation.x += ((i ? -pierna : pierna) - eje.rotation.x) * mezcla; });
-    u.brazos.forEach((eje, i) => {
-      const lado = i ? -1 : 1;
-      eje.rotation.x += ((alzados ? brazo : brazo * lado) - eje.rotation.x) * mezcla;
-      eje.rotation.z += (lado * (alzados ? alzados + brazo : 0.12) - eje.rotation.z) * mezcla;
-    });
-    u.cuerpo.rotation.z += (ladeo - u.cuerpo.rotation.z) * mezcla;
+    const mezcla = 1 - Math.exp(-dt * 18), hacia = (objeto, eje, valor) => { objeto.rotation[eje] += (valor - objeto.rotation[eje]) * mezcla; };
+    u.piernas.forEach((eje, i) => { hacia(eje, 'x', i ? -pose.pierna : pose.pierna); hacia(eje, 'z', (i ? 1 : -1) * pose.abre); });
+    u.brazos.forEach((eje, i) => { hacia(eje, 'x', pose.brazos[i]); hacia(eje, 'z', (i ? -1 : 1) * pose.alza[i]); });
+    hacia(u.cuerpo, 'x', pose.inclina); hacia(u.cuerpo, 'z', pose.ladeo);
+    // Giro sobre sí mismo, para los festejos que dan vueltas.
+    u.vuelta = pose.gira ? (u.vuelta || 0) + dt * pose.gira : 0;
+    g.rotation.y = u.giro + u.vuelta;
     g.scale.setScalar(g.scale.x + (1 - g.scale.x) * suave * 0.6);       // aparece creciendo
     // Brillo del contorno: pasa del color encendido al negro y se adelgaza mientras se apaga.
     u.brillo = Math.max(0, u.brillo - dt * 1.1);
@@ -1119,7 +1213,7 @@ function reloj(segundos) {
 function actualizarInterfaz() {
   const h = modo.hud(), carrera = h.tipo === 'carrera';
   for (const id of ['posiciones', 'lugar', 'contador', 'tiempo']) $(id).hidden = !carrera;
-  for (const id of ['marcador', 'aviso']) $(id).hidden = carrera;
+  for (const id of ['marcador', 'aviso', 'rivales']) $(id).hidden = carrera;
   if (carrera) {
     // Clasificación: las filas se quedan en la página y solo cambia su altura, así se ven adelantarse.
     const lista = $('posiciones');
@@ -1146,6 +1240,9 @@ function actualizarInterfaz() {
     const lado = l => `<div class="lado" style="background:${hex(l.color)}"><span>${l.nombre}</span><b>${l.puntos}</b></div>`;
     if (poner($('marcador'), lado(a) + `<span class="entre">A ${h.meta}</span>` + lado(b))) { saltar($('marcador').children[0]); saltar($('marcador').children[2]); }
     if (poner($('aviso'), h.aviso) && h.aviso) saltar($('aviso'));
+    // Selector de rival: se puede cambiar con un clic o con las teclas 1 a 6.
+    poner($('rivales'), '<b class="carrera">RIVAL</b>' + h.opciones.map((nombre, i) =>
+      `<button data-tecla="${i + 1}"${nombre === h.elegido ? ' class="elegido"' : ''}>${i + 1}  ${nombre.toUpperCase()}</button>`).join(''));
   }
   // Cuenta regresiva de salida.
   const cuenta = modo.espera > 0 ? String(Math.ceil(modo.espera)) : modo.tiempo - modo.salida < 0.8 ? '¡YA!' : '';
@@ -1259,6 +1356,7 @@ function iniciar() {
   $('modos').innerHTML = MODOS.map((m, i) => `<button data-i="${i}"><b>${i + 1}. ${m.titulo}</b><span>${m.resumen}</span></button>`).join('');
   $('modos').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) elegir(Number(b.dataset.i)); });
   $('portada').addEventListener('click', dejarPortada);
+  $('rivales').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && modo) modo.tecla(b.dataset.tecla); });
   if (typeof THREE === 'undefined') { $('sinVista').hidden = false; return; }
   try { iniciarVista(); } catch (error) { $('sinVista').hidden = false; console.error(error); return; }
   addEventListener('keydown', ev => {
