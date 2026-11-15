@@ -89,11 +89,14 @@ canvas.borroso{filter:blur(9px) brightness(.82)}
 .pila{display:flex;gap:12px;align-items:stretch;margin-top:6px}
 .vaso{flex:none;width:150px;border:4px solid #B9B9C2;border-top:none;border-radius:0 0 12px 12px;padding:8px 8px 6px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;min-height:150px}
 .vaso .dato{display:block;margin:0;text-align:center}
+.vaso .punta{margin:0;text-align:center}
 .pila .rotulos{display:flex;flex-direction:column;justify-content:space-between}
 .tubo{border-top:4px solid #B9B9C2;border-bottom:4px solid #B9B9C2;padding:8px 4px 3px;min-height:30px}
 .extremos{display:flex;justify-content:space-between;gap:10px;margin:6px 0 3px}
 .rotulo{font-weight:800;font-size:12px;color:var(--oro)}
 .rotulo b{color:var(--blanco)}
+.extremos .rotulo:last-child{text-align:right}
+.punta{display:inline-block;font-weight:900;font-size:11px;color:var(--oro);margin:0 6px 5px 0}
 .muestra{display:inline-block;width:14px;height:14px;border-radius:4px;border:2px solid #000;vertical-align:-3px;margin-right:7px}
 #resultado table{border-collapse:collapse;margin:4px 0 0}
 #resultado td,#resultado th{padding:2px 8px;text-align:right}
@@ -952,7 +955,7 @@ VerGemas.ayuda = VerBandera.ayuda = VerMaze.ayuda = 'RUEDA: ZOOM   ARRASTRAR: GI
 // a cada tipo de paso para poder resaltarlos.
 const RECETAS = {
   'BFS': {
-    estructura: 'COLA (FIFO)', regla: 'La primera que entra es la primera que sale.', saca: 'frente', entra: 'sin padre',
+    estructura: 'COLA (FIFO)', regla: 'La primera que entra es la primera que sale: entra por el FIN (append) y sale por el INICIO (popleft).', saca: 'frente', entra: 'sin padre',
     idea: 'Explora por capas: primero todo lo que está a 1 paso, luego a 2, luego a 3. Encuentra la ruta con menos pasos, pero no mira el costo del terreno.',
     valor: () => '',
     porque: () => 'Sale del frente de la cola: es la que lleva más tiempo esperando. Por eso BFS avanza parejo, por capas.',
@@ -961,7 +964,7 @@ const RECETAS = {
     lineas: {inicio: [0, 1], sacar: [3, 3], meta: [4, 5], vecinos: [6, 9], ruta: [5, 5], sinRuta: [10, 10]},
   },
   'DFS': {
-    estructura: 'PILA (LIFO)', regla: 'La última que entra es la primera que sale.', saca: 'tope', entra: 'sin explorar',
+    estructura: 'PILA (LIFO)', regla: 'La última que entra es la primera que sale: entra por el FIN (append) y sale por el mismo FIN (pop).', saca: 'tope', entra: 'sin explorar',
     idea: 'Se mete hasta el fondo por un solo camino y solo regresa cuando se topa con pared. Usa poca memoria, pero su ruta suele dar muchas vueltas.',
     valor: () => '',
     porque: () => 'Sale del tope de la pila: es la última que entró. Por eso DFS sigue de frente por el mismo camino.',
@@ -2206,11 +2209,11 @@ function pintarLeccion() {
   const resto = fila.length > CABEN ? `<small>y ${fila.length - CABEN} más ${esPila ? 'abajo' : 'detrás'}</small>` : fila.length ? '' : '<small>vacía</small>';
   const rotulo = (titulo, texto) => `<span class="rotulo">${titulo} <b>${texto}</b></span>`;
   const estructura = esPila
-    ? `<div class="pila"><div class="vaso">${cajas}${resto}</div><div class="rotulos">
-        ${rotulo('&#9664; TOPE:', 'por aquí ENTRA cada casilla nueva y de aquí SALE la siguiente. Es el único lado abierto.')}
-        ${rotulo('&#9664; FONDO:', 'la primera que entró. Será la última en salir.')}</div></div>`
-    : `<div class="extremos">${rotulo('&#9664; SALE', receta.clave ? 'la de menor valor' : 'por el frente')}${rotulo('ENTRA &#9664;', receta.clave ? 'y se acomoda según su valor' : 'por el final')}</div>
-       <div class="tubo">${cajas}${resto}</div>`;
+    ? `<div class="pila"><div class="vaso"><span class="punta">&#9660; FIN</span>${cajas}${resto}<span class="punta">INICIO</span></div><div class="rotulos">
+        ${rotulo('&#9664; FIN (tope):', 'por aquí ENTRA cada casilla nueva y de aquí SALE la siguiente. Es el único lado abierto.')}
+        ${rotulo('&#9664; INICIO (fondo):', 'la primera que entró. Será la última en salir.')}</div></div>`
+    : `<div class="extremos">${rotulo('INICIO (frente):', receta.clave ? 'de aquí SALE la de menor valor' : 'de aquí SALE')}${rotulo('FIN (final):', receta.clave ? 'la de mayor valor. La que ENTRA se acomoda según su valor' : 'por aquí ENTRA')}</div>
+       <div class="tubo"><span class="punta">INICIO &#9654;</span>${cajas}${resto}<span class="punta">&#9664; FIN</span></div>`;
   $('leccion').innerHTML = `
     <div><h4>ALGORITMO</h4><div class="grupo">${botones('algoritmo', RIVALES.map(r => r[0]), Aprender.algoritmo, true)}</div></div>
     <div><h4>MAPA</h4><div class="grupo">${botones('mapa', LECCIONES.map(l => l.nombre), Aprender.mapa)}</div></div>
