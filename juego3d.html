@@ -436,7 +436,8 @@ class AtrapaGemas extends Modo {
   }
   escena() {
     return {
-      personajes: this.todos.map(p => ({p, etiqueta: p.nombre})),
+      // Quien ya terminó se queda bailando en su tablero.
+      personajes: this.todos.map(p => ({p, etiqueta: p.nombre, baila: p.tiempoFinal !== null})),
       gemas: this.todos.map(p => this.gemaDe(p)).filter(Boolean),
       ...this.vistaTerreno(), rutas: this.rivales,
     };
@@ -568,13 +569,21 @@ class Bandera extends Modo {
     for (const [dueno, ladron] of [[this.jugador, this.cpu], [this.cpu, this.jugador]]) {
       banderas.push(ladron.lleva ? {pos: ladron.visual(), color: dueno.color, llevada: true} : {pos: dueno.bandera, color: dueno.color, marco: true});
     }
-    return {personajes: [{p: this.cpu, etiqueta: 'A*'}, {p: this.jugador, etiqueta: 'Tú'}], banderas, ...this.vistaTerreno(), rutas: [this.cpu], lineaMedia: this.mitad};
+    const rutas = [this.cpu];
+    let destino = null;
+    if (this.jugador.lleva) {
+      // Con la bandera rival en las manos se marca a dónde hay que llevarla y la ruta más corta hasta ahí.
+      destino = this.jugador.bandera;
+      const guia = aEstrella(this.cuad, this.jugador.camino[0] || this.jugador.posicion, destino);
+      if (guia) rutas.push({color: DORADO, camino: guia.slice(1)});
+    }
+    return {personajes: [{p: this.cpu, etiqueta: 'A*', baila: this.estado === 'perdido'}, {p: this.jugador, etiqueta: 'Tú', baila: this.estado === 'ganado'}], banderas, ...this.vistaTerreno(), rutas, destino, lineaMedia: this.mitad};
   }
   hud() {
     return {
       tipo: 'duelo', meta: this.metaPuntos,
       lados: [{nombre: 'TÚ', color: ROJO, puntos: this.jugador.puntos}, {nombre: 'CPU A*', color: CARBON, puntos: this.cpu.puntos}],
-      aviso: this.jugador.lleva && this.cpu.lleva ? '¡LOS DOS LLEVAN BANDERA!' : this.jugador.lleva ? '¡LLEVAS SU BANDERA!' : this.cpu.lleva ? '¡TE ROBARON LA BANDERA!' : '',
+      aviso: this.jugador.lleva && this.cpu.lleva ? '¡LLÉVALA A TU BANDERA ANTES QUE LA CPU!' : this.jugador.lleva ? '¡LLÉVALA A TU BANDERA!' : this.cpu.lleva ? '¡TE ROBARON LA BANDERA!' : '',
     };
   }
 }
@@ -659,7 +668,6 @@ function iniciarVista() {
   const plana = g => { const n = g.toNonIndexed(); n.computeVertexNormals(); return n; };
   vista.geo = {
     caja: new THREE.BoxGeometry(1, 1, 1),
-    cuerpo: plana(new THREE.CylinderGeometry(0.15, 0.26, 0.5, 6)), cabeza: plana(new THREE.IcosahedronGeometry(0.18, 0)),
     tronco: plana(new THREE.CylinderGeometry(0.06, 0.09, 0.3, 5)), cono: plana(new THREE.ConeGeometry(0.34, 0.5, 6)),
     gema: plana(new THREE.OctahedronGeometry(0.2, 0)), chispa: plana(new THREE.TetrahedronGeometry(0.1, 0)),
     asta: new THREE.CylinderGeometry(0.025, 0.025, 0.9, 5), aro: new THREE.TorusGeometry(0.34, 0.035, 4, 14), marca: plana(new THREE.OctahedronGeometry(0.07, 0)),
@@ -675,6 +683,13 @@ function iniciarVista() {
   }
   for (let i = 0; i < 70; i++) { const m = new THREE.Mesh(vista.geo.marca, material(0xffffff)); m.visible = false; vista.mundo.add(m); vista.marcas.push(m); }
   vista.linea = new THREE.Mesh(vista.geo.caja, material(DORADO)); vista.linea.visible = false; vista.mundo.add(vista.linea);
+  // Faro que señala a dónde llevar la bandera: una flecha que rebota y un aro que late.
+  vista.faro = new THREE.Group();
+  const flecha = pieza(vista.geo.cono, DORADO, 0, 0, 0, 0.09); flecha.rotation.x = Math.PI; flecha.scale.set(0.9, 1.1, 0.9);
+  const aroFaro = new THREE.Mesh(vista.geo.aro, new THREE.MeshBasicMaterial({color: DORADO}));
+  aroFaro.rotation.x = Math.PI / 2; aroFaro.position.y = 0.04;
+  vista.faro.add(flecha, aroFaro); vista.faro.visible = false;
+  vista.mundo.add(vista.faro);
   // Mar de nubes low poly bajo el tablero: cada nube es un racimo de bolas achatadas.
   vista.nubes = new THREE.Group();
   const bola = plana(new THREE.IcosahedronGeometry(1, 0));
@@ -767,16 +782,30 @@ function etiqueta(texto, fondo) {
 }
 
 function crearPersonaje(dato) {
+  // Muñeco de bloques: cabeza, torso, dos brazos y dos piernas. Brazos y piernas cuelgan de
+  // un grupo colocado en el hombro o la cadera, para que giren desde ahí como articulaciones.
   // Cada personaje tiene su propio material de contorno, para poder iluminarlo por separado.
   const contorno = new THREE.MeshBasicMaterial({color: PALETA.contorno, side: THREE.BackSide});
-  const g = new THREE.Group(), cuerpo = new THREE.Group();
-  cuerpo.add(pieza(vista.geo.cuerpo, dato.p.color, 0, 0.27, 0, 0.06, contorno), pieza(vista.geo.cabeza, PALETA.piel, 0, 0.66, 0, 0.06, contorno));
-  // Mochila: sirve para ver hacia dónde mira.
-  const mochila = pieza(vista.geo.caja, 0xffffff, 0, 0.3, -0.19, 0.06, contorno); mochila.scale.set(0.2, 0.22, 0.12);
-  cuerpo.add(mochila);
-  cuerpo.scale.setScalar(1.3);
+  const bordes = [];
+  const bloque = (ancho, alto, fondo, color, x, y, z) => {
+    const m = new THREE.Mesh(vista.geo.caja, material(color));
+    m.scale.set(ancho, alto, fondo); m.position.set(x, y, z); m.castShadow = true;
+    // El contorno debe medir lo mismo en las piezas delgadas que en las gruesas.
+    const borde = new THREE.Mesh(vista.geo.caja, contorno), g = [0.05 / ancho, 0.05 / alto, 0.05 / fondo];
+    m.add(borde); bordes.push({m: borde, g});
+    return m;
+  };
+  const articulacion = (x, y, pieza) => { const eje = new THREE.Group(); eje.position.set(x, y, 0); eje.add(pieza); return eje; };
+  const oscuro = new THREE.Color(dato.p.color).multiplyScalar(0.62).getHex();
+  const piernas = [-1, 1].map(lado => articulacion(lado * 0.08, 0.27, bloque(0.12, 0.27, 0.13, oscuro, 0, -0.135, 0)));
+  const brazos = [1, -1].map(lado => articulacion(lado * 0.215, 0.56, bloque(0.1, 0.3, 0.11, dato.p.color, 0, -0.13, 0)));
+  const cuerpo = new THREE.Group();
+  cuerpo.add(bloque(0.32, 0.31, 0.18, dato.p.color, 0, 0.42, 0), bloque(0.27, 0.25, 0.25, PALETA.piel, 0, 0.71, 0),
+    bloque(0.2, 0.2, 0.09, 0xffffff, 0, 0.43, -0.13), ...piernas, ...brazos);      // la mochila blanca deja ver hacia dónde mira
+  cuerpo.scale.setScalar(1.25);
+  const g = new THREE.Group();
   g.add(cuerpo);
-  g.userData = {cuerpo, contorno, bordes: cuerpo.children.map(m => m.children[0]), giro: 0, previo: null, brillo: 0, colorBrillo: new THREE.Color(0xffffff)};
+  g.userData = {cuerpo, contorno, bordes, piernas, brazos, giro: 0, previo: null, brillo: 0, colorBrillo: new THREE.Color(0xffffff)};
   if (dato.etiqueta) { const e = etiqueta(dato.etiqueta, dato.p.color); e.position.y = 1.5; g.add(e); }
   vista.cosas.add(g);
   return g;
@@ -921,17 +950,36 @@ function sincronizar(modo, dt) {
       let d = u.destinoGiro - u.giro; d = Math.atan2(Math.sin(d), Math.cos(d));
       u.giro += d * suave; g.rotation.y = u.giro;
     }
-    const caminando = p.camino.length > 0, salto = caminando ? Math.abs(Math.sin(p.avance * Math.PI)) : 0;
+    const caminando = p.camino.length > 0 && !dato.baila;
     g.position.x += (x - g.position.x) * Math.min(1, suave * 2.5); g.position.z += (z - g.position.z) * Math.min(1, suave * 2.5);
-    g.position.y = salto * 0.2 - (modo.cuad[Math.round(f)][Math.round(c)] === 'a' ? 0.14 : 0);
-    // Se estira al saltar y respira cuando está quieto.
-    const respira = caminando ? 1 + salto * 0.12 : 1 + Math.sin(t * 3 + p.id) * 0.03;
-    u.cuerpo.scale.set(1.3 / Math.sqrt(respira), 1.3 * respira, 1.3 / Math.sqrt(respira));
+    let salto = 0, pierna = 0, brazo = 0, alzados = 0, ladeo = 0;
+    if (dato.baila) {
+      // Baile de victoria: brazos arriba que se agitan, patadas alternadas, rebote y balanceo.
+      const compas = t * 9 + p.id;
+      salto = Math.abs(Math.sin(compas)) * 0.22; pierna = Math.sin(compas) * 0.9; brazo = Math.sin(compas * 2) * 0.5;
+      alzados = 2.5; ladeo = Math.sin(compas * 0.5) * 0.3;
+      u.destinoGiro = Math.sin(compas * 0.25) * 0.9;      // de frente a la cámara, girando a un lado y al otro
+    } else if (caminando) {
+      // Dos zancadas por casilla, y en cada una un saltito. Los brazos van al revés que las piernas.
+      const zancada = p.avance * Math.PI * 2;
+      salto = Math.abs(Math.sin(zancada)) * 0.13; pierna = Math.sin(zancada) * 0.85; brazo = -Math.sin(zancada) * 0.7;
+    } else brazo = Math.sin(t * 2 + p.id) * 0.08;         // quieto: apenas balancea los brazos
+    g.position.y = salto - (modo.cuad[Math.round(f)][Math.round(c)] === 'a' ? 0.14 : 0);
+    // Cada articulación gira poco a poco hacia su ángulo, para que el cambio de pose no sea brusco.
+    const mezcla = 1 - Math.exp(-dt * 18);
+    u.piernas.forEach((eje, i) => { eje.rotation.x += ((i ? -pierna : pierna) - eje.rotation.x) * mezcla; });
+    u.brazos.forEach((eje, i) => {
+      const lado = i ? -1 : 1;
+      eje.rotation.x += ((alzados ? brazo : brazo * lado) - eje.rotation.x) * mezcla;
+      eje.rotation.z += (lado * (alzados ? alzados + brazo : 0.12) - eje.rotation.z) * mezcla;
+    });
+    u.cuerpo.rotation.z += (ladeo - u.cuerpo.rotation.z) * mezcla;
     g.scale.setScalar(g.scale.x + (1 - g.scale.x) * suave * 0.6);       // aparece creciendo
     // Brillo del contorno: pasa del color encendido al negro y se adelgaza mientras se apaga.
     u.brillo = Math.max(0, u.brillo - dt * 1.1);
     u.contorno.color.set(PALETA.contorno).lerp(u.colorBrillo, u.brillo);
-    for (const borde of u.bordes) borde.scale.setScalar(1.06 + u.brillo * 0.2);
+    const grueso = 1 + u.brillo * 2.2;
+    for (const borde of u.bordes) borde.m.scale.set(1 + borde.g[0] * grueso, 1 + borde.g[1] * grueso, 1 + borde.g[2] * grueso);
   }
   for (const [id, g] of vista.personajes) if (!vivos.has(id)) { vista.cosas.remove(g); vista.personajes.delete(id); }
 
@@ -970,6 +1018,15 @@ function sincronizar(modo, dt) {
     m.position.set(mundoX(c), 0.12 + Math.sin(t * 4 + f + c) * 0.03, mundoZ(f)); m.rotation.y = t * 2;
   }
   for (; n < vista.marcas.length; n++) vista.marcas[n].visible = false;
+
+  // Faro del destino: solo se ve mientras el jugador lleva la bandera rival.
+  vista.faro.visible = !!e.destino;
+  if (e.destino) {
+    vista.faro.position.set(mundoX(e.destino[1]), 0, mundoZ(e.destino[0]));
+    vista.faro.children[0].position.y = 1.9 + Math.abs(Math.sin(t * 4)) * 0.45; vista.faro.children[0].rotation.y = t * 3;
+    const latido = 1.5 + Math.sin(t * 6) * 0.35;
+    vista.faro.children[1].scale.set(latido, latido, 1);
+  }
 
   // Línea de media cancha.
   vista.linea.visible = e.lineaMedia !== undefined;
