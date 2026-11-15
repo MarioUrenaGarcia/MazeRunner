@@ -803,7 +803,7 @@ class Bandera(Modo):
         if self.jugador.lleva and self.cpu.lleva:
             aviso = ["¡LOS DOS", "LLEVAN", "BANDERA!"]
         elif self.jugador.lleva:
-            aviso = ["¡LLEVAS", "SU BANDERA!"]
+            aviso = ["¡LLÉVALA", "A TU BANDERA!"]
         elif self.cpu.lleva:
             aviso = ["¡TE ROBARON", "LA BANDERA!"]
         else:
@@ -811,12 +811,30 @@ class Bandera(Modo):
         for i, linea in enumerate(aviso):
             letrero(pantalla, linea, PANEL_X, 350 + i * 28, 17, ORO)
 
+    def dibujar_destino(self, pantalla):
+        """Señala a dónde llevar la bandera rival: ruta más corta, marco que late y flecha."""
+        origen = self.jugador.camino[0] if self.jugador.camino else self.jugador.posicion
+        guia = a_estrella(self.cuadricula, origen, self.jugador.bandera) or []
+        for f, c in guia[1:]:
+            pygame.draw.circle(pantalla, ORO, self.centro(f, c), max(3, self.px(5)))
+        x, y = self.a_pantalla(*self.jugador.bandera)
+        latido = round(3 + math.sin(self.tiempo * 6) * 3)
+        marco = pygame.Rect(x, y, self.ancho_casilla, self.alto_casilla).inflate(2 * latido, 2 * latido)
+        pygame.draw.rect(pantalla, ORO, marco, 4, border_radius=6)
+        cx = x + self.ancho_casilla // 2
+        punta = y - self.px(46) + round(abs(math.sin(self.tiempo * 4)) * self.px(14))
+        flecha = [(cx, punta + self.px(18)), (cx - self.px(13), punta), (cx + self.px(13), punta)]
+        pygame.draw.polygon(pantalla, ORO, flecha)
+        pygame.draw.polygon(pantalla, NEGRO, flecha, 2)
+
     def dibujar(self, pantalla):
         self.dibujar_suelo(pantalla)
         # Línea que separa las dos mitades del mapa.
         x = self.origen_x + self.mitad * self.ancho_casilla + self.ancho_casilla // 2
         pygame.draw.line(pantalla, BLANCO, (x, self.origen_y), (x, self.origen_y + self.filas * self.alto_casilla), 2)
         self.dibujar_rutas(pantalla, [self.cpu])
+        if self.jugador.lleva:
+            self.dibujar_destino(pantalla)
         extras = []
         for dueno, ladron in ((self.jugador, self.cpu), (self.cpu, self.jugador)):
             f, c = dueno.bandera
