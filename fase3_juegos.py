@@ -1850,16 +1850,17 @@ def empezar_cuadro(entorno):
     entorno['chispas'].clear()
 
 
-def dibujar_cielo(pantalla, entorno, t):
+def dibujar_cielo(pantalla, entorno, t, con_nubes=True):
     """Dibuja lo que pasa por encima de los tableros: nubes, pájaros y, de noche, la oscuridad.
 
-    Entradas: la pantalla, el entorno y el tiempo en segundos.
+    Entradas: la pantalla, el entorno, el tiempo en segundos y si se dibujan las nubes.
+    En Maze Runner no se dibujan: el laberinto llena la pantalla y le taparían los pasillos.
 
     La noche es una capa azul oscura semitransparente sobre toda la pantalla.
     Donde hay una luz (una lámpara encendida o la linterna de un personaje) se
     le resta transparencia a la capa, y por eso ahí se ve claro.
     """
-    for nube in entorno['nubes']:
+    for nube in entorno['nubes'] if con_nubes else []:
         pantalla.blit(nube['imagen'], (nube['x'], nube['y']))
     for bandada in entorno['pajaros']:
         for numero in range(bandada['cuantos']):
@@ -2324,7 +2325,7 @@ def dibujar_bandera_juego(pantalla, fuentes, juego, t, entorno, efectos):
 
 # ---------------------------------------------------------------- Maze Runner
 
-ZONA_LABERINTO = pygame.Rect(24, 104, 1232, 600)
+ZONA_LABERINTO = pygame.Rect(24, 126, 1232, 580)     # empieza debajo de la franja de botones, para que no lo tape
 BOTON_ACERCAR = pygame.Rect(24, 80, 150, 30)
 BOTON_ANTERIOR = pygame.Rect(184, 80, 44, 30)
 BOTON_SIGUIENTE = pygame.Rect(234, 80, 44, 30)
@@ -2368,7 +2369,7 @@ def dibujar_laberinto(pantalla, fuentes, juego, t, entorno, efectos):
         anterior = {casilla: '.' if que == 'cerrado' else '#' for casilla, que in juego['recientes'].items()}
         progreso = juego['cambio'] / DURACION_DEL_CAMBIO
     dibujar_tablero(pantalla, vista, mapa, [marcas], altos, t, entorno, juego['adornos'], anterior, progreso)
-    dibujar_cielo(pantalla, entorno, t)
+    dibujar_cielo(pantalla, entorno, t, con_nubes=False)
     lanzar_eventos(efectos, juego, {0: vista})
     dibujar_efectos(pantalla, efectos)
 
