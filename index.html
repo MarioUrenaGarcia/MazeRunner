@@ -62,6 +62,9 @@
   #rivales, #controles { position: absolute; bottom: 34px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 8px; }
   #rivales, #controles { flex-wrap: wrap; row-gap: 6px; padding: 0 10px; }
   #rivales span, #controles span { font-size: 15px; text-shadow: 0 1px 3px #000; white-space: nowrap; }
+  /* Al solo mirar captura la bandera hay once botones: se compactan para caber en un renglón. */
+  #rivales.doble { gap: 5px; } #rivales.doble button { padding: 4px 8px; font-size: 13px; } #rivales.doble span { font-size: 13px; }
+  #rivales.doble i { width: 9px; height: 14px; margin: 0 5px -2px 1px; }
   #interfaz button { background: #2a2a30; color: #fff; border: 1px solid #6a6a70; border-radius: 9px; padding: 7px 12px; font-size: 15px; white-space: nowrap; }
   #interfaz button.activo { background: var(--rojo); border-color: #fff; }
 
@@ -215,7 +218,7 @@
     .puesto { font-size: 12px; margin: 0 2px; padding: 0 5px 1px 3px; } .puesto b { font-size: 14px !important; }
     .puesto i { width: 8px; height: 12px; margin: 0 4px -2px 2px; }
     #cuenta { top: 0; height: 40px; line-height: 38px; font-size: 36px; -webkit-text-stroke-width: 1px; }
-    #mensaje { top: calc(var(--barra) + 6px); font-size: 14px; } #aviso { font-size: 22px; padding: 8px 0; }
+    #mensaje { top: calc(var(--barra) + 6px); font-size: 14px; } #aviso { top: calc(var(--barra) + 30px); font-size: 17px; padding: 3px 0; }
     #cartel { top: calc(var(--barra) + 6px); right: 10px; width: 290px; padding: 8px 12px; border-width: 3px; }
     #cartel h2 { font-size: 19px; margin-bottom: 4px; } #cartel table { font-size: 14px; } #cartel td { padding: 1px 2px; }
     #interfaz button { padding: 5px 7px; font-size: 13px; } #rivales span, #controles span { font-size: 13px; }
@@ -453,10 +456,13 @@ void main() {
   // La luz de contraste: un filo frío y claro en las caras que ven hacia el lado contrario al sol.
   luz += vec3(0.10, 0.12, 0.17) * step(0.55, dot(n, uContraluz));
   // De noche, las lámparas y las linternas alumbran lo que tienen cerca.
+  // Se suman, pero con tope: varias luces juntas no deben dejar blanco lo que alumbran.
+  float faros = 0.0;
   for (int i = 0; i < 8; i++) {
     float cerca = 1.0 - distance(vPosicion, uFaros[i].xyz) / max(uFaros[i].w, 0.001);
-    luz += uColorFaro * step(0.0, cerca) * (cerca > 0.5 ? 1.0 : 0.5) * step(0.001, uFaros[i].w);
+    faros += step(0.0, cerca) * (cerca > 0.5 ? 1.0 : 0.5) * step(0.001, uFaros[i].w);
   }
+  luz += uColorFaro * min(faros, 1.2);
   vec3 color = mix(vColor * luz, vColor, vBrillo);
   // La niebla: lo lejano se funde con el color del cielo.
   float niebla = clamp((vLejos - uLejosNiebla) / (uLejosNiebla * 1.6), 0.0, 0.85);
@@ -2769,6 +2775,7 @@ function interfazDeBandera(estado, juego, escena) {
   }
   // Los botones para elegir rival: del 1 al 6. El elegido va en rojo.
   // Al solo mirar se elige también el algoritmo del lado izquierdo.
+  elemento('rivales').classList.toggle('doble', !humano);            // al solo mirar hay dos grupos de botones: van más chicos
   poner('rivales', (humano ? '<span>Rival:</span>' : botonesDeIzquierda(juego)) + OPCIONES_DE_RIVAL.map((opcion, k) =>
     `<button data-rival="${opcion}" class="${opcion === juego.eleccion ? 'activo' : ''}">` +
     `${opcion in COLOR_DE ? `<i style="background:${colorCss(COLOR_DE[opcion])}"></i>` : ''}${k + 1} ${opcion}</button>`).join(''));
@@ -2813,6 +2820,9 @@ const AYUDA_DE_MIRAR = 'Rueda: acercar. Arrastrar: girar. W A S D: mover. Tab: s
 // al empezar (sin los muros que se están moviendo) y al terminar (ya con todos).
 const laberintoHecho = { lote: null, clave: '' };
 const MUROS_BAJOS = 0.55;               // en el laberinto los muros son más bajos, para que se vean los pasillos
+// Dónde festeja cada quien al llegar, del segundo al sexto: casillas del muro de la orilla que
+// rodea la salida, contadas desde ella (a lo ancho y a lo largo del tablero).
+const LUGARES_DE_LLEGADA = [[1, 0], [0, 1], [1, 1], [1, -1], [-1, 1]];
 
 // Da las casillas cuyo muro está subiendo o bajando en este momento.
 function casillasEnCambio(juego) {
@@ -2853,9 +2863,17 @@ function agregarLaberinto(juego, tablero, t, segundos, estado) {
   for (const corredor of juego.corredores) {
     if (corredor.algoritmo !== null && corredor.final === null) agregarRutaDeCorredor(dinamico, origen, mapa, corredor);
   }
+  // Todos terminan en la misma casilla. Para que no queden encimados, el primero festeja en la
+  // salida y los demás se suben al muro de la orilla que la rodea, cada quien en su lugar.
+  const llegados = juego.corredores.filter(corredor => corredor.final !== null).sort((a, b) => a.final - b.final);
   for (const corredor of juego.corredores) {
     girarHacia(corredor, segundos);
-    agregarPersonaje(personajes, enMundo(origen, posicion(corredor, mapa)), corredor, t);
+    const lugar = enMundo(origen, posicion(corredor, mapa)), puesto = llegados.indexOf(corredor);
+    if (puesto > 0) {
+      const [aLoAncho, aLoLargo] = LUGARES_DE_LLEGADA[puesto - 1];
+      lugar[0] += aLoAncho; lugar[1] = MUROS_BAJOS; lugar[2] += aLoLargo;
+    }
+    agregarPersonaje(personajes, lugar, corredor, t);
   }
 }
 
