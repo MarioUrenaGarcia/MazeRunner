@@ -20,6 +20,8 @@
   #titulo { font-size: 28px; font-weight: 800; white-space: nowrap; }
   #centro { flex: 1; text-align: center; font-size: 22px; font-weight: 700; white-space: nowrap; }
   #centro b { color: var(--dorado); font-size: 28px; }
+  .puesto { display: inline-block; margin: 0 5px; padding: 1px 8px 2px 6px; border-radius: 7px; background: #2a2a30; font-size: 17px; }
+  .puesto b { font-size: 21px !important; } .puesto.seguido { outline: 2px solid var(--dorado); }
   #tiempo { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 110px; text-align: right; }
   i { display: inline-block; width: 12px; height: 18px; border-radius: 3px; border: 2px solid #fff; margin: 0 7px -3px 4px; }
 
@@ -1015,7 +1017,163 @@ function actualizarBandera(juego, segundos, direcciones) {
 }
 
 // ============================================================================
-// 6. LA ESCENA
+// 6. MAZE RUNNER
+// Un laberinto de 10 x 15 celdas. Entre celda y celda hay una casilla que es
+// pasillo (abierta) o muro (cerrada), así que el tablero mide 21 x 31 casillas.
+// ============================================================================
+
+const CELDAS_ALTO = 10, CELDAS_ANCHO = 15;
+const FILAS_LABERINTO = 2 * CELDAS_ALTO + 1, COLUMNAS_LABERINTO = 2 * CELDAS_ANCHO + 1;        // 21 x 31
+const PARTIDA_LABERINTO = 1 * COLUMNAS_LABERINTO + 1;                                          // la celda de la esquina superior izquierda
+const META_LABERINTO = (FILAS_LABERINTO - 2) * COLUMNAS_LABERINTO + (COLUMNAS_LABERINTO - 2);  // la de la esquina inferior derecha
+const PASILLOS_EXTRA = 22;              // pasillos que se abren de más, para que haya rutas alternativas
+const CELDAS_LENTAS = 15;               // 15 celdas con agua y 15 con bosque
+const SEGUNDOS_ENTRE_CAMBIOS = 3.0;
+const PASILLOS_POR_CAMBIO = 8;          // en cada cambio se cierran hasta 8 y se abren tantos como se cerraron
+const FACTOR_DE_PENSAR_LABERINTO = 0.5; // en Maze Runner el tiempo de pensar es la mitad
+
+// Da las casillas que son celdas del laberinto: las de fila y columna impares.
+function celdasDelLaberinto() {
+  const celdas = [];
+  for (let i = 0; i < CELDAS_ALTO; i++) for (let j = 0; j < CELDAS_ANCHO; j++) celdas.push((2 * i + 1) * COLUMNAS_LABERINTO + 2 * j + 1);
+  return celdas;
+}
+
+// Dice si desde la partida se puede llegar a todas las celdas del laberinto.
+// Se recorre de celda en celda: se pasa a la de al lado solo si la casilla que las separa está abierta.
+function todoConectado(t) {
+  const vistas = new Set([PARTIDA_LABERINTO]), pendientes = [PARTIDA_LABERINTO];
+  while (pendientes.length) {
+    const actual = pendientes.pop(), f = Math.floor(actual / COLUMNAS_LABERINTO), c = actual % COLUMNAS_LABERINTO;
+    for (const [df, dc] of MOVIMIENTOS) {
+      const nf = f + 2 * df, nc = c + 2 * dc;
+      if (nf < 1 || nc < 1 || nf >= FILAS_LABERINTO - 1 || nc >= COLUMNAS_LABERINTO - 1) continue;
+      const vecina = nf * COLUMNAS_LABERINTO + nc, entre = (f + df) * COLUMNAS_LABERINTO + c + dc;
+      if (!vistas.has(vecina) && t[entre] !== '#') { vistas.add(vecina); pendientes.push(vecina); }
+    }
+  }
+  return vistas.size === CELDAS_ALTO * CELDAS_ANCHO;
+}
+
+// Calcula cuánto cuesta llegar a una casilla desde cada una de las demás.
+// Es Dijkstra corrido al revés, saliendo de la meta. Sirve para saber quién está más cerca de la salida.
+function costoHasta(mapa, meta) {
+  const costos = { [meta]: 0 }, cola = new Monticulo();
+  cola.meter([0, meta]);
+  while (!cola.vacio) {
+    const [costo, actual] = cola.sacar();
+    if (costo > costos[actual]) continue;
+    const paso = COSTOS[mapa.t[actual]];              // para llegar a la actual desde una vecina se paga entrar a la actual
+    for (const [vecina] of vecinos(mapa, actual)) {
+      const nuevo = costo + paso;
+      if (!(vecina in costos) || nuevo < costos[vecina]) { costos[vecina] = nuevo; cola.meter([nuevo, vecina]); }
+    }
+  }
+  return costos;
+}
+
+// Prepara una partida de Maze Runner. conJugador es false para solo mirar.
+function crearLaberinto(conJugador = true) {
+  const mapa = mapaVacio(FILAS_LABERINTO, COLUMNAS_LABERINTO), t = mapa.t, celdas = celdasDelLaberinto();
+  t.fill('#');
+  for (const celda of celdas) t[celda] = '.';
+
+  // 1. Un laberinto con un solo camino entre cada par de celdas. Se camina al azar abriendo
+  //    paso hacia celdas no visitadas; al quedar sin salida, se regresa.
+  const visitadas = new Set([PARTIDA_LABERINTO]), camino = [PARTIDA_LABERINTO];
+  while (camino.length) {
+    const actual = camino[camino.length - 1], f = filaDe(mapa, actual), c = columnaDe(mapa, actual);
+    const opciones = MOVIMIENTOS.filter(([df, dc]) => {
+      const nf = f + 2 * df, nc = c + 2 * dc;
+      return nf >= 1 && nc >= 1 && nf < FILAS_LABERINTO - 1 && nc < COLUMNAS_LABERINTO - 1 && !visitadas.has(casilla(mapa, nf, nc));
+    });
+    if (!opciones.length) { camino.pop(); continue; }             // callejón: se regresa una celda
+    const [df, dc] = elegir(opciones);
+    t[casilla(mapa, f + df, c + dc)] = '.';                         // se abre el pasillo entre las dos celdas
+    const siguiente = casilla(mapa, f + 2 * df, c + 2 * dc);
+    visitadas.add(siguiente);
+    camino.push(siguiente);
+  }
+
+  // 2. Las casillas que separan dos celdas vecinas: las que pueden ser pasillo o muro.
+  const pasillos = [];
+  for (let f = 1; f < FILAS_LABERINTO - 1; f++) for (let c = 1; c < COLUMNAS_LABERINTO - 1; c++) if ((f + c) % 2 === 1) pasillos.push(casilla(mapa, f, c));
+
+  // 3. Se abren 22 pasillos de más, para que haya rutas alternativas.
+  for (const pasillo of muestra(pasillos.filter(p => t[p] === '#'), PASILLOS_EXTRA)) t[pasillo] = '.';
+
+  // 4. 30 celdas lentas: 15 con agua y 15 con bosque, nunca pegadas a la partida ni a la salida.
+  const apartadas = new Set();
+  for (const extremo of [PARTIDA_LABERINTO, META_LABERINTO]) {
+    apartadas.add(extremo);
+    for (const [df, dc] of MOVIMIENTOS) apartadas.add(extremo + 2 * df * COLUMNAS_LABERINTO + 2 * dc);
+  }
+  muestra(celdas.filter(celda => !apartadas.has(celda)), 2 * CELDAS_LENTAS).forEach((celda, numero) => { t[celda] = numero < CELDAS_LENTAS ? 'A' : 'B'; });
+
+  const corredores = (conJugador ? ['Tú'] : []).concat(NOMBRES).map(nombre =>
+    nombre === 'Tú' ? crearCorredor('Tú', PARTIDA_LABERINTO, null, VELOCIDAD_JUGADOR) : crearCorredor(nombre, PARTIDA_LABERINTO, ALGORITMOS[nombre], VELOCIDAD_RIVAL));
+  return { tipo: 'laberinto', mapa, pasillos, corredores, jugador: conJugador ? corredores[0] : null, distancias: costoHasta(mapa, META_LABERINTO),
+           proximo: SEGUNDOS_ENTRE_CAMBIOS, anterior: null, cambio: 9, cambios: 0, reloj: 0, cuenta: CUENTA_REGRESIVA, fase: 'cuenta', anuncio: false, eventos: [] };
+}
+
+// Cambia el laberinto: cierra hasta 8 pasillos y abre tantos como cerró. Devuelve [cerrados, abiertos].
+// Un pasillo solo se cierra si el laberinto sigue completamente conectado y si nadie está en él ni va entrando.
+function cambiarLaberinto(juego) {
+  const mapa = juego.mapa, t = mapa.t, antes = t.slice();
+  const ocupadas = new Set();
+  for (const corredor of juego.corredores) { ocupadas.add(corredor.casilla); if (corredor.destino !== null) ocupadas.add(corredor.destino); }
+  const estabanCerrados = juego.pasillos.filter(p => t[p] === '#');
+  const cerrados = [];
+  for (const pasillo of muestra(juego.pasillos.filter(p => t[p] !== '#' && !ocupadas.has(p)), 9999)) {
+    if (cerrados.length === PASILLOS_POR_CAMBIO) break;
+    t[pasillo] = '#';                                 // se prueba a cerrarlo
+    if (todoConectado(t)) cerrados.push(pasillo);
+    else t[pasillo] = '.';                            // dejaba celdas aisladas: se vuelve a abrir
+  }
+  // Se abren tantos como se cerraron, entre los que ya estaban cerrados antes.
+  const abiertos = muestra(estabanCerrados, Math.min(cerrados.length, estabanCerrados.length));
+  for (const pasillo of abiertos) t[pasillo] = '.';
+  // Un rival solo vuelve a planear si el cambio le cerró el camino que llevaba.
+  for (const corredor of juego.corredores) {
+    if (corredor.algoritmo !== null && corredor.ruta.some(i => t[i] === '#')) corredor.replanear = true;
+  }
+  juego.distancias = costoHasta(mapa, META_LABERINTO);
+  juego.anterior = antes;                             // cómo estaba, para dibujar los muros subiendo y bajando
+  juego.cambio = 0;
+  juego.cambios += 1;
+  return [cerrados, abiertos];
+}
+
+// Avanza un cuadro de Maze Runner.
+function actualizarLaberinto(juego, segundos, direcciones) {
+  if (juego.fase === 'cuenta') {
+    juego.cuenta -= segundos;
+    if (juego.cuenta <= 0) juego.fase = 'carrera';
+    return;
+  }
+  juego.reloj += segundos;
+  juego.cambio += segundos;
+  juego.proximo -= segundos;
+  if (juego.proximo <= 0) {                           // cada 3 segundos el laberinto cambia
+    juego.proximo += SEGUNDOS_ENTRE_CAMBIOS;
+    cambiarLaberinto(juego);
+  }
+  for (const corredor of juego.corredores) {
+    if (corredor.final !== null) continue;
+    if (avanzar(corredor, segundos) && corredor.casilla === META_LABERINTO) {
+      corredor.final = juego.reloj;                   // llegó a la salida
+      anotarEvento(juego, 'victoria', corredor);
+      continue;
+    }
+    if (corredor.algoritmo === null) moverJugador(corredor, juego.mapa, direcciones);
+    else conducirRival(corredor, juego.mapa, META_LABERINTO, segundos, FACTOR_DE_PENSAR_LABERINTO);
+  }
+  // El resultado se anuncia igual que en atrapa gemas.
+  juego.anuncio = juego.jugador ? juego.jugador.final !== null : juego.corredores.some(c => c.final !== null);
+}
+
+// ============================================================================
+// 7. LA ESCENA
 // Convierte el estado del juego en figuras. En el mundo 3D, una casilla mide
 // 1 de lado: la columna es la x, la fila es la z y la altura es la y.
 // ============================================================================
@@ -1035,10 +1193,11 @@ function colorDePiso(terreno, f, c) {
 
 // Agrega a un lote lo que tiene altura en una casilla: el bloque de un muro o los árboles de un bosque.
 // 'tamaño' va de 0 a 1 y sirve para los cambios de terreno: los muros suben o bajan y los árboles crecen.
-function agregarBloque(lote, terreno, x, z, tamaño) {
+// 'bajo' hace los muros más bajos: en el laberinto, para que no tapen los pasillos.
+function agregarBloque(lote, terreno, x, z, tamaño, bajo = 1) {
   if (tamaño <= 0.01) return;
   if (terreno === '#') {
-    lote.caja(bloque(x, 0.42 * tamaño, z, 0.94, 0.84 * tamaño, 0.94), COLOR_DE_MURO);
+    lote.caja(bloque(x, 0.42 * tamaño * bajo, z, 0.94, 0.84 * tamaño * bajo, 0.94), COLOR_DE_MURO);
   } else if (terreno === 'B') {
     for (const [dx, dz, alto] of [[-0.22, -0.18, 1.0], [0.2, 0.2, 0.8]]) {
       const h = alto * tamaño;
@@ -1052,9 +1211,11 @@ function agregarBloque(lote, terreno, x, z, tamaño) {
 //   origen:   [x, z] de la esquina del tablero en el mundo
 //   anterior: terreno que tenía cada casilla antes del último cambio, o null si no está cambiando
 //   progreso: de 0 a 1, cuánto va del cambio
+//   sinBloque: casillas a las que no se les dibuja su muro ni sus árboles, porque se dibujan aparte
+//   bajo:     qué tan bajos son los muros (1 es su altura normal)
 // En la primera mitad del cambio lo viejo se hunde; en la segunda, lo nuevo crece. El color del
 // piso pasa poco a poco del anterior al nuevo, y así el agua aparece y desaparece.
-function construirTablero(mapa, origen, anterior, progreso) {
+function construirTablero(mapa, origen, anterior, progreso, sinBloque = null, bajo = 1) {
   const lote = new Lote();
   const [ox, oz] = origen, ancho = mapa.columnas, fondo = mapa.filas;
   // La plataforma: una losa oscura con un filo rojo, y debajo un bloque más chico.
@@ -1073,8 +1234,8 @@ function construirTablero(mapa, origen, anterior, progreso) {
     if (cambia) {
       if (progreso < 0.5) agregarBloque(lote, anterior[i], ox + c, oz + f, 1 - progreso * 2);
       else agregarBloque(lote, terreno, ox + c, oz + f, progreso * 2 - 1);
-    } else {
-      agregarBloque(lote, terreno, ox + c, oz + f, 1);
+    } else if (!sinBloque || !sinBloque.has(i)) {
+      agregarBloque(lote, terreno, ox + c, oz + f, 1, bajo);
     }
   }
   return lote;
@@ -1280,7 +1441,8 @@ function apuntarCamara(camara, juego, tableros, seguir, momento, t) {
   }
   if (seguir !== null) {
     const p = lugarDe(seguir);
-    camara.ojoMeta = [p[0], 8.5, p[2] + 8];
+    // En el laberinto se mira más desde arriba, para que los muros no tapen al personaje.
+    camara.ojoMeta = juego.tipo === 'laberinto' ? [p[0], 10, p[2] + 4.5] : [p[0], 8.5, p[2] + 8];
     camara.centroMeta = [p[0], 0.4, p[2]];
     return;
   }
@@ -1299,7 +1461,7 @@ function apuntarCamara(camara, juego, tableros, seguir, momento, t) {
 }
 
 // ============================================================================
-// 7. LOS PERSONAJES
+// 8. LOS PERSONAJES
 // Cada personaje es un muñequito de bloques con cabeza, cuerpo, brazos y
 // piernas. Su postura se calcula en cada cuadro: cada algoritmo camina y
 // festeja según su personalidad.
@@ -1446,7 +1608,7 @@ function agregarPersonaje(lote, lugar, corredor, t, carga = null) {
 }
 
 // ============================================================================
-// 8. DIBUJAR UNA PARTIDA
+// 9. DIBUJAR UNA PARTIDA
 // ============================================================================
 
 // Los lotes que se llenan de nuevo en cada cuadro.
@@ -1546,6 +1708,7 @@ function dibujarPartida(estado, juego, segundos, t) {
 
   // 1. Los tableros. Solo se reconstruyen mientras su terreno está cambiando.
   const estaticos = tableros.map((tablero, numero) => {
+    if (juego.tipo === 'laberinto') return tableroDelLaberinto(juego);
     const [anterior, progreso] = cambioDeTablero(juego, tablero);
     return loteDeTablero(juego.tipo + numero, tablero.mapa, tablero.origen, anterior, progreso);
   });
@@ -1553,6 +1716,7 @@ function dibujarPartida(estado, juego, segundos, t) {
   // 2. Lo que se mueve.
   if (juego.tipo === 'gemas') agregarGemas(juego, tableros, t, segundos);
   else if (juego.tipo === 'bandera') agregarBanderas(juego, tableros[0], t, segundos);
+  else agregarLaberinto(juego, tableros[0], t, segundos, estado);
 
   // 3. Los efectos y los momentos especiales de la cámara.
   estado.momento = momentoDeCamara(estado, juego);
@@ -1587,7 +1751,7 @@ function dibujarPartida(estado, juego, segundos, t) {
 }
 
 // ============================================================================
-// 9. LA INTERFAZ, AL ESTILO DE UN JUEGO DE CARRERAS
+// 10. LA INTERFAZ, AL ESTILO DE UN JUEGO DE CARRERAS
 // Los textos y los botones son elementos de la página, encima del lienzo 3D.
 // ============================================================================
 
@@ -1693,8 +1857,10 @@ function actualizarInterfaz(estado, juego, escena) {
   poner('tiempo', textoDeTiempo(juego.reloj));
   poner('cartel', '');
   if (juego.tipo !== 'bandera') { poner('rivales', ''); poner('mensaje', ''); poner('aviso', ''); }
+  if (juego.tipo !== 'laberinto') poner('controles', '');
   if (juego.tipo === 'gemas') interfazDeGemas(estado, juego, escena);
   else if (juego.tipo === 'bandera') interfazDeBandera(estado, juego, escena);
+  else interfazDeLaberinto(estado, juego, escena);
   // La cuenta regresiva de salida: 3, 2, 1 y la palabra de arranque.
   let cuenta = '';
   if (juego.fase === 'cuenta') cuenta = String(Math.ceil(juego.cuenta));
@@ -1708,7 +1874,110 @@ const AYUDA_DE_JUGAR = 'Flechas o W A S D: moverte. C: acercar. R: reiniciar. Es
 const AYUDA_DE_MIRAR = 'Rueda: acercar. Arrastrar: girar. W A S D: mover. Tab: seguir a otro. 0: vista general. R: reiniciar. Esc: menú.';
 
 // ============================================================================
-// 10. MODOS DE SOLO MIRAR
+// 11. MAZE RUNNER EN PANTALLA
+// ============================================================================
+
+// El lote del laberinto que no se mueve. Se rehace solo dos veces por cambio:
+// al empezar (sin los muros que se están moviendo) y al terminar (ya con todos).
+const laberintoHecho = { lote: null, clave: '' };
+const MUROS_BAJOS = 0.55;               // en el laberinto los muros son más bajos, para que se vean los pasillos
+
+// Da las casillas cuyo muro está subiendo o bajando en este momento.
+function casillasEnCambio(juego) {
+  if (juego.cambio >= DURACION_DEL_CAMBIO || !juego.anterior) return [];
+  const lista = [];
+  for (const i of juego.pasillos) if (juego.anterior[i] !== juego.mapa.t[i]) lista.push(i);
+  return lista;
+}
+
+// Da el lote con el laberinto quieto. Los muros que están cambiando se dibujan aparte, animados.
+function tableroDelLaberinto(juego) {
+  const enCambio = casillasEnCambio(juego);
+  if (!juego.sello) juego.sello = Math.random();       // para distinguir un laberinto de otro
+  const clave = `${juego.sello} ${juego.cambios} ${enCambio.length ? 'moviendo' : 'quieto'}`;
+  if (laberintoHecho.clave !== clave) {
+    if (laberintoHecho.lote && laberintoHecho.lote.bufer) motor.gl.deleteBuffer(laberintoHecho.lote.bufer);
+    laberintoHecho.lote = construirTablero(juego.mapa, [0, 0], null, 1, new Set(enCambio), MUROS_BAJOS);
+    laberintoHecho.clave = clave;
+  }
+  return laberintoHecho.lote;
+}
+
+// Agrega al lote dinámico todo lo que se mueve en Maze Runner.
+function agregarLaberinto(juego, tablero, t, segundos, estado) {
+  const { mapa, origen } = tablero;
+  // Los pasillos que se están cerrando o abriendo: en la primera mitad baja lo viejo, en la segunda sube lo nuevo.
+  const progreso = juego.cambio / DURACION_DEL_CAMBIO;
+  for (const i of casillasEnCambio(juego)) {
+    const lugar = enMundo(origen, posDeCasilla(mapa, i));
+    if (progreso < 0.5) agregarBloque(dinamico, juego.anterior[i], lugar[0], lugar[2], 1 - progreso * 2, MUROS_BAJOS);
+    else agregarBloque(dinamico, mapa.t[i], lugar[0], lugar[2], progreso * 2 - 1, MUROS_BAJOS);
+  }
+  agregarPunto(dinamico, enMundo(origen, posDeCasilla(mapa, PARTIDA_LABERINTO)), VERDE_INICIO);    // la partida
+  // La salida: una bandera dorada con su resplandor.
+  const salida = enMundo(origen, posDeCasilla(mapa, META_LABERINTO));
+  agregarBandera(dinamico, salida, DORADO, t, 1.5);
+  manchasDeFrente.mancha(salida[0], 0.9, salida[2], 1.3, [1, 0.85, 0.3], 0.3);
+  for (const corredor of juego.corredores) {
+    if (corredor.algoritmo !== null && corredor.final === null) agregarRutaDeCorredor(dinamico, origen, mapa, corredor);
+  }
+  for (const corredor of juego.corredores) {
+    girarHacia(corredor, segundos);
+    agregarPersonaje(dinamico, enMundo(origen, posicion(corredor, mapa)), corredor, t);
+  }
+}
+
+// Cambia a quién sigue la cámara: 'paso' es 1 para el siguiente competidor y -1 para el anterior.
+function verAOtro(estado, paso) {
+  const cuantos = estado.juego.corredores.length;
+  estado.seguir = ((estado.seguir === null ? 0 : estado.seguir) + paso + cuantos) % cuantos;
+  estado.cartelCerrado = true;                         // el cartel se quita para dejar ver el laberinto
+  estado.momento = null;                               // y la cámara deja de girar alrededor del jugador
+}
+
+// Atiende las flechas en Maze Runner: cuando el jugador ya terminó, pasan la vista de un competidor a otro.
+// Devuelve true si atendió la tecla.
+function teclaDeLaberinto(estado, tecla) {
+  const jugador = estado.juego.jugador;
+  if (!jugador || jugador.final === null || (tecla !== 'ArrowLeft' && tecla !== 'ArrowRight')) return false;
+  verAOtro(estado, tecla === 'ArrowRight' ? 1 : -1);
+  return true;
+}
+
+// Atiende los botones de Maze Runner: acercar la vista y pasar de un competidor a otro.
+function accionDeLaberinto(estado, accion) {
+  const juego = estado.juego;
+  if (accion === 'acercar') estado.seguir = estado.seguir === null ? juego.corredores.indexOf(juego.jugador) : null;
+  else verAOtro(estado, accion === 'siguiente' ? 1 : -1);
+}
+
+// Actualiza la interfaz de Maze Runner: posiciones, contador del siguiente cambio y botones.
+function interfazDeLaberinto(estado, juego, escena) {
+  const orden = clasificacion(juego), jugador = juego.jugador, tablero = escena.tableros[0];
+  poner('titulo', jugador ? 'Maze Runner' : 'Mirar: Maze Runner');
+  // Las posiciones en vivo, en una fila.
+  poner('centro', orden.map((c, k) => `<span class="puesto ${estado.seguir !== null && juego.corredores[estado.seguir] === c ? 'seguido' : ''}">` +
+    `<b>${k + 1}</b>${ficha(c)}</span>`).join(''));
+  // El contador: los segundos enteros que faltan para el siguiente cambio.
+  const faltan = juego.fase === 'carrera' ? Math.ceil(juego.proximo) : Math.ceil(SEGUNDOS_ENTRE_CAMBIOS);
+  poner('mensaje', `El laberinto cambia en <b class="dorado">${faltan}</b>`);
+  for (const [numero, corredor] of juego.corredores.entries()) {
+    const lugar = enMundo(tablero.origen, posicion(corredor, tablero.mapa), 1.5);
+    if (corredor.pensando > 0 && corredor.final === null) etiquetar('globo' + numero, lugar, '...', 'globo', escena.camara);
+    else if (corredor === jugador || estado.seguir === numero) etiquetar('nombre' + numero, lugar, corredor.nombre, 'nombre', escena.camara);
+  }
+  let botones = '';
+  if (jugador) {
+    botones = `<button data-accion="acercar" class="${estado.seguir !== null && jugador.final === null ? 'activo' : ''}">Acercar (C)</button>`;
+    // Cuando el jugador ya terminó, dos flechas para pasar la vista de un competidor a otro.
+    if (jugador.final !== null) botones += '<span>Ver a otro competidor:</span><button data-accion="anterior">&lt;</button><button data-accion="siguiente">&gt;</button>';
+  }
+  poner('controles', botones);
+  if (juego.anuncio && !estado.cartelCerrado) cartelDeCarrera(juego, orden);
+}
+
+// ============================================================================
+// 12. MODOS DE SOLO MIRAR
 // Compiten solo los algoritmos y la cámara se mueve con libertad: la rueda
 // acerca y aleja, arrastrar gira, W A S D desplaza, Tab pasa a seguir a otro
 // personaje y 0 vuelve a la vista general.
@@ -1804,7 +2073,7 @@ if (typeof document !== 'undefined') {
 }
 
 // ============================================================================
-// 11. PORTADA Y MENÚ
+// 13. PORTADA Y MENÚ
 // La portada muestra el título sobre una partida que se juega sola. Al oprimir
 // una tecla, el fondo se desenfoca, el título se barre hacia un lado y aparecen
 // los modos en cajas. Al elegir uno, su caja estalla en partículas y hay un
@@ -1961,15 +2230,17 @@ function pasearCamara(camara, tableros, t) {
 }
 
 // ============================================================================
-// 12. EL PROGRAMA
+// 14. EL PROGRAMA
 // ============================================================================
 
 // Los modos del juego: clave, nombre y una línea que lo describe.
 const MODOS = [
   ['gemas', 'Atrapa gemas', 'Carrera contra los cinco algoritmos, cada quien en su tablero.'],
   ['bandera', 'Captura la bandera', 'Uno contra uno: roba la bandera rival. A tres puntos.'],
+  ['laberinto', 'Maze Runner', 'Un laberinto gigante que cambia cada 3 segundos.'],
   ['mirar_gemas', 'Mirar: atrapa gemas', 'Compiten solo los algoritmos.'],
   ['mirar_bandera', 'Mirar: captura la bandera', 'Elige el algoritmo de cada lado.'],
+  ['mirar_laberinto', 'Mirar: Maze Runner', 'Sigue de cerca a quien quieras.'],
 ];
 
 // Todo lo que cambia mientras corre el programa.
@@ -1989,11 +2260,13 @@ function empezar(modo) {
   estado.direcciones = [];
   estado.seguir = null;
   estado.momento = null;
+  estado.cartelCerrado = false;
   estado.efectos = crearEfectos();
   if (modo === 'gemas') estado.juego = crearGemas();
   else if (modo === 'mirar_gemas') estado.juego = crearGemas(false);
   else if (modo === 'bandera') estado.juego = crearBandera(estado.rival);
   else if (modo === 'mirar_bandera') estado.juego = crearBandera(estado.rival, estado.izquierda);
+  else estado.juego = crearLaberinto(modo === 'laberinto');
   estado.pantalla = 'juego';
   elemento('menu').style.display = 'none';
   elemento('portada').style.display = 'none';
@@ -2029,6 +2302,7 @@ function alOprimir(evento) {
     estado.rival = OPCIONES_DE_RIVAL[Number(tecla) - 1];                         // se conserva para las partidas siguientes
     empezar(estado.modo);
   }
+  else if (juego.tipo === 'laberinto' && teclaDeLaberinto(estado, tecla)) return;
   else teclaDeModo(estado, evento, tecla);
 }
 
@@ -2045,6 +2319,7 @@ function alHacerClic(evento) {
   if (!boton) return;
   if (boton.dataset.modo) clicDeMenu(estado, boton.dataset.modo);
   else if (boton.dataset.rival) { estado.rival = boton.dataset.rival; empezar(estado.modo); }
+  else if (boton.dataset.accion) accionDeLaberinto(estado, boton.dataset.accion);
   else clicDeModo(estado, boton);
   boton.blur();                                                                  // para que Espacio no vuelva a oprimirlo
 }
@@ -2058,6 +2333,7 @@ function actualizar(segundos) {
   const direcciones = estado.modo.startsWith('mirar') ? [] : estado.direcciones;
   if (juego.tipo === 'gemas') actualizarGemas(juego, segundos, direcciones);
   else if (juego.tipo === 'bandera') actualizarBandera(juego, segundos, direcciones);
+  else actualizarLaberinto(juego, segundos, direcciones);
 }
 
 // Un cuadro completo: avanzar, dibujar y pedir el siguiente.
