@@ -37,12 +37,17 @@
   .letrero b { font-size: 24px; margin-right: 2px; } .letrero b.primero { color: var(--dorado); }
   .letrero small { font-weight: 400; color: #cfcfcf; margin-left: 10px; font-size: 13px; }
   .nombre { font-size: 15px; font-weight: 700; }
+  /* En ventanas angostas los letreros se achican y pierden su texto chico, para no encimarse. */
+  @media (max-width: 760px) { .letrero { font-size: 12px; padding: 2px 6px 2px 4px; } .letrero b { font-size: 15px; } .letrero small { display: none; }
+                              .letrero i { width: 8px; height: 12px; margin: 0 4px -2px 2px; } }
   .globo { background: #fff; color: #111; font-weight: 900; font-size: 18px; line-height: 12px; padding: 2px 9px 9px;
            border-radius: 14px; border: 2px solid #111; text-shadow: none; }
 
   /* Cuenta regresiva y avisos, al centro. */
-  #cuenta { position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); text-align: center; font-size: 190px;
-            font-weight: 900; color: var(--dorado); -webkit-text-stroke: 5px #000; text-shadow: 0 8px 0 #000; }
+  /* La cuenta regresiva va dentro de la barra, al centro: así no tapa ningún tablero ni letrero. */
+  #cuenta { position: absolute; top: 0; left: 0; right: 0; height: 64px; line-height: 60px; text-align: center; font-size: 60px;
+            font-weight: 900; color: var(--dorado); -webkit-text-stroke: 2px #000; animation: late .5s ease-out infinite alternate; }
+  @keyframes late { from { transform: scale(1); } to { transform: scale(1.18); } }
   #aviso { position: absolute; top: 42%; left: 0; right: 0; text-align: center; font-size: 34px; font-weight: 800;
            color: var(--dorado); background: rgba(0, 0, 0, .72); padding: 14px 0; }
   #cartel { position: absolute; top: 96px; right: 24px; width: 360px; background: rgba(17, 17, 20, .93);
@@ -61,20 +66,27 @@
   #interfaz button.activo { background: var(--rojo); border-color: #fff; }
 
   /* El menú. */
-  #menu { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-          background: rgba(0, 0, 0, .28); text-align: center; }
+  #menu { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
   #menu h1 { margin: 0; font-size: min(11vw, 110px); font-weight: 900; -webkit-text-stroke: 3px #000; text-shadow: 0 6px 0 #000; }
   #menu .subtitulo { margin: 0 0 28px; font-size: min(3.4vw, 30px); font-weight: 700; border-top: 7px solid var(--rojo);
                      padding-top: 8px; text-shadow: 0 2px 4px #000; }
-  #menu .cajas { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; max-width: 980px; }
-  #menu .cajas button { width: 300px; min-height: 120px; padding: 14px; border-radius: 16px; background: rgba(24, 24, 28, .92);
-                        display: flex; flex-direction: column; justify-content: center; gap: 8px; }
-  #menu .cajas button b { font-size: 23px; } #menu .cajas button span { font-size: 15px; color: #d5d5d5; }
+  #menu .cajas { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; max-width: 980px; padding: 0 12px; }
+  /* Todas las cajas miden lo mismo y su texto se parte en las líneas que haga falta. */
+  #menu .cajas button { width: 300px; max-width: 92vw; height: 138px; padding: 12px 16px; border-radius: 16px; background: rgba(24, 24, 28, .9);
+                        border: 2px solid #8a8a90; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;
+                        white-space: normal; overflow: hidden; transition: background .15s, border-color .15s; }
+  #menu .cajas button b { font-size: 22px; line-height: 1.15; } #menu .cajas button span { font-size: 15px; line-height: 1.25; color: #e2e2e2; }
+  /* La caja elegida (con el cursor o con las flechas) se pinta de rojo, se apachurra y rebota. */
+  #menu .cajas button.activo { background: var(--rojo); border-color: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, .35), 0 10px 24px rgba(0, 0, 0, .45);
+                               transform: scale(1.05); animation: rebote .5s; }
+  #menu .cajas button.activo span { color: #fff; }
+  @keyframes rebote { 0% { transform: scale(1, 1); } 25% { transform: scale(1.12, .8); } 50% { transform: scale(.95, 1.12); }
+                      75% { transform: scale(1.07, .98); } 100% { transform: scale(1.05); } }
   #menu .pie { font-size: 15px; text-shadow: 0 1px 3px #000; }
   #menu h1.chico { font-size: min(7vw, 64px); margin-bottom: 18px; }
   #menu.yendose { transition: opacity .35s; opacity: 0; }
   /* Las cajas del menú llegan una tras otra, subiendo. */
-  #menu .cajas button.entra { animation: entra .4s both; }
+  #menu .cajas.entrando button { animation: entra .4s both; }
   @keyframes entra { from { opacity: 0; transform: translateY(50px) scale(.9); } to { opacity: 1; transform: none; } }
 
   /* La portada: el título arriba. Al abrir el menú se barre hacia la izquierda. */
@@ -363,7 +375,9 @@ function subir(lote, dinamico) {
 
 // Dibuja lotes de figuras sólidas. Con 'borde' mayor que cero dibuja solo su contorno:
 // las mismas figuras, un poco infladas y mostrando sus caras de atrás, en un solo color.
-function dibujarLotes(lotes, camara, luz, borde = 0, colorBorde = [0, 0, 0]) {
+// Con 'sinTapar', lo dibujado no tapa a lo que venga después: sirve para el halo de un
+// personaje, que se dibuja antes que él y así solo se ve por fuera de su silueta.
+function dibujarLotes(lotes, camara, luz, borde = 0, colorBorde = [0, 0, 0], sinTapar = false) {
   const gl = motor.gl, p = motor.solido;
   gl.useProgram(p.programa);
   gl.uniformMatrix4fv(p.u.uCamara, false, camara);
@@ -381,6 +395,7 @@ function dibujarLotes(lotes, camara, luz, borde = 0, colorBorde = [0, 0, 0]) {
   gl.uniform4fv(p.u.uFaros, faros);
   gl.uniform3fv(p.u.uColorFaro, luz.colorFaro || [0, 0, 0]);
   gl.cullFace(borde > 0 ? gl.FRONT : gl.BACK);
+  gl.depthMask(!sinTapar);
   for (const lote of lotes) {
     if (!lote.vertices) continue;
     subir(lote, lote.dinamico);
@@ -392,6 +407,7 @@ function dibujarLotes(lotes, camara, luz, borde = 0, colorBorde = [0, 0, 0]) {
     gl.drawArrays(gl.TRIANGLES, 0, lote.vertices);
   }
   gl.cullFace(gl.BACK);
+  gl.depthMask(true);
 }
 
 // Dibuja una lista de manchas. Son translúcidas: se mezclan con lo que ya hay.
@@ -1359,31 +1375,17 @@ function agregarEfectos(lote, efectos) {
 
 // ---- El cielo: el tablero flota sobre un mar de nubes, con un sol rojo y una luz blanca de contraste.
 
-// La luz de la escena. 'faros' son las luces de noche (se usan desde el paso de ambientación).
+// La luz de la escena: un sol rojo que tiñe todo de un tono cálido y, del lado contrario, una luz
+// blanca de contraste. 'faros' son las luces de noche: lámparas y linternas.
+const CIELO_DE_DIA = [0.80, 0.36, 0.36], SOL_DE_DIA = [0.98, 0.60, 0.48], AMBIENTE_DE_DIA = [0.44, 0.38, 0.40];
 function crearLuz() {
-  return { sol: unitario([-0.45, 0.8, 0.4]), colorSol: [0.74, 0.66, 0.64], contraluz: unitario([0.6, 0.25, -0.75]),
-           ambiente: [0.36, 0.36, 0.4], cielo: [0.72, 0.83, 0.95], lejos: 46, faros: [], colorFaro: [0, 0, 0] };
+  return { sol: unitario([-0.5, 0.72, -0.5]), colorSol: SOL_DE_DIA.slice(), contraluz: unitario([0.6, 0.3, 0.7]),
+           ambiente: AMBIENTE_DE_DIA.slice(), cielo: CIELO_DE_DIA.slice(), lejos: 46, faros: [], colorFaro: [0, 0, 0] };
 }
 
 // Las nubes del mar de nubes: se sortean una vez y después solo se deslizan.
 const NUBES_DEL_MAR = Array.from({ length: 150 }, () => ({ x: Math.random() * 180 - 90, z: Math.random() * 150 - 95,
                                                            r: 5 + Math.random() * 8, vel: 0.3 + Math.random() * 0.5, tono: 0.92 + Math.random() * 0.08 }));
-
-// Llena la lista de manchas del fondo: el sol rojo, la luz blanca y el mar de nubes.
-// Todo esto se dibuja con manchas difuminadas, y por eso el fondo se ve un poco desenfocado.
-function agregarCielo(manchas, centro, t) {
-  // El sol rojo, lejos y a la izquierda: un disco con su resplandor.
-  const sol = [centro[0] - 60, 26, centro[2] - 95];
-  manchas.mancha(sol[0], sol[1], sol[2], 34, [1.0, 0.45, 0.35], 0.35);
-  manchas.mancha(sol[0], sol[1], sol[2], 13, [0.93, 0.12, 0.12], 1, 0.75);
-  // La luz blanca de contraste, del lado opuesto.
-  manchas.mancha(centro[0] + 75, 30, centro[2] - 80, 40, [1, 1, 1], 0.45);
-  // El mar de nubes, muy por debajo del tablero.
-  for (const nube of NUBES_DEL_MAR) {
-    const x = ((nube.x + t * nube.vel + 90) % 180) - 90;
-    manchas.mancha(centro[0] + x, -9 - nube.r * 0.2, centro[2] + nube.z, nube.r, [nube.tono, nube.tono, 1], 0.7);
-  }
-}
 
 // ---- La cámara: se mueve suave hacia donde se le pide.
 
@@ -1419,6 +1421,28 @@ function tablerosDe(juego) {
 // El centro de un tablero en el mundo.
 const centroDe = tablero => [tablero.origen[0] + (tablero.mapa.columnas - 1) / 2, 0, tablero.origen[1] + (tablero.mapa.filas - 1) / 2];
 
+// Calcula qué tan lejos hay que poner la cámara para que todos los puntos dados queden dentro
+// de la pantalla, respetando los márgenes (en pixeles) que ocupa la interfaz.
+//   centro:    el punto al que mira la cámara
+//   direccion: hacia dónde se aleja la cámara desde ese punto
+// Prueba distancias partiendo el rango a la mitad cada vez, hasta dar con la más corta que sirve.
+function encuadrar(centro, direccion, puntos, margenes) {
+  const ancho = motor.ancho, alto = motor.alto;
+  const proyeccion = perspectiva(0.72, ancho / alto, 0.5, 600);
+  let cerca = 3, lejos = 500;
+  for (let vuelta = 0; vuelta < 24; vuelta++) {
+    const d = (cerca + lejos) / 2;
+    const ojo = [centro[0] + direccion[0] * d, centro[1] + direccion[1] * d, centro[2] + direccion[2] * d];
+    const m = multiplicar(proyeccion, mirarHacia(ojo, centro));
+    const caben = puntos.every(p => {
+      const [x, y, delante] = proyectar(m, p, ancho, alto);
+      return delante && x >= margenes.lados && x <= ancho - margenes.lados && y >= margenes.arriba && y <= alto - margenes.abajo;
+    });
+    if (caben) lejos = d; else cerca = d;
+  }
+  return lejos;
+}
+
 // Decide a dónde debe mirar la cámara en este momento.
 //   seguir:  el número del corredor al que sigue de cerca, o null para la vista general
 //   momento: un momento especial en curso (alguien anotó o ganó), o null
@@ -1446,18 +1470,23 @@ function apuntarCamara(camara, juego, tableros, seguir, momento, t) {
     camara.centroMeta = [p[0], 0.4, p[2]];
     return;
   }
-  // Vista general: todos los tableros. Se calcula qué tan lejos hay que poner la cámara para
-  // que quepan a lo ancho y a lo hondo; entre más angosta la ventana, más se aleja.
-  const centros = tableros.map(centroDe);
-  const medio = [0, 1].map(k => (Math.min(...centros.map(c => c[k * 2])) + Math.max(...centros.map(c => c[k * 2]))) / 2);
-  const ancho = Math.max(...centros.map(c => c[0])) - Math.min(...centros.map(c => c[0])) + tableros[0].mapa.columnas + 1;
-  const fondo = Math.max(...centros.map(c => c[2])) - Math.min(...centros.map(c => c[2])) + tableros[0].mapa.filas + 1;
-  const abertura = Math.tan(0.72 / 2);                // la mitad del ángulo de visión vertical
-  const porAncho = (ancho / 2) / (abertura * motor.ancho / motor.alto) * 1.1;
-  const porFondo = (fondo * 0.8 / 2) / abertura * 1.1;
-  const lejos = Math.max(porAncho, porFondo);
-  camara.ojoMeta = [medio[0], lejos * 0.80, medio[1] + lejos * 0.60 + fondo * 0.04];
-  camara.centroMeta = [medio[0], 0, medio[1] - fondo * 0.02];
+  // Vista general: la cámara se aleja lo justo para que todos los tableros se vean completos,
+  // con sus letreros, en cualquier tamaño de ventana.
+  const puntos = [];
+  for (const tablero of tableros) {
+    const [ox, oz] = tablero.origen, ancho = tablero.mapa.columnas, fondo = tablero.mapa.filas;
+    for (const x of [ox - 0.9, ox + ancho - 0.1]) {
+      for (const z of [oz - 0.9, oz + fondo - 0.1]) puntos.push([x, -0.6, z], [x, 1.3, z]);     // las esquinas, abajo y arriba
+    }
+    if (juego.tipo === 'gemas') puntos.push([ox + 4, 0, oz - 1.5]);                             // de donde cuelga su letrero
+  }
+  const xs = puntos.map(p => p[0]), zs = puntos.map(p => p[2]);
+  const centro = [(Math.min(...xs) + Math.max(...xs)) / 2, 0, (Math.min(...zs) + Math.max(...zs)) / 2];
+  const direccion = unitario([0, 0.8, 0.6]);
+  // Arriba se deja lugar para la barra y los letreros; abajo, para la ayuda y los botones.
+  const lejos = encuadrar(centro, direccion, puntos, { lados: 24, arriba: juego.tipo === 'gemas' ? 122 : 112, abajo: juego.tipo === 'gemas' ? 40 : 84 });
+  camara.ojoMeta = [centro[0] + direccion[0] * lejos, direccion[1] * lejos, centro[2] + direccion[2] * lejos];
+  camara.centroMeta = centro;
 }
 
 // ============================================================================
@@ -1491,7 +1520,7 @@ function girarHacia(corredor, segundos) {
 //   DFS       corre inclinado con los brazos hacia atrás y festeja girando como trompo
 //   Dijkstra  camina de puntillas equilibrándose y festeja con una reverencia
 //   Voraz     da zancadas enormes con los brazos al frente y festeja a grandes brincos
-//   A*        va a saltos largos, uno por casilla, y festeja con el baile del robot
+//   A*        corre a saltos largos, uno por casilla, y festeja con el baile del robot
 function poseDe(corredor, t) {
   const pose = { salto: 0, inclinacion: 0, ladeo: 0, trompo: 0, cabeza: 0,
                  piernaIzq: [0, 0], piernaDer: [0, 0], brazoIzq: [0, 6, 0], brazoDer: [0, 6, 0] };
@@ -1556,11 +1585,13 @@ function poseDe(corredor, t) {
     Object.assign(pose, { inclinacion: 10, salto: 0.18 * Math.abs(vaiven), piernaIzq: [62 * vaiven, 0], piernaDer: [-62 * vaiven, 0],
                           brazoIzq: [85, 4, 0], brazoDer: [85 + 8 * Math.sin(t * 14), 4, 0] });
   } else if (nombre === 'A*') {
-    // Un salto largo por casilla: sale parado, en el aire abre las piernas alternando cuál va
-    // adelante, y cae con las dos juntas. Todo exagerado.
+    // Un salto largo por casilla, como correr y saltar a la vez: sale parado, en el aire abre las
+    // piernas una adelante y otra atrás, y cae con las dos juntas. En cada salto cambia cuál
+    // pierna va adelante. Los brazos van al contrario de las piernas, como al correr. Todo exagerado.
+    // Los pies nunca atraviesan el suelo: el salto sube más rápido de lo que las piernas se abren.
     const aire = Math.sin(Math.PI * avance);
-    Object.assign(pose, { salto: 0.55 * aire, piernaIzq: [58 * aire * lado, 0], piernaDer: [-58 * aire * lado, 0],
-                          brazoIzq: [0, 40 + 110 * aire, 0], brazoDer: [0, 40 + 110 * aire, 0] });
+    Object.assign(pose, { salto: 0.62 * aire, inclinacion: 12 * aire, piernaIzq: [72 * aire * lado, 0], piernaDer: [-72 * aire * lado, 0],
+                          brazoIzq: [-82 * aire * lado, 8, 0], brazoDer: [82 * aire * lado, 8, 0] });
   } else {
     // El jugador camina normal.
     Object.assign(pose, { salto: 0.07 * Math.abs(vaiven), piernaIzq: [32 * vaiven, 0], piernaDer: [-32 * vaiven, 0],
@@ -1596,10 +1627,9 @@ function agregarPersonaje(lote, lugar, corredor, t, carga = null) {
     lote.caja(componer(codo, bloque(0, -0.085, 0, 0.1, 0.17, 0.1)), oscuro);
     if (lado === 1) corredor.mano = [codo[12] - codo[4] * 0.2, codo[13] - codo[5] * 0.2, codo[14] - codo[6] * 0.2];
   }
-  // La cabeza, con los ojos al frente.
+  // La cabeza: un cubo liso, sin cara.
   const cabeza = componer(torso, mover(0, 0.36, 0), girarZ(pose.cabeza * GRADOS));
   lote.caja(componer(cabeza, bloque(0, 0.18, 0, 0.34, 0.34, 0.34)), [1.0, 0.86, 0.72]);
-  for (const lado of [-1, 1]) lote.caja(componer(cabeza, bloque(lado * 0.085, 0.2, 0.171, 0.06, 0.07, 0.02)), NEGRO);
   // La bandera que carga va en su espalda.
   if (carga) {
     lote.caja(componer(torso, bloque(0, 0.5, -0.16, 0.05, 0.9, 0.05)), [0.92, 0.92, 0.92]);
@@ -1700,51 +1730,82 @@ const ESTRELLAS = Array.from({ length: 150 }, () => {
 const NUBES_ALTAS = Array.from({ length: 14 }, () => ({ x: Math.random() * 160 - 80, y: 3 + Math.random() * 12, z: -30 - Math.random() * 60,
                                                         r: 7 + Math.random() * 9, vel: 0.5 + Math.random() }));
 
-// Llena el fondo del cielo según la hora: el sol rojo que se oculta, la luna, las estrellas,
-// las nubes y el mar de nubes. Todo va difuminado, así que el fondo se ve un poco desenfocado.
-function agregarCieloVivo(manchas, centro, t, noche) {
-  const dia = 1 - noche;
-  // El sol rojo baja al atardecer; la luna sube del otro lado.
-  const sol = [centro[0] - 60, 26 - noche * 40, centro[2] - 95];
-  manchas.mancha(sol[0], sol[1], sol[2], 34, [1.0, 0.45, 0.35], 0.35 * dia);
-  manchas.mancha(sol[0], sol[1], sol[2], 13, [0.93, 0.12, 0.12], dia, 0.75);
-  manchas.mancha(centro[0] + 75, 30, centro[2] - 80, 40, [1, 1, 1], 0.45 * dia);          // la luz blanca de contraste
-  manchas.mancha(centro[0] + 55, 6 + noche * 30, centro[2] - 95, 22, [0.75, 0.82, 1], 0.25 * noche);
-  manchas.mancha(centro[0] + 55, 6 + noche * 30, centro[2] - 95, 8, [0.96, 0.97, 1], noche, 0.8);   // la luna
+// Da un punto lejano del cielo que siempre cae en el mismo lugar de la pantalla.
+//   aLoAncho, aLoAlto: de -1 a 1; (0, 0) es el centro de la pantalla y (-1, 1) la esquina superior izquierda
+// Así el sol se ve siempre, aunque la cámara mire hacia abajo o gire.
+function puntoDelCielo(ojos, vista, aLoAncho, aLoAlto, distancia) {
+  const adelante = unitario(restar(ojos.centro, ojos.ojo)), abertura = Math.tan(0.72 / 2), aspecto = motor.ancho / motor.alto;
+  return [0, 1, 2].map(k => ojos.ojo[k] + (adelante[k] + vista.derecha[k] * aLoAncho * abertura * aspecto + vista.arriba[k] * aLoAlto * abertura) * distancia);
+}
+
+// Llena el cielo según la hora: el sol rojo y su resplandor, la luz blanca del otro lado, la luna,
+// las estrellas, las nubes y el mar de nubes. Todo va difuminado, así que el fondo se ve desenfocado.
+//   fondo:  manchas que van detrás de todo
+//   encima: manchas que van encima de todo; con ellas el resplandor del sol baña la escena
+function agregarCieloVivo(fondo, encima, ojos, vista, t, noche) {
+  const dia = 1 - noche, centro = ojos.centro;
+  // El sol rojo, arriba a la izquierda. Al atardecer baja; de noche no está.
+  const sol = puntoDelCielo(ojos, vista, -0.6, 0.56 - noche * 0.9, 170);
+  // La luz blanca de contraste, del lado contrario.
+  const blanca = puntoDelCielo(ojos, vista, 0.7, 0.5, 170);
+  fondo.mancha(blanca[0], blanca[1], blanca[2], 55, [1, 1, 1], 0.22 * dia);
+  // La luna sale de noche, del lado de la luz blanca.
+  const luna = puntoDelCielo(ojos, vista, 0.62, -0.35 + noche * 0.9, 170);
+  fondo.mancha(luna[0], luna[1], luna[2], 22, [0.75, 0.82, 1], 0.25 * noche);
+  fondo.mancha(luna[0], luna[1], luna[2], 7.5, [0.96, 0.97, 1], noche, 0.8);
   // Las estrellas titilan. Solo salen de noche.
   if (noche > 0.05) {
     for (const e of ESTRELLAS) {
-      manchas.mancha(centro[0] + e[0] * 170, e[1] * 170, centro[2] + e[2] * 170 - 30, 0.7 * e[3], [1, 1, 0.95], noche * (0.6 + 0.4 * Math.sin(t * 2 + e[4])), 0.3);
+      fondo.mancha(centro[0] + e[0] * 170, e[1] * 170, centro[2] + e[2] * 170 - 30, 0.7 * e[3], [1, 1, 0.95], noche * (0.6 + 0.4 * Math.sin(t * 2 + e[4])), 0.3);
     }
   }
-  // Nubes suaves y translúcidas, cada una de una sola pieza, que cruzan despacio.
+  // Las nubes se tiñen de rojizo del lado del sol y quedan blancas del otro. De noche se apagan.
   const tono = 1 - noche * 0.62;
+  const colorDeNube = (x, y, z, claro) => {
+    const lado = ((x - centro[0]) * vista.derecha[0] + (y - centro[1]) * vista.derecha[1] + (z - centro[2]) * vista.derecha[2]) / 70;
+    const calido = Math.min(1, Math.max(0, 0.5 - lado * 0.75)) * dia;
+    return mezcla([claro * tono, claro * tono, tono + 0.04], [1.0, 0.56, 0.46], calido * 0.8);
+  };
+  // Nubes suaves y translúcidas, cada una de una sola pieza, que cruzan despacio.
   for (const nube of NUBES_ALTAS) {
-    const x = ((nube.x + t * nube.vel + 80) % 160) - 80;
-    manchas.mancha(centro[0] + x, nube.y, centro[2] + nube.z, nube.r, [tono, tono, tono + 0.06], 0.42);
+    const x = centro[0] + ((nube.x + t * nube.vel + 80) % 160) - 80, z = centro[2] + nube.z;
+    fondo.mancha(x, nube.y, z, nube.r, colorDeNube(x, nube.y, z, 1), 0.42);
   }
   // El mar de nubes, muy por debajo del tablero.
   for (const nube of NUBES_DEL_MAR) {
-    const x = ((nube.x + t * nube.vel + 90) % 180) - 90;
-    manchas.mancha(centro[0] + x, -9 - nube.r * 0.2, centro[2] + nube.z, nube.r, [nube.tono * tono, nube.tono * tono, tono + 0.05], 0.7);
+    const x = centro[0] + ((nube.x + t * nube.vel + 90) % 180) - 90, z = centro[2] + nube.z;
+    fondo.mancha(x, -9 - nube.r * 0.2, z, nube.r, colorDeNube(x, -9, z, nube.tono), 0.7);
   }
+  // El sol se dibuja después de las nubes, para que ninguna lo tape. Es translúcido, para no
+  // deslumbrar: un disco de color salmón y, alrededor, un halo más grande y más tenue.
+  fondo.mancha(sol[0], sol[1], sol[2], 46, [1.0, 0.45, 0.36], 0.12 * dia);
+  fondo.mancha(sol[0], sol[1], sol[2], 21, [1.0, 0.5, 0.42], 0.26 * dia, 0.7);
+  fondo.mancha(sol[0], sol[1], sol[2], 12.5, [1.0, 0.45, 0.36], 0.7 * dia, 0.82);
+  // El resplandor: un velo rojizo y cálido que sale del sol y cae sobre el tablero y las nubes,
+  // y uno blanco, más tenue, del lado de la luz de contraste.
+  encima.mancha(sol[0], sol[1], sol[2], 150, [1.0, 0.3, 0.16], 0.08 * dia);
+  encima.mancha(blanca[0], blanca[1], blanca[2], 110, [1, 1, 1], 0.04 * dia);
+  return sol;
 }
 
-// Agrega lo que cruza el cielo: bandadas de pájaros, cometas de noche y, muy de vez en cuando,
-// un dragón o un leviatán nadando entre las nubes.
+// Agrega lo que cruza el cielo: bandadas de pájaros sobre los tableros, cometas de noche y, muy
+// de vez en cuando, un dragón o un leviatán nadando entre las nubes.
 function agregarVuelos(lote, manchas, centro, t, noche) {
-  // Tres bandadas, cada una con su ritmo. Cada pájaro son dos alas que aletean.
+  // Tres bandadas que cruzan por encima de los tableros, cada una a su ritmo y en formación de "v".
+  // Cada pájaro es un cuerpo con dos alas que aletean.
+  const oscuro = [0.1, 0.1, 0.12];
   for (let k = 0; k < 3; k++) {
-    const vuelta = 34 + k * 13, paso = ((t + k * 11) % vuelta) / vuelta;
-    if (paso > 0.55) continue;                         // el resto del tiempo esa bandada no se ve
+    const vuelta = 17 + k * 6, paso = ((t + k * 7) % vuelta) / vuelta;
+    if (paso > 0.7) continue;                          // el resto del tiempo esa bandada va fuera de la vista
     const sentido = k % 2 ? -1 : 1;
-    const x = centro[0] + sentido * (paso / 0.55 * 150 - 75), y = 9 + k * 2.5, z = centro[2] - 22 - k * 9;
+    const x = centro[0] + sentido * (paso / 0.7 * 100 - 50), y = 4.4 + k * 0.9, z = centro[2] + (k - 1) * 6;
     for (let n = 0; n < 5 + k; n++) {
-      const fila = Math.ceil(n / 2), lado = n % 2 ? 1 : -1;        // vuelan en "v"
-      const ala = Math.sin(t * 9 + n) * 0.6;
+      const fila = Math.ceil(n / 2), lado = n % 2 ? 1 : -1;
+      const px = x - sentido * fila * 1.1, py = y + Math.sin(t * 2 + n) * 0.2, pz = z + lado * fila * 0.9;
+      const ala = Math.sin(t * 10 + n) * 0.7;
+      lote.caja(bloque(px, py, pz, 0.34, 0.1, 0.12), oscuro);
       for (const s of [-1, 1]) {
-        lote.caja(componer(mover(x - sentido * fila * 0.9, y + Math.sin(t * 2 + n) * 0.2, z + lado * fila * 0.8), girarZ(s * ala),
-                           mover(s * 0.22, 0, 0), escalar(0.44, 0.04, 0.16)), [0.12, 0.12, 0.14]);
+        lote.caja(componer(mover(px, py, pz), girarX(s * ala), mover(0, 0, s * 0.3), escalar(0.2, 0.04, 0.6)), oscuro);
       }
     }
   }
@@ -1783,12 +1844,13 @@ function agregarVuelos(lote, manchas, centro, t, noche) {
 }
 
 // Agrega toda la ambientación de un cuadro y ajusta la luz según la hora.
-function agregarAmbiente(estado, juego, tableros, t, segundos, camara) {
-  const noche = nivelDeNoche(t), faros = [];
-  // De noche hay menos luz de sol y el cielo se oscurece.
-  luz.cielo = mezcla([0.72, 0.83, 0.95], [0.04, 0.06, 0.15], noche);
-  luz.colorSol = mezcla([0.74, 0.66, 0.64], [0.16, 0.18, 0.3], noche);
-  luz.ambiente = mezcla([0.36, 0.36, 0.4], [0.13, 0.15, 0.26], noche);
+function agregarAmbiente(estado, juego, tableros, t, segundos, vista) {
+  const noche = nivelDeNoche(t), faros = [], ojos = estado.camara;
+  // De día manda el sol rojo: su luz es cálida y el cielo se tiñe de rojizo. De noche casi no hay
+  // sol, el cielo es azul oscuro y alumbran las lámparas y las linternas.
+  luz.cielo = mezcla(CIELO_DE_DIA, [0.04, 0.06, 0.15], noche);
+  luz.colorSol = mezcla(SOL_DE_DIA, [0.16, 0.18, 0.3], noche);
+  luz.ambiente = mezcla(AMBIENTE_DE_DIA, [0.13, 0.15, 0.26], noche);
   luz.colorFaro = [0.85 * noche, 0.66 * noche, 0.3 * noche];
   // Cada personaje lleva su linterna: un cubito encendido en la mano, que alumbra a su alrededor.
   if (noche > 0.25) {
@@ -1803,10 +1865,14 @@ function agregarAmbiente(estado, juego, tableros, t, segundos, camara) {
     agregarAdornos(dinamico, manchasDeFrente, tablero, adornosDe(juego.tipo + numero + (juego.sello || ''), tablero.mapa), t, noche, faros);
   });
   // La tarjeta de video acepta 8 luces: se quedan las más cercanas a donde mira la cámara.
-  const centro = estado.camara.centro;
+  const centro = ojos.centro;
   faros.sort((a, b) => Math.hypot(a[0] - centro[0], a[2] - centro[2]) - Math.hypot(b[0] - centro[0], b[2] - centro[2]));
   luz.faros = faros.slice(0, 8);
-  agregarCieloVivo(manchasDeFondo, centro, t, noche);
+  const sol = agregarCieloVivo(manchasDeFondo, manchasDeEncima, ojos, vista, t, noche);
+  // La luz llega desde donde se ve el sol, y la de contraste desde el lado contrario.
+  const haciaElSol = unitario([sol[0] - centro[0], 0, sol[2] - centro[2]]);
+  luz.sol = unitario([haciaElSol[0] * 0.7, 0.72, haciaElSol[2] * 0.7]);
+  luz.contraluz = unitario([-haciaElSol[0], 0.3, -haciaElSol[2]]);
   agregarVuelos(dinamico, manchasDeFrente, centro, t, noche);
 }
 
@@ -1814,9 +1880,11 @@ function agregarAmbiente(estado, juego, tableros, t, segundos, camara) {
 // 10. DIBUJAR UNA PARTIDA
 // ============================================================================
 
-// Los lotes que se llenan de nuevo en cada cuadro.
-const dinamico = new Lote(), brillantes = new Lote(), manchasDeFondo = new Manchas(), manchasDeFrente = new Manchas();
-dinamico.dinamico = brillantes.dinamico = true;
+// Los lotes que se llenan de nuevo en cada cuadro. Los personajes van en su propio lote porque
+// son los únicos que llevan borde negro; 'brillantes' repite a los que acaban de recoger algo.
+const dinamico = new Lote(), personajes = new Lote(), brillantes = new Lote();
+const manchasDeFondo = new Manchas(), manchasDeFrente = new Manchas(), manchasDeEncima = new Manchas();
+dinamico.dinamico = personajes.dinamico = brillantes.dinamico = true;
 const luz = crearLuz();
 
 // Da el terreno anterior y el progreso del cambio de un tablero, para dibujar la transformación.
@@ -1847,8 +1915,8 @@ function agregarGemas(juego, tableros, t, segundos) {
     }
     girarHacia(corredor, segundos);
     const lugar = enMundo(origen, posicion(corredor, mapa));
-    agregarPersonaje(dinamico, lugar, corredor, t);
-    if (corredor.brillo > 0) agregarPersonaje(brillantes, lugar, corredor, t);       // su contorno brilla un momento
+    agregarPersonaje(personajes, lugar, corredor, t);
+    if (corredor.brillo > 0) agregarPersonaje(brillantes, lugar, corredor, t);       // su silueta brilla un momento
   });
 }
 
@@ -1882,7 +1950,7 @@ function agregarBanderas(juego, tablero, t, segundos) {
   for (const [corredor, otro] of [[jugador, rival], [rival, jugador]]) {
     girarHacia(corredor, segundos);
     const lugar = enMundo(origen, posicion(corredor, mapa));
-    agregarPersonaje(dinamico, lugar, corredor, t, corredor.lleva ? otro.color : null);
+    agregarPersonaje(personajes, lugar, corredor, t, corredor.lleva ? otro.color : null);
     if (corredor.brillo > 0) agregarPersonaje(brillantes, lugar, corredor, t);
   }
 }
@@ -1907,7 +1975,7 @@ function momentoDeCamara(estado, juego) {
 function dibujarPartida(estado, juego, segundos, t) {
   const gl = motor.gl;
   const tableros = tablerosDe(juego);
-  dinamico.vaciar(); brillantes.vaciar(); manchasDeFondo.vaciar(); manchasDeFrente.vaciar();
+  dinamico.vaciar(); personajes.vaciar(); brillantes.vaciar(); manchasDeFondo.vaciar(); manchasDeFrente.vaciar(); manchasDeEncima.vaciar();
 
   // 1. Los tableros. Solo se reconstruyen mientras su terreno está cambiando.
   const estaticos = tableros.map((tablero, numero) => {
@@ -1939,17 +2007,25 @@ function dibujarPartida(estado, juego, segundos, t) {
   const camara = matrizDeCamara(estado.camara);
   agregarAmbiente(estado, juego, tableros, t, segundos, camara);
 
-  // 5. A dibujar: primero el cielo, luego las figuras, sus bordes negros y al final lo translúcido.
+  // 5. A dibujar. El orden importa:
+  //    a) el cielo; b) tableros y adornos, sin borde; c) el halo blanco de quien recogió algo;
+  //    d) los personajes; e) su borde negro; f) lo translúcido; g) el resplandor del sol.
   gl.clearColor(luz.cielo[0], luz.cielo[1], luz.cielo[2], 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   dibujarManchas(manchasDeFondo, camara.total, camara.derecha, camara.arriba, false);
-  const lotes = estaticos.concat([dinamico]);
-  dibujarLotes(lotes, camara.total, luz);
-  // El borde se hace más grueso mientras más lejos está la cámara, para que siempre se vea igual.
+  // La niebla empieza más lejos cuando la cámara se aleja, para que nunca borre los tableros.
   const lejania = Math.hypot(...restar(estado.camara.ojo, estado.camara.centro));
-  dibujarLotes(lotes, camara.total, luz, lejania * 0.0012);
-  dibujarLotes([brillantes], camara.total, luz, lejania * 0.0012 + 0.07, DORADO);    // el contorno dorado de quien recogió algo
+  luz.lejos = Math.max(46, lejania * 1.5);
+  dibujarLotes(estaticos.concat([dinamico]), camara.total, luz);
+  // El borde se hace más grueso mientras más lejos está la cámara, para que en pantalla se vea igual.
+  const borde = Math.max(0.035, lejania * 0.003);
+  // El halo se dibuja antes que el personaje y sin tapar: así el cuerpo lo cubre por dentro y
+  // solo queda a la vista por fuera de la silueta.
+  dibujarLotes([brillantes], camara.total, luz, borde * 2.6 + 0.04, [1, 1, 1], true);
+  dibujarLotes([personajes], camara.total, luz);
+  dibujarLotes([personajes], camara.total, luz, borde);
   dibujarManchas(manchasDeFrente, camara.total, camara.derecha, camara.arriba, true);
+  dibujarManchas(manchasDeEncima, camara.total, camara.derecha, camara.arriba, false);
   return { tableros, camara };
 }
 
@@ -2069,6 +2145,7 @@ function actualizarInterfaz(estado, juego, escena) {
   if (juego.fase === 'cuenta') cuenta = String(Math.ceil(juego.cuenta));
   else if (juego.fase === 'carrera' && juego.reloj < 0.8) cuenta = '¡Ya!';
   poner('cuenta', cuenta);
+  elemento('centro').style.visibility = cuenta ? 'hidden' : '';     // la cuenta va en la barra y ocupa su centro
   poner('ayuda', estado.modo.startsWith('mirar') ? AYUDA_DE_MIRAR : AYUDA_DE_JUGAR);
   limpiarEtiquetas();
 }
@@ -2126,7 +2203,7 @@ function agregarLaberinto(juego, tablero, t, segundos, estado) {
   }
   for (const corredor of juego.corredores) {
     girarHacia(corredor, segundos);
-    agregarPersonaje(dinamico, enMundo(origen, posicion(corredor, mapa)), corredor, t);
+    agregarPersonaje(personajes, enMundo(origen, posicion(corredor, mapa)), corredor, t);
   }
 }
 
@@ -2318,18 +2395,25 @@ function mostrarPortada(estado) {
 function mostrarMenu(estado) {
   prepararFondo(estado);
   estado.pantalla = 'menu';
-  elemento('lienzo').style.filter = 'blur(7px) brightness(0.8)';
+  elemento('lienzo').style.filter = 'blur(6px)';
   elemento('portada').classList.add('fuera');                       // el título se va por la izquierda
   elemento('menu').style.display = '';
-  pintarMenu(estado, true);
+  pintarMenu(estado);
 }
 
-// Escribe las cajas del menú. Con 'entrando', aparecen una tras otra.
-function pintarMenu(estado, entrando = false) {
-  poner('menu', '<h1 class="chico">Maze Runner</h1><div class="cajas">' +
-    MODOS.map((modo, k) => `<button data-modo="${modo[0]}" class="${k === estado.elegida ? 'activo' : ''} ${entrando ? 'entra' : ''}" ` +
-      `style="animation-delay:${k * 60}ms"><b>${modo[1]}</b><span>${modo[2]}</span></button>`).join('') +
+// Escribe las cajas del menú. Al abrirse, llegan una tras otra.
+function pintarMenu(estado) {
+  poner('menu', '<h1 class="chico">Maze Runner</h1><div class="cajas entrando">' +
+    MODOS.map((modo, k) => `<button data-modo="${modo[0]}" style="animation-delay:${k * 60}ms"><b>${modo[1]}</b><span>${modo[2]}</span></button>`).join('') +
     '</div><p class="pie">Elige con las flechas y Enter, o con el ratón. Esc: portada.</p>');
+  // Cuando terminan de llegar se quita la animación de entrada, para que puedan rebotar al elegirlas.
+  setTimeout(() => { const cajas = elemento('menu').querySelector('.cajas'); if (cajas) cajas.classList.remove('entrando'); marcarCaja(estado); }, 420 + MODOS.length * 60);
+  marcarCaja(estado);
+}
+
+// Marca la caja elegida. Al cambiar de caja, la nueva se apachurra un poco y rebota.
+function marcarCaja(estado) {
+  elemento('menu').querySelectorAll('button[data-modo]').forEach((caja, k) => caja.classList.toggle('activo', k === estado.elegida));
 }
 
 // Atiende una tecla en la portada o en el menú.
@@ -2337,14 +2421,26 @@ function teclaDeMenu(estado, tecla) {
   if (estado.pantalla === 'salto') return;                           // durante el salto no se atiende nada
   if (estado.pantalla === 'portada') { mostrarMenu(estado); return; }   // cualquier tecla abre el menú
   if (tecla === 'Escape') { mostrarPortada(estado); return; }
-  const columnas = Math.max(1, Math.round(elemento('menu').querySelector('.cajas').clientWidth / 314));
+  // Cuántas cajas caben por fila: se cuentan las que están a la misma altura que la primera.
+  const cajas = [...elemento('menu').querySelectorAll('button[data-modo]')];
+  const columnas = Math.max(1, cajas.filter(caja => caja.offsetTop === cajas[0].offsetTop).length);
   if (tecla === 'ArrowRight') estado.elegida = (estado.elegida + 1) % MODOS.length;
   else if (tecla === 'ArrowLeft') estado.elegida = (estado.elegida + MODOS.length - 1) % MODOS.length;
   else if (tecla === 'ArrowDown') estado.elegida = Math.min(MODOS.length - 1, estado.elegida + columnas);
   else if (tecla === 'ArrowUp') estado.elegida = Math.max(0, estado.elegida - columnas);
   else if (tecla === 'Enter' || tecla === ' ') { clicDeMenu(estado, MODOS[estado.elegida][0]); return; }
   else return;
-  pintarMenu(estado);
+  marcarCaja(estado);
+}
+
+// Al pasar el cursor por una caja, queda elegida (y rebota).
+if (typeof document !== 'undefined') {
+  document.getElementById('menu').addEventListener('mouseover', evento => {
+    const caja = evento.target.closest('button[data-modo]');
+    if (!caja || estado.pantalla !== 'menu') return;
+    const numero = MODOS.findIndex(modo => modo[0] === caja.dataset.modo);
+    if (numero !== estado.elegida) { estado.elegida = numero; marcarCaja(estado); }
+  });
 }
 
 // Elige un modo: su caja estalla en partículas y empieza el salto tipo hiperespacio.
