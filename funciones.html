@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MazeRunner: las funciones paso a paso</title>
+<style>
+  /* Colores y medidas generales */
+  :root {
+    --rojo: #c62828;
+    --tinta: #1c1c1c;
+    --gris: #6b6b6b;
+    --linea: #dcdcdc;
+    --fondo: #f6f5f2;
+    --papel: #ffffff;
+    --resalte: #fff3b0;
+    --cambio: #ffe0b2;
+    --alto-controles: 74px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    color: var(--tinta);
+    background: var(--fondo);
+    line-height: 1.45;
+    /* Espacio para que la barra fija de controles no tape el final de la página */
+    padding-bottom: calc(var(--alto-controles) + 24px);
+  }
+  header.cabecera {
+    background: var(--tinta);
+    color: #fff;
+    padding: 14px 20px;
+    border-bottom: 4px solid var(--rojo);
+  }
+  header.cabecera h1 { margin: 0; font-size: 20px; }
+  header.cabecera p { margin: 2px 0 0; font-size: 13.5px; color: #cfcfcf; }
+
+  /* Estructura: índice a la izquierda, contenido a la derecha */
+  .marco { display: grid; grid-template-columns: 200px 1fr; gap: 18px; padding: 18px; max-width: 1500px; margin: 0 auto; }
+  nav#indice {
+    position: sticky; top: 12px; align-self: start;
+    max-height: calc(100vh - var(--alto-controles) - 30px); overflow: auto;
+    background: var(--papel); border: 1px solid var(--linea); border-radius: 8px; padding: 10px;
+  }
+  nav#indice h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--gris); margin: 12px 6px 4px; }
+  nav#indice h2:first-child { margin-top: 2px; }
+  nav#indice button {
+    display: block; width: 100%; text-align: left; border: 0; background: none; cursor: pointer;
+    font: 13.5px Consolas, "Cascadia Mono", monospace; padding: 5px 8px; border-radius: 5px; color: var(--tinta);
+  }
+  nav#indice button:hover { background: #eee; }
+  nav#indice button.activa { background: var(--rojo); color: #fff; }
+
+  section.tarjeta { background: var(--papel); border: 1px solid var(--linea); border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+  section.tarjeta h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--gris); }
+  #ficha h2 { margin: 0 0 6px; font: bold 22px Consolas, "Cascadia Mono", monospace; }
+  #ficha pre.doc { margin: 0; white-space: pre-wrap; font: 14px/1.5 "Segoe UI", system-ui, Arial, sans-serif; }
+  .fila-casos { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; }
+  .fila-casos button {
+    border: 1px solid var(--linea); background: #fff; border-radius: 16px; padding: 4px 12px; cursor: pointer; font-size: 13.5px;
+  }
+  .fila-casos button.activa { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+
+  .entradas-salida { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .caja-valor { font: 13px/1.5 Consolas, "Cascadia Mono", monospace; overflow-wrap: anywhere; max-height: 150px; overflow: auto; }
+  .caja-valor b { color: var(--rojo); }
+  .pendiente { color: var(--gris); font-family: "Segoe UI", system-ui, Arial, sans-serif; font-style: italic; }
+
+  /* Código a la izquierda; explicación, dibujo y variables a la derecha */
+  .dos { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+  #panel-codigo { position: sticky; top: 12px; max-height: calc(100vh - var(--alto-controles) - 30px); overflow: auto; }
+  #codigo { margin: 0; font: 12px/1.55 Consolas, "Cascadia Mono", monospace; }
+  #codigo .renglon { display: flex; border-radius: 4px; }
+  #codigo .num { flex: 0 0 26px; text-align: right; padding-right: 8px; color: #aaa; user-select: none; }
+  #codigo .txt { white-space: pre-wrap; overflow-wrap: break-word; flex: 1; min-width: 0; }
+  #codigo .renglon.actual { background: var(--resalte); box-shadow: inset 4px 0 0 var(--rojo); }
+  #codigo .com { color: #7a7a7a; }
+  #codigo .cad { color: #2e7d32; }
+  #codigo .pal { color: #1a4fa0; font-weight: bold; }
+
+  #nota { font-size: 15.5px; }
+  #nota .devuelve { margin-top: 10px; padding: 8px 10px; border-left: 4px solid var(--rojo); background: #fdecea;
+                    font: 13px/1.5 Consolas, "Cascadia Mono", monospace; overflow-wrap: anywhere; }
+  #nota code, .vista code { font: 13px Consolas, "Cascadia Mono", monospace; background: #f0f0f0; padding: 1px 4px; border-radius: 3px; }
+
+  /* Dibujos */
+  .figura-titulo { text-align: center; font-weight: bold; margin-bottom: 6px; }
+  .lienzos { display: grid; gap: 12px; justify-items: center; }
+  .lienzo { width: 100%; text-align: center; }
+  .lienzo .rotulo { font-size: 13px; margin-bottom: 3px; }
+  .lienzo svg { width: 100%; height: auto; display: block; margin: 0 auto; }
+  .lienzo svg.marco-vacio { outline: 1px dashed #bbb; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 12.5px; margin-top: 8px; }
+  .leyenda span { display: inline-flex; align-items: center; gap: 5px; }
+  .leyenda i { width: 14px; height: 14px; border: 1px solid #000; display: inline-block; }
+  .leyenda svg { width: 16px; height: 16px; }
+  pre.salida { margin: 8px 0 0; padding: 10px; background: #1c1c1c; color: #f1f1f1; border-radius: 6px;
+               font: 12.5px/1.5 Consolas, "Cascadia Mono", monospace; overflow: auto; }
+  pre.salida:empty::before { content: "(todavía no se imprime nada)"; color: #999; }
+
+  /* Vista del texto del mapa */
+  .texto-mapa { font: 14px/1.5 Consolas, "Cascadia Mono", monospace; }
+  .texto-mapa .cuadro { background: #f3f3f3; border: 1px solid var(--linea); border-radius: 6px; padding: 8px 10px; margin: 4px 0 10px; overflow-wrap: anywhere; }
+  .texto-mapa .salto { background: #ffd54f; border-radius: 3px; padding: 0 2px; font-weight: bold; }
+  .texto-mapa .vacio { color: var(--gris); font-style: italic; font-family: "Segoe UI", system-ui, Arial, sans-serif; font-size: 12.5px; }
+  .texto-mapa .quitado { text-decoration: line-through; opacity: .55; }
+  .texto-mapa table { border-collapse: collapse; margin-top: 4px; }
+  .texto-mapa td, .texto-mapa th { border: 1px solid #ccc; width: 30px; height: 30px; text-align: center; padding: 0; }
+  .texto-mapa th { background: #eee; font-weight: normal; color: var(--gris); font-size: 12px; }
+  .texto-mapa td.relleno { color: var(--rojo); background: #fdecea; }
+  .texto-mapa td.aqui { outline: 3px solid var(--rojo); outline-offset: -3px; background: var(--resalte); }
+  .texto-mapa tr.fila-actual th { background: var(--resalte); color: var(--tinta); font-weight: bold; }
+  .explica { font: 13px "Segoe UI", system-ui, Arial, sans-serif; color: var(--gris); }
+
+  /* Tabla de variables */
+  table.vars { width: 100%; border-collapse: collapse; font: 13px/1.45 Consolas, "Cascadia Mono", monospace; }
+  table.vars td { border-top: 1px solid var(--linea); padding: 5px 6px; vertical-align: top; }
+  table.vars td.nombre { white-space: nowrap; font-weight: bold; width: 1%; }
+  table.vars td.valor { overflow-wrap: anywhere; }
+  table.vars td.valor div { max-height: 118px; overflow: auto; }
+  table.vars tr.cambio td { background: var(--cambio); }
+  table.vars .marca { font: 11px "Segoe UI", system-ui, Arial, sans-serif; color: #a04a00; margin-left: 6px; white-space: nowrap; }
+
+  /* Barra de controles: siempre a la vista, pegada al borde inferior de la ventana */
+  footer.controles {
+    position: fixed; left: 0; right: 0; bottom: 0; height: var(--alto-controles); z-index: 10;
+    background: var(--tinta); color: #fff; border-top: 4px solid var(--rojo);
+    display: flex; align-items: center; gap: 10px; padding: 0 16px;
+  }
+  footer.controles button {
+    border: 0; border-radius: 6px; padding: 10px 14px; font-size: 14.5px; font-weight: bold; cursor: pointer;
+    background: #fff; color: var(--tinta);
+  }
+  footer.controles button.principal { background: var(--rojo); color: #fff; }
+  footer.controles button:disabled { opacity: .35; cursor: default; }
+  footer.controles input[type=range] { flex: 1; min-width: 60px; accent-color: var(--rojo); }
+  #contador { font-size: 14.5px; white-space: nowrap; min-width: 118px; text-align: center; }
+  #nombre-barra { font: bold 14px Consolas, "Cascadia Mono", monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
+
+  /* Pantallas angostas: todo en una columna y el índice arriba */
+  @media (max-width: 1000px) {
+    .marco { grid-template-columns: 1fr; }
+    nav#indice { position: static; max-height: none; display: flex; flex-wrap: wrap; gap: 2px; }
+    nav#indice h2 { width: 100%; }
+    nav#indice button { width: auto; }
+    .dos { grid-template-columns: 1fr; }
+    #panel-codigo { position: static; max-height: 46vh; }
+    .entradas-salida { grid-template-columns: 1fr; }
+    #nombre-barra { display: none; }
+    footer.controles { gap: 6px; padding: 0 8px; }
+    footer.controles button { padding: 10px 9px; font-size: 13.5px; }
+    #contador { min-width: 92px; font-size: 13px; }
+  }
+  /* Teléfonos: la barra de controles ocupa dos renglones, el deslizador arriba y los botones abajo */
+  @media (max-width: 640px) {
+    :root { --alto-controles: 108px; }
+    footer.controles { flex-wrap: wrap; align-content: center; row-gap: 6px; }
+    footer.controles input[type=range] { order: -2; flex: 1 1 calc(100% - 120px); }
+    #contador { order: -1; min-width: 100px; }
+    footer.controles button { flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header class="cabecera">
+  <h1>MazeRunner: las funciones paso a paso</h1>
+  <p>Cada función del notebook de la fase 1, ejecutada despacio: qué recibe, qué devuelve y cómo cambia cada variable.</p>
+</header>
+
+<div class="marco">
+  <nav id="indice" aria-label="Funciones"></nav>
+
+  <main>
+    <section class="tarjeta" id="ficha">
+      <h2 id="ficha-nombre"></h2>
+      <pre class="doc" id="ficha-doc"></pre>
+      <div class="fila-casos" id="casos"></div>
+    </section>
+
+    <div class="entradas-salida">
+      <section class="tarjeta"><h3>Entradas de este ejemplo</h3><div class="caja-valor" id="entradas"></div></section>
+      <section class="tarjeta"><h3>Salida</h3><div class="caja-valor" id="salida-final"></div></section>
+    </div>
+
+    <div class="dos">
+      <section class="tarjeta" id="panel-codigo">
+        <h3>Código (el renglón resaltado es el que se está ejecutando)</h3>
+        <div id="codigo"></div>
+      </section>
+      <div>
+        <section class="tarjeta"><h3>Qué pasa en este paso</h3><div id="nota"></div></section>
+        <section class="tarjeta" id="panel-vista"><h3>Dibujo</h3><div class="vista" id="vista"></div></section>
+        <section class="tarjeta"><h3>Variables (en color las que cambiaron en este paso)</h3><table class="vars" id="vars"></table></section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer class="controles">
+  <span id="nombre-barra"></span>
+  <button id="b-inicio" title="Ir al primer paso">Inicio</button>
+  <button id="b-anterior" title="Paso anterior (flecha izquierda)">Anterior</button>
+  <button id="b-siguiente" class="principal" title="Paso siguiente (flecha derecha)">Siguiente</button>
+  <button id="b-final" title="Ir al último paso">Final</button>
+  <input type="range" id="deslizador" min="0" max="0" value="0" aria-label="Paso">
+  <span id="contador"></span>
+</footer>
+
+<script>
+"use strict";
+
+// ============================================================================
+// 1. EL CÓDIGO DEL NOTEBOOK
+// El texto de cada función, tal como está en el notebook, y su documentación.
+// ============================================================================
+const NOTEBOOK = {
+ "leer_mapa": {
+  "codigo": "def leer_mapa(texto):\n    lineas = texto.strip('\\n').split('\\n')          # quita renglones vacíos de las orillas y separa por fila\n    filas = len(lineas)\n    columnas = max(len(linea) for linea in lineas)  # la fila más larga define el ancho\n\n    terreno = {}\n    inicio = None\n    meta = None\n    objetos = []\n\n    for f, linea in enumerate(lineas):\n        linea = linea.ljust(columnas, '#')          # lo que le falta a una fila corta se rellena con muro\n        for c, caracter in enumerate(linea):\n            if caracter == ' ':                     # un espacio también es muro\n                caracter = '#'\n            elif caracter == 'I':\n                if inicio is not None:\n                    raise ValueError('El mapa tiene más de un inicio (I).')\n                inicio = (f, c)\n                caracter = '.'                      # el inicio se pisa como llano\n            elif caracter == 'M':\n                if meta is not None:\n                    raise ValueError('El mapa tiene más de una meta (M).')\n                meta = (f, c)\n                caracter = '.'                      # la meta se pisa como llano\n            elif caracter == 'O':\n                objetos.append((f, c))\n                caracter = '.'                      # los objetos están sobre llano\n            elif caracter not in COLORES:\n                raise ValueError(f'Carácter desconocido en el mapa: {caracter!r}')\n            terreno[(f, c)] = caracter\n\n    if inicio is None or meta is None:\n        raise ValueError('El mapa necesita un inicio (I) y una meta (M).')\n\n    return {'terreno': terreno, 'filas': filas, 'columnas': columnas,\n            'inicio': inicio, 'meta': meta, 'objetos': objetos}",
+  "doc": "Convierte el texto de un mapa en un diccionario fácil de consultar.\n\nEntrada:\n    texto: el mapa escrito con un carácter por casilla y un renglón por fila.\n\nSalida: un diccionario con\n    'terreno':  diccionario {(fila, columna): carácter del terreno}\n    'filas':    número de filas\n    'columnas': número de columnas (el de la fila más larga)\n    'inicio':   casilla de inicio\n    'meta':     casilla de meta\n    'objetos':  lista con las casillas de los objetos, en orden de lectura"
+ },
+ "vecinos": {
+  "codigo": "def vecinos(mapa, casilla):\n    f, c = casilla\n    resultado = []\n    for df, dc in MOVIMIENTOS:\n        vecina = (f + df, c + dc)\n        terreno = mapa['terreno'].get(vecina, '#')   # fuera del mapa cuenta como muro\n        if terreno != '#':\n            resultado.append((vecina, COSTOS[terreno]))\n    return resultado",
+  "doc": "Da las casillas a las que se puede pasar desde una casilla. Son las aristas del grafo.\n\nEntradas:\n    mapa:    el diccionario que devuelve leer_mapa\n    casilla: la posición (fila, columna)\n\nSalida: lista de pares (vecina, costo de entrar a ella), en el orden\n        arriba, derecha, abajo, izquierda. Los muros y lo que queda\n        fuera del mapa no aparecen."
+ },
+ "construir_grafo": {
+  "codigo": "def construir_grafo(mapa):\n    grafo = nx.DiGraph()\n    for casilla, terreno in mapa['terreno'].items():\n        if terreno != '#':\n            grafo.add_node(casilla)\n            for vecina, costo in vecinos(mapa, casilla):\n                grafo.add_edge(casilla, vecina, weight=costo)\n    return grafo",
+  "doc": "Arma el grafo del mapa con NetworkX, para dibujarlo y para comprobar resultados.\n\nEntrada: el mapa.\nSalida:  un grafo dirigido. La arista u -> v pesa lo que cuesta entrar a v.\n         Es dirigido porque ir de llano a agua cuesta 5, pero regresar cuesta 1."
+ },
+ "etiqueta": {
+  "codigo": "def etiqueta(mapa, casilla):\n    if casilla in mapa['objetos']:\n        return 'O' + str(mapa['objetos'].index(casilla) + 1)   # index cuenta desde 0; se suma 1\n    return ''",
+  "doc": "Da el nombre de un objeto para escribirlo en los dibujos: O1, O2, O3...\n\nEntradas:\n    mapa:    el diccionario que devuelve leer_mapa\n    casilla: la posición (fila, columna)\n\nSalida: 'O1', 'O2'... según el orden en que se leyeron los objetos.\n        Texto vacío si en la casilla no hay objeto. El inicio y la meta\n        no llevan texto: se dibujan con un punto verde y una estrella."
+ },
+ "marcar_inicio_y_meta": {
+  "codigo": "def marcar_inicio_y_meta(eje, inicio, meta, tamaño):\n    # plot con un solo punto y un marcador dibuja un símbolo en esa posición.\n    # 'o' es un círculo relleno. zorder alto para que quede encima de todo lo demás.\n    eje.plot(inicio[0], inicio[1], marker='o', markersize=tamaño, color=COLOR_INICIO,\n             markeredgecolor='black', zorder=6)\n    # '*' es una estrella. Se dibuja más grande porque sus puntas la hacen ver más chica.\n    eje.plot(meta[0], meta[1], marker='*', markersize=tamaño * 1.6, color=COLOR_META,\n             markeredgecolor='black', zorder=6)",
+  "doc": "Dibuja el punto verde del inicio y la estrella de la meta.\n\nEntradas:\n    eje:    la zona de la figura donde se dibuja\n    inicio: coordenadas (x, y) del dibujo donde va el punto verde\n    meta:   coordenadas (x, y) del dibujo donde va la estrella\n    tamaño: diámetro del punto, en puntos tipográficos\n\nNo devuelve nada: solo dibuja."
+ },
+ "simbolos_de_leyenda": {
+  "codigo": "def simbolos_de_leyenda():\n    # Line2D sin datos y sin línea: solo sirve para mostrar el marcador en la leyenda.\n    return [Line2D([], [], linestyle='none', marker='o', markersize=11, markerfacecolor=COLOR_INICIO,\n                   markeredgecolor='black', label='Inicio'),\n            Line2D([], [], linestyle='none', marker='*', markersize=17, markerfacecolor=COLOR_META,\n                   markeredgecolor='black', label='Meta')]",
+  "doc": "Prepara los dos símbolos que explican en la leyenda qué es el punto y qué es la estrella.\n\nNo recibe nada.\nSalida: lista con dos elementos de leyenda, 'Inicio' y 'Meta'."
+ },
+ "dibujar_cuadricula": {
+  "codigo": "def dibujar_cuadricula(eje, mapa, ruta=None, exploradas=None):\n    lado = 320 / mapa['columnas']                    # tamaño aproximado de una casilla, en puntos\n    # Se pasa a conjunto porque preguntar \"¿está aquí?\" es mucho más rápido que en una lista.\n    marcadas = set(exploradas) if exploradas is not None else None\n\n    # 1. Un cuadro por casilla, del color de su terreno y con borde negro: así se ve la cuadrícula.\n    for (f, c), terreno in mapa['terreno'].items():\n        eje.add_patch(Rectangle((c, f), 1, 1, facecolor=COLORES[terreno], edgecolor='black'))\n        # 2. Si se dibuja una búsqueda, velo blanco semitransparente sobre lo que no se exploró.\n        if marcadas is not None and terreno != '#' and (f, c) not in marcadas:\n            eje.add_patch(Rectangle((c, f), 1, 1, facecolor='white', alpha=0.7, edgecolor='none'))\n        # 3. El nombre del objeto (O1, O2...) centrado en su casilla. En las demás es texto vacío.\n        eje.text(c + 0.5, f + 0.5, etiqueta(mapa, (f, c)), ha='center', va='center',\n                 fontsize=lado * 0.38, fontweight='bold', zorder=5)\n\n    # 4. La ruta: una línea roja que une los centros de sus casillas, en orden.\n    if ruta:\n        xs = [c + 0.5 for f, c in ruta]              # x del centro de cada casilla\n        ys = [f + 0.5 for f, c in ruta]              # y del centro de cada casilla\n        eje.plot(xs, ys, color='red', linewidth=3, alpha=0.8)\n\n    # 5. El punto verde del inicio y la estrella de la meta, en el centro de sus casillas.\n    (fi, ci), (fm, cm) = mapa['inicio'], mapa['meta']\n    marcar_inicio_y_meta(eje, (ci + 0.5, fi + 0.5), (cm + 0.5, fm + 0.5), lado * 0.45)\n\n    # 6. Límites y aspecto del dibujo.\n    eje.set_xlim(0, mapa['columnas'])\n    eje.set_ylim(mapa['filas'], 0)                   # eje y al revés: la fila 0 queda arriba, como en el texto\n    eje.set_aspect('equal')                          # casillas cuadradas, no estiradas\n    eje.set_xticks([])                               # sin números en los ejes\n    eje.set_yticks([])",
+  "doc": "Dibuja el mapa como cuadrícula.\n\nEntradas:\n    eje:        la zona de la figura donde se dibuja\n    mapa:       el diccionario que devuelve leer_mapa\n    ruta:       lista de casillas de una ruta (opcional); se pinta en rojo\n    exploradas: casillas exploradas por un algoritmo (opcional); el resto se ve pálido\n\nNo devuelve nada: solo dibuja.\n\nCómo se construye: cada casilla es un cuadro de lado 1. La casilla (fila, columna)\nocupa de x = columna a x = columna + 1 y de y = fila a y = fila + 1, así que su\ncentro está en (columna + 0.5, fila + 0.5)."
+ },
+ "dibujar_grafo": {
+  "codigo": "def dibujar_grafo(eje, mapa, ruta=None, exploradas=None):\n    # 1. El grafo del mapa. Se quitan las direcciones para que cada par de vecinas\n    #    se dibuje con una sola línea y no con dos flechas encimadas.\n    grafo = construir_grafo(mapa).to_undirected()\n    lado = 320 / mapa['columnas']                    # tamaño aproximado de una casilla, en puntos\n\n    # 2. Posición de cada vértice: x = columna, y = -fila.\n    #    El signo menos hace que la fila 0 quede arriba, igual que en la cuadrícula.\n    posiciones = {(f, c): (c, -f) for f, c in grafo.nodes}\n\n    # 3. Aspecto de cada vértice, en listas que siguen el mismo orden que 'nodos'.\n    nodos = list(grafo.nodes)\n    marcadas = set(exploradas) if exploradas is not None else set(nodos)\n    colores = [COLORES[mapa['terreno'][n]] for n in nodos]          # color de su terreno\n    opacidad = [1.0 if n in marcadas else 0.25 for n in nodos]      # pálido si no se exploró\n\n    # 4. Texto de cada vértice: el nombre del objeto si lo hay y, si no, lo que cuesta entrar.\n    #    El inicio y la meta no llevan texto porque encima va su símbolo.\n    textos = {}\n    for n in nodos:\n        if n == mapa['inicio'] or n == mapa['meta']:\n            textos[n] = ''\n        else:\n            textos[n] = etiqueta(mapa, n) or COSTOS[mapa['terreno'][n]]\n\n    # 5. Se dibuja por capas, de abajo hacia arriba.\n    nx.draw_networkx_edges(grafo, posiciones, ax=eje, edge_color='gray')        # todas las aristas, en gris\n    if ruta:\n        tramos = list(zip(ruta, ruta[1:]))           # pares de casillas consecutivas: las aristas de la ruta\n        nx.draw_networkx_edges(grafo, posiciones, ax=eje, edgelist=tramos, edge_color='red', width=4)\n    nx.draw_networkx_nodes(grafo, posiciones, ax=eje, nodelist=nodos, node_color=colores,\n                           alpha=opacidad, node_size=(lado * 0.62) ** 2,        # node_size es un área\n                           edgecolors='black')\n    nx.draw_networkx_labels(grafo, posiciones, ax=eje, labels=textos, font_size=lado * 0.26)\n\n    # 6. El punto verde y la estrella, encima de los vértices del inicio y de la meta.\n    marcar_inicio_y_meta(eje, posiciones[mapa['inicio']], posiciones[mapa['meta']], lado * 0.4)\n\n    # 7. Los mismos límites que la cuadrícula, para que los dos dibujos se correspondan.\n    eje.set_xlim(-0.5, mapa['columnas'] - 0.5)\n    eje.set_ylim(-mapa['filas'] + 0.5, 0.5)\n    eje.set_aspect('equal')\n    eje.axis('off')                                  # sin marco ni ejes",
+  "doc": "Dibuja el grafo del mapa, con cada vértice en el lugar de su casilla.\n\nEntradas:\n    eje:        la zona de la figura donde se dibuja\n    mapa:       el diccionario que devuelve leer_mapa\n    ruta:       lista de casillas de una ruta (opcional); sus aristas se pintan en rojo\n    exploradas: casillas exploradas por un algoritmo (opcional); el resto se ve pálido\n\nNo devuelve nada: solo dibuja.\n\nCómo se construye: NetworkX dibuja un grafo por partes (aristas, vértices y textos)\ny necesita un diccionario que diga en qué punto del dibujo va cada vértice."
+ },
+ "mostrar_mapa": {
+  "codigo": "def mostrar_mapa(mapa, titulo, ruta=None, exploradas=None):\n    # El alto de la figura depende de la forma del mapa, para que las casillas salgan cuadradas.\n    alto = 5.5 * mapa['filas'] / mapa['columnas'] + 1.3\n    # Una figura con 1 renglón y 2 columnas de dibujos: dos ejes, uno al lado del otro.\n    figura, (izquierda, derecha) = plt.subplots(1, 2, figsize=(11, alto))\n\n    dibujar_cuadricula(izquierda, mapa, ruta, exploradas)\n    dibujar_grafo(derecha, mapa, ruta, exploradas)\n    izquierda.set_title('Cuadrícula')\n    derecha.set_title('Grafo')\n    figura.suptitle(titulo, fontsize=14, fontweight='bold')      # título de toda la figura\n\n    # Leyenda debajo de los dos dibujos: un cuadro de color por terreno y los dos símbolos.\n    cuadros = [Patch(facecolor=COLORES[t], edgecolor='black', label=NOMBRES[t]) for t in COLORES]\n    figura.legend(handles=cuadros + simbolos_de_leyenda(), loc='lower center', ncol=6, frameon=False)\n    # Acomoda los dibujos sin que se encimen, dejando libre la franja de abajo para la leyenda.\n    figura.tight_layout(rect=(0, 0.07, 1, 1))\n    plt.show()",
+  "doc": "Muestra un mapa: la cuadrícula a la izquierda y su grafo a la derecha.\n\nEntradas:\n    mapa:       el diccionario que devuelve leer_mapa\n    titulo:     texto que se escribe arriba de la figura\n    ruta:       lista de casillas de una ruta (opcional)\n    exploradas: casillas exploradas por un algoritmo (opcional)\n\nNo devuelve nada: muestra la figura."
+ },
+ "reconstruir_ruta": {
+  "codigo": "def reconstruir_ruta(padres, meta):\n    ruta = []\n    casilla = meta\n    while casilla is not None:        # el padre del inicio es None: ahí se detiene\n        ruta.append(casilla)\n        casilla = padres[casilla]     # se retrocede a la casilla desde la que se llegó\n    ruta.reverse()                    # se armó de la meta al inicio; se voltea\n    return ruta",
+  "doc": "Arma la ruta caminando hacia atrás desde la meta.\n\nEntradas:\n    padres: diccionario {casilla: casilla desde la que se llegó a ella}.\n            El inicio tiene como padre None.\n    meta:   la casilla donde termina la ruta\n\nSalida: lista de casillas desde el inicio hasta la meta."
+ },
+ "estimacion": {
+  "codigo": "def estimacion(casilla, meta):\n    filas_que_faltan = abs(casilla[0] - meta[0])       # abs quita el signo: da igual arriba o abajo\n    columnas_que_faltan = abs(casilla[1] - meta[1])\n    return filas_que_faltan + columnas_que_faltan",
+  "doc": "Estima cuánto falta para llegar a la meta: la distancia en casillas, sin diagonales.\n\nEntradas:\n    casilla: la posición (fila, columna) desde la que se mide\n    meta:    la posición (fila, columna) de la meta\n\nSalida: un número entero. Es cuántas filas faltan más cuántas columnas faltan.\n        No se fija en muros ni en terrenos.\n\nLa usan el voraz y A* para adivinar qué casilla está más cerca de la meta."
+ },
+ "bfs": {
+  "codigo": "def bfs(mapa, inicio, meta):\n    cola = deque([inicio])               # casillas pendientes, en orden de llegada\n    padres = {inicio: None}              # desde dónde se llegó a cada casilla; también dice cuáles ya se descubrieron\n    exploradas = []\n\n    while cola:                          # mientras queden casillas pendientes\n        actual = cola.popleft()          # sale la que lleva más tiempo esperando\n        exploradas.append(actual)\n        if actual == meta:               # se llegó: se arma la ruta y se termina\n            return reconstruir_ruta(padres, meta), exploradas\n        for vecina, costo in vecinos(mapa, actual):\n            if vecina not in padres:     # solo las que no se habían descubierto\n                padres[vecina] = actual  # se anota que a la vecina se llegó desde la actual\n                cola.append(vecina)      # entra al final de la cola\n\n    return None, exploradas              # la cola se vació sin llegar a la meta: no hay camino",
+  "doc": "Búsqueda en anchura (BFS): explora por capas alrededor del inicio.\n\nEntradas:\n    mapa:   el diccionario que devuelve leer_mapa\n    inicio: la casilla (fila, columna) de donde se sale\n    meta:   la casilla (fila, columna) a la que se quiere llegar\n\nSalida: el par (ruta, exploradas).\n    ruta:       lista de casillas del inicio a la meta, o None si no hay camino\n    exploradas: lista de las casillas que salieron de la cola, en orden\n\nGarantía: la ruta tiene la menor cantidad de pasos posible. No toma en cuenta los costos."
+ },
+ "dfs": {
+  "codigo": "def dfs(mapa, inicio, meta):\n    pila = [inicio]                      # casillas pendientes; la última de la lista es la de arriba\n    padres = {inicio: None}              # desde dónde se llegó a cada casilla\n    exploradas = []\n    vistas = set()                       # casillas ya exploradas\n\n    while pila:                          # mientras queden casillas pendientes\n        actual = pila.pop()              # sale la última que entró\n        if actual in vistas:             # una casilla puede estar repetida en la pila: se ignora\n            continue\n        vistas.add(actual)\n        exploradas.append(actual)\n        if actual == meta:               # se llegó: se arma la ruta y se termina\n            return reconstruir_ruta(padres, meta), exploradas\n        # Se meten al revés para que la primera en salir sea la de arriba,\n        # luego derecha, abajo e izquierda.\n        for vecina, costo in reversed(vecinos(mapa, actual)):\n            if vecina not in vistas:\n                padres[vecina] = actual  # se anota que a la vecina se llegó desde la actual\n                pila.append(vecina)      # entra arriba de la pila\n\n    return None, exploradas              # la pila se vació sin llegar a la meta: no hay camino",
+  "doc": "Búsqueda en profundidad (DFS): sigue un camino hasta el fondo antes de probar otro.\n\nEntradas:\n    mapa:   el diccionario que devuelve leer_mapa\n    inicio: la casilla (fila, columna) de donde se sale\n    meta:   la casilla (fila, columna) a la que se quiere llegar\n\nSalida: el par (ruta, exploradas).\n    ruta:       lista de casillas del inicio a la meta, o None si no hay camino\n    exploradas: lista de las casillas que salieron de la pila, en orden\n\nGarantía: ninguna sobre la ruta. Si hay camino lo encuentra, pero puede ser largo y caro."
+ },
+ "dijkstra": {
+  "codigo": "def dijkstra(mapa, inicio, meta):\n    cola = [(0, inicio)]                 # cola de prioridad con pares (costo acumulado, casilla)\n    costos = {inicio: 0}                 # el menor costo conocido para llegar a cada casilla\n    padres = {inicio: None}              # desde dónde se llegó a cada casilla\n    exploradas = []\n    vistas = set()                       # casillas ya exploradas\n\n    while cola:                          # mientras queden casillas pendientes\n        costo, actual = heapq.heappop(cola)      # sale la de menor costo acumulado\n        if actual in vistas:                     # ya se había explorado con un costo menor: se ignora\n            continue\n        vistas.add(actual)\n        exploradas.append(actual)\n        if actual == meta:                       # se llegó: se arma la ruta y se termina\n            return reconstruir_ruta(padres, meta), exploradas\n        for vecina, paso in vecinos(mapa, actual):\n            nuevo = costo + paso                 # costo de llegar a la vecina pasando por la actual\n            if vecina not in costos or nuevo < costos[vecina]:\n                costos[vecina] = nuevo           # es la forma más barata de llegar que se conoce\n                padres[vecina] = actual          # y se llega desde la actual\n                heapq.heappush(cola, (nuevo, vecina))\n\n    return None, exploradas              # la cola se vació sin llegar a la meta: no hay camino",
+  "doc": "Algoritmo de Dijkstra: explora siempre la casilla más barata de alcanzar desde el inicio.\n\nEntradas:\n    mapa:   el diccionario que devuelve leer_mapa\n    inicio: la casilla (fila, columna) de donde se sale\n    meta:   la casilla (fila, columna) a la que se quiere llegar\n\nSalida: el par (ruta, exploradas).\n    ruta:       lista de casillas del inicio a la meta, o None si no hay camino\n    exploradas: lista de las casillas que salieron de la cola, en orden\n\nGarantía: la ruta tiene el menor costo posible."
+ },
+ "voraz": {
+  "codigo": "def voraz(mapa, inicio, meta):\n    cola = [(estimacion(inicio, meta), inicio)]  # cola de prioridad con pares (estimación hasta la meta, casilla)\n    padres = {inicio: None}              # desde dónde se llegó a cada casilla; también dice cuáles ya se descubrieron\n    exploradas = []\n\n    while cola:                          # mientras queden casillas pendientes\n        distancia, actual = heapq.heappop(cola)  # sale la que parece más cerca de la meta\n        exploradas.append(actual)\n        if actual == meta:                       # se llegó: se arma la ruta y se termina\n            return reconstruir_ruta(padres, meta), exploradas\n        for vecina, costo in vecinos(mapa, actual):\n            if vecina not in padres:             # solo las que no se habían descubierto\n                padres[vecina] = actual\n                # La prioridad es solo la estimación: el costo del terreno no se usa para nada.\n                heapq.heappush(cola, (estimacion(vecina, meta), vecina))\n\n    return None, exploradas              # la cola se vació sin llegar a la meta: no hay camino",
+  "doc": "Búsqueda voraz: explora siempre la casilla que parece más cerca de la meta.\n\nEntradas:\n    mapa:   el diccionario que devuelve leer_mapa\n    inicio: la casilla (fila, columna) de donde se sale\n    meta:   la casilla (fila, columna) a la que se quiere llegar\n\nSalida: el par (ruta, exploradas).\n    ruta:       lista de casillas del inicio a la meta, o None si no hay camino\n    exploradas: lista de las casillas que salieron de la cola, en orden\n\nGarantía: ninguna sobre la ruta. Suele explorar muy poco, pero no toma en cuenta los costos."
+ },
+ "a_estrella": {
+  "codigo": "def a_estrella(mapa, inicio, meta):\n    distancia = estimacion(inicio, meta)\n    cola = [(distancia, distancia, inicio)]      # cola de prioridad con (costo acumulado + estimación, estimación, casilla)\n    costos = {inicio: 0}                         # el menor costo conocido para llegar a cada casilla\n    padres = {inicio: None}                      # desde dónde se llegó a cada casilla\n    exploradas = []\n    vistas = set()                               # casillas ya exploradas\n\n    while cola:                                  # mientras queden casillas pendientes\n        prioridad, distancia, actual = heapq.heappop(cola)   # sale la de menor prioridad\n        if actual in vistas:                     # ya se había explorado por un camino mejor: se ignora\n            continue\n        vistas.add(actual)\n        exploradas.append(actual)\n        if actual == meta:                       # se llegó: se arma la ruta y se termina\n            return reconstruir_ruta(padres, meta), exploradas\n        for vecina, paso in vecinos(mapa, actual):\n            nuevo = costos[actual] + paso        # lo gastado para llegar a la vecina pasando por la actual\n            if vecina not in costos or nuevo < costos[vecina]:\n                costos[vecina] = nuevo           # es la forma más barata de llegar que se conoce\n                padres[vecina] = actual\n                distancia = estimacion(vecina, meta)         # lo que se cree que falta desde la vecina\n                # Prioridad = lo gastado + lo que falta. La estimación sola va después para los empates.\n                heapq.heappush(cola, (nuevo + distancia, distancia, vecina))\n\n    return None, exploradas                      # la cola se vació sin llegar a la meta: no hay camino",
+  "doc": "Algoritmo A*: explora la casilla con menor suma de lo ya gastado más lo que se estima que falta.\n\nEntradas:\n    mapa:   el diccionario que devuelve leer_mapa\n    inicio: la casilla (fila, columna) de donde se sale\n    meta:   la casilla (fila, columna) a la que se quiere llegar\n\nSalida: el par (ruta, exploradas).\n    ruta:       lista de casillas del inicio a la meta, o None si no hay camino\n    exploradas: lista de las casillas que salieron de la cola, en orden\n\nGarantía: la ruta tiene el menor costo posible, porque la estimación nunca se pasa del costo real."
+ },
+ "medir": {
+  "codigo": "def medir(mapa, ruta):\n    pasos = len(ruta) - 1             # una ruta de n casillas tiene n - 1 movimientos\n    # ruta[1:] deja fuera la primera casilla: el inicio no se cobra porque no se entra a él.\n    costo = sum(COSTOS[mapa['terreno'][casilla]] for casilla in ruta[1:])\n    return pasos, costo",
+  "doc": "Calcula los pasos y el costo de una ruta.\n\nEntradas:\n    mapa: el diccionario que devuelve leer_mapa\n    ruta: lista de casillas, del inicio a la meta\n\nSalida: el par (pasos, costo).\n    pasos: cuántos movimientos tiene la ruta\n    costo: la suma de lo que cuesta entrar a cada casilla"
+ },
+ "comparar": {
+  "codigo": "def comparar(mapa):\n    resultados = {}\n    for nombre, algoritmo in ALGORITMOS.items():\n        ruta, exploradas = algoritmo(mapa, mapa['inicio'], mapa['meta'])\n        pasos, costo = medir(mapa, ruta) if ruta else (None, None)   # sin ruta no hay nada que medir\n        resultados[nombre] = {'ruta': ruta, 'exploradas': exploradas, 'pasos': pasos, 'costo': costo}\n    return resultados",
+  "doc": "Corre los cinco algoritmos del inicio a la meta del mapa y mide a cada uno.\n\nEntrada: el diccionario que devuelve leer_mapa.\n\nSalida: diccionario {nombre del algoritmo: resultado}. Cada resultado es un diccionario con\n    'ruta':       la ruta que encontró, o None\n    'exploradas': las casillas que exploró, en orden\n    'pasos':      los pasos de su ruta, o None si no encontró\n    'costo':      el costo de su ruta, o None si no encontró"
+ },
+ "imprimir_tabla": {
+  "codigo": "def imprimir_tabla(resultados):\n    # El menor costo entre los algoritmos que sí encontraron ruta.\n    costos = [r['costo'] for r in resultados.values() if r['costo'] is not None]\n    minimo = min(costos) if costos else None\n\n    # En los formatos, <10 alinea a la izquierda en 10 espacios y >8 a la derecha en 8.\n    print(f\"{'Algoritmo':<10}{'Exploradas':>11}{'Pasos':>8}{'Costo':>8}   Nota\")\n    print('-' * 52)\n    for nombre, r in resultados.items():\n        if r['ruta'] is None:\n            print(f\"{nombre:<10}{len(r['exploradas']):>11}{'-':>8}{'-':>8}   sin ruta\")\n        else:\n            nota = 'costo mínimo' if r['costo'] == minimo else ''\n            print(f\"{nombre:<10}{len(r['exploradas']):>11}{r['pasos']:>8}{r['costo']:>8}   {nota}\")",
+  "doc": "Imprime la tabla comparativa: casillas exploradas, pasos y costo de cada algoritmo.\n\nEntrada: el diccionario que devuelve comparar.\nNo devuelve nada: imprime la tabla. Marca con una nota las rutas de costo mínimo."
+ },
+ "comprobar": {
+  "codigo": "def comprobar(mapa, resultados):\n    grafo = construir_grafo(mapa)\n    inicio, meta = mapa['inicio'], mapa['meta']\n\n    # Caso sin camino: NetworkX dice que no existe y nadie debió encontrar ruta.\n    if not nx.has_path(grafo, inicio, meta):\n        assert all(r['ruta'] is None for r in resultados.values())\n        print('Comprobado con NetworkX: no existe camino y ningún algoritmo encontró ruta.')\n        return\n\n    # Toda ruta debe empezar en el inicio, terminar en la meta y seguir aristas del grafo.\n    for nombre, r in resultados.items():\n        ruta = r['ruta']\n        # Si existe camino, todos los algoritmos deben encontrar alguna ruta.\n        assert ruta is not None, f'{nombre} no devolvió ninguna ruta, pero NetworkX dice que sí existe camino.'\n        assert ruta[0] == inicio and ruta[-1] == meta, nombre\n        assert nx.is_path(grafo, ruta), nombre\n\n    # Los valores de referencia, calculados por NetworkX.\n    costo_minimo = nx.dijkstra_path_length(grafo, inicio, meta)      # usa el peso de las aristas\n    pasos_minimos = nx.shortest_path_length(grafo, inicio, meta)     # sin pesos: cuenta aristas\n    assert resultados['Dijkstra']['costo'] == costo_minimo\n    assert resultados['A*']['costo'] == costo_minimo\n    assert resultados['BFS']['pasos'] == pasos_minimos\n    print(f'Comprobado con NetworkX: rutas válidas, costo mínimo = {costo_minimo}, '\n          f'pasos mínimos = {pasos_minimos}.')",
+  "doc": "Compara los resultados hechos a mano contra NetworkX.\n\nEntradas:\n    mapa:       el diccionario que devuelve leer_mapa\n    resultados: el diccionario que devuelve comparar\n\nNo devuelve nada: imprime lo que comprobó. Si algo no coincide, assert detiene\nla ejecución con un error."
+ },
+ "mostrar_busquedas": {
+  "codigo": "def mostrar_busquedas(mapa, resultados):\n    alto = 5.5 * mapa['filas'] / mapa['columnas'] + 0.6          # alto de cada renglón de dibujos\n    # Una figura con un renglón por algoritmo y 2 columnas. 'ejes' es una tabla de ejes:\n    # cada renglón trae el eje de la cuadrícula y el eje del grafo.\n    figura, ejes = plt.subplots(len(resultados), 2, figsize=(11, alto * len(resultados)))\n\n    # zip empareja cada renglón de ejes con el resultado de un algoritmo.\n    for (izquierda, derecha), (nombre, r) in zip(ejes, resultados.items()):\n        dibujar_cuadricula(izquierda, mapa, r['ruta'], r['exploradas'])\n        dibujar_grafo(derecha, mapa, r['ruta'], r['exploradas'])\n        # El título de cada renglón lleva las tres medidas del algoritmo.\n        if r['ruta'] is None:\n            medidas = f\"{len(r['exploradas'])} exploradas, sin ruta\"\n        else:\n            medidas = f\"{len(r['exploradas'])} exploradas, {r['pasos']} pasos, costo {r['costo']}\"\n        izquierda.set_title(f'{nombre}: {medidas}', fontweight='bold')\n        derecha.set_title(f'Grafo de {nombre}')\n\n    figura.tight_layout()                # acomoda los renglones sin que se encimen\n    plt.show()",
+  "doc": "Dibuja el resultado de cada algoritmo, un renglón por algoritmo: cuadrícula y grafo.\n\nEntradas:\n    mapa:       el diccionario que devuelve leer_mapa\n    resultados: el diccionario que devuelve comparar\n\nNo devuelve nada: muestra la figura."
+ },
+ "analizar": {
+  "codigo": "def analizar(mapa, titulo):\n    mostrar_mapa(mapa, titulo)\n    resultados = comparar(mapa)\n    imprimir_tabla(resultados)\n    comprobar(mapa, resultados)\n    mostrar_busquedas(mapa, resultados)\n    return resultados",
+  "doc": "Hace el análisis completo de un mapa.\n\nMuestra el mapa, compara los cinco algoritmos, imprime la tabla, comprueba\ncon NetworkX y dibuja cada búsqueda.\n\nEntradas:\n    mapa:   el diccionario que devuelve leer_mapa\n    titulo: texto para el título de la figura del mapa\n\nSalida: el diccionario que devuelve comparar, por si se quiere usar después."
+ },
+ "comprobar_estimacion": {
+  "codigo": "def comprobar_estimacion(mapa, nombre):\n    grafo = construir_grafo(mapa)\n    # Costo real desde cada casilla hasta la meta. En lugar de calcular una ruta por casilla,\n    # se voltean todas las aristas y se mide una sola vez saliendo de la meta.\n    # El resultado es un diccionario {casilla: costo real hasta la meta}.\n    reales = nx.single_source_dijkstra_path_length(grafo.reverse(), mapa['meta'])\n\n    # Casillas donde la estimación exagera. Si la lista queda vacía, la estimación nunca se pasa.\n    se_pasan = [c for c, real in reales.items() if estimacion(c, mapa['meta']) > real]\n\n    inicio = mapa['inicio']\n    real_inicio = reales.get(inicio, 'no hay camino')    # el inicio no aparece si no puede llegar a la meta\n    print(f\"{nombre:<20} casillas revisadas: {len(reales):>3}   se pasan: {len(se_pasan)}   \"\n          f\"desde el inicio: estimación {estimacion(inicio, mapa['meta'])}, costo real {real_inicio}\")",
+  "doc": "Revisa, casilla por casilla, que la estimación no sea mayor que el costo real hasta la meta.\n\nEntradas:\n    mapa:   el diccionario que devuelve leer_mapa\n    nombre: nombre del mapa, para identificar el renglón que se imprime\n\nNo devuelve nada: imprime cuántas casillas revisó y en cuántas la estimación se pasa."
+ },
+ "costos_entre_puntos": {
+  "codigo": "def costos_entre_puntos(mapa):\n    puntos = [mapa['inicio']] + mapa['objetos'] + [mapa['meta']]\n    tabla = {}\n    for a in puntos:\n        for b in puntos:\n            if a != b:                                    # de un punto a sí mismo no hay nada que medir\n                ruta, exploradas = dijkstra(mapa, a, b)   # la ruta más barata de a hasta b\n                costo = medir(mapa, ruta)[1] if ruta else None   # medir da (pasos, costo): se toma el costo\n                tabla[(a, b)] = (costo, ruta)\n    return tabla",
+  "doc": "Calcula con Dijkstra la ruta más barata entre cada par de puntos de interés.\n\nLos puntos de interés son el inicio, los objetos y la meta.\n\nEntrada: el diccionario que devuelve leer_mapa.\n\nSalida: diccionario {(a, b): (costo, ruta)} para cada par de puntos distintos.\n        Son los pesos de las aristas del grafo completo.\n        Si no hay camino entre dos puntos, su costo y su ruta son None."
+ },
+ "costo_del_orden": {
+  "codigo": "def costo_del_orden(mapa, tabla, orden):\n    paradas = [mapa['inicio']] + list(orden) + [mapa['meta']]\n    # zip(paradas, paradas[1:]) da los tramos: cada parada con la que le sigue.\n    return sum(tabla[(a, b)][0] for a, b in zip(paradas, paradas[1:]))",
+  "doc": "Suma lo que cuesta ir del inicio a la meta visitando los objetos en un orden dado.\n\nEntradas:\n    mapa:  el diccionario que devuelve leer_mapa\n    tabla: el diccionario que devuelve costos_entre_puntos\n    orden: lista de las casillas de los objetos, en el orden en que se visitan\n\nSalida: el costo total del recorrido."
+ },
+ "unir_rutas": {
+  "codigo": "def unir_rutas(mapa, tabla, orden):\n    paradas = [mapa['inicio']] + list(orden) + [mapa['meta']]\n    ruta = [mapa['inicio']]\n    for a, b in zip(paradas, paradas[1:]):\n        ruta += tabla[(a, b)][1][1:]      # la ruta del tramo sin su primera casilla, que ya está puesta\n    return ruta",
+  "doc": "Pega las rutas de cada tramo para formar la ruta completa del inicio a la meta.\n\nEntradas:\n    mapa:  el diccionario que devuelve leer_mapa\n    tabla: el diccionario que devuelve costos_entre_puntos\n    orden: lista de las casillas de los objetos, en el orden en que se visitan\n\nSalida: lista de casillas de todo el recorrido."
+ },
+ "todos_los_ordenes": {
+  "codigo": "def todos_los_ordenes(mapa, tabla):\n    mejor_orden = None\n    mejor_costo = None\n    revisados = 0\n    for orden in permutations(mapa['objetos']):      # cada forma distinta de ordenar los objetos\n        revisados += 1\n        costo = costo_del_orden(mapa, tabla, orden)\n        if mejor_costo is None or costo < mejor_costo:    # el primero, o uno más barato que el mejor hasta ahora\n            mejor_orden, mejor_costo = list(orden), costo\n    return mejor_orden, mejor_costo, revisados",
+  "doc": "Prueba todos los órdenes posibles de los objetos y se queda con el más barato.\n\nEntradas:\n    mapa:  el diccionario que devuelve leer_mapa\n    tabla: el diccionario que devuelve costos_entre_puntos\n\nSalida: (mejor orden, su costo, cuántos órdenes se revisaron)."
+ },
+ "mas_cercano": {
+  "codigo": "def mas_cercano(mapa, tabla):\n    actual = mapa['inicio']                  # dónde se está parado\n    pendientes = list(mapa['objetos'])       # objetos que faltan por recoger\n    orden = []\n    while pendientes:\n        # De los pendientes, el que tiene la ruta más barata desde la posición actual.\n        siguiente = min(pendientes, key=lambda objeto: tabla[(actual, objeto)][0])\n        orden.append(siguiente)\n        pendientes.remove(siguiente)\n        actual = siguiente                   # ahora se está parado en ese objeto\n    return orden, costo_del_orden(mapa, tabla, orden)",
+  "doc": "Va siempre al objeto pendiente más barato de alcanzar desde donde está.\n\nEntradas:\n    mapa:  el diccionario que devuelve leer_mapa\n    tabla: el diccionario que devuelve costos_entre_puntos\n\nSalida: (orden elegido, su costo)."
+ },
+ "dibujar_grafo_completo": {
+  "codigo": "def dibujar_grafo_completo(eje, mapa, tabla, orden=None):\n    puntos = [mapa['inicio']] + mapa['objetos'] + [mapa['meta']]\n\n    # 1. El grafo: primero los vértices, en orden (inicio, objetos, meta), y luego las aristas.\n    grafo = nx.Graph()\n    grafo.add_nodes_from(puntos)\n    for a in puntos:\n        for b in puntos:\n            if a < b:                                    # cada par una sola vez, no (a, b) y (b, a)\n                grafo.add_edge(a, b, weight=tabla[(a, b)][0])\n\n    # 2. Posiciones: los puntos repartidos en un círculo, para que las aristas no se encimen.\n    posiciones = nx.circular_layout(grafo)\n    nombres = {p: etiqueta(mapa, p) for p in mapa['objetos']}    # O1, O2...\n    pesos = nx.get_edge_attributes(grafo, 'weight')              # {arista: costo}, para escribirlo sobre ella\n\n    # 3. Capas del dibujo, de abajo hacia arriba.\n    nx.draw_networkx_edges(grafo, posiciones, ax=eje, edge_color='gray')        # todas las aristas, en gris\n    if orden is not None:\n        paradas = [mapa['inicio']] + list(orden) + [mapa['meta']]\n        tramos = list(zip(paradas, paradas[1:]))                 # las aristas del camino elegido\n        nx.draw_networkx_edges(grafo, posiciones, ax=eje, edgelist=tramos, edge_color='red', width=4)\n    # Los objetos son círculos con su nombre.\n    nx.draw_networkx_nodes(grafo, posiciones, ax=eje, nodelist=mapa['objetos'], node_color='#fff3c4',\n                           node_size=900, edgecolors='black')\n    nx.draw_networkx_labels(grafo, posiciones, ax=eje, labels=nombres, font_weight='bold')\n    # El costo de cada arista, escrito a un cuarto de su largo para que no se junten en el centro.\n    nx.draw_networkx_edge_labels(grafo, posiciones, ax=eje, edge_labels=pesos, label_pos=0.25)\n    # El inicio es el punto verde y la meta la estrella, igual que en los mapas.\n    marcar_inicio_y_meta(eje, posiciones[mapa['inicio']], posiciones[mapa['meta']], 24)\n\n    eje.legend(handles=simbolos_de_leyenda(), loc='upper left', frameon=False)\n    eje.margins(0.15)                        # aire en las orillas para que no se corten los símbolos\n    eje.axis('off')                          # sin marco ni ejes",
+  "doc": "Dibuja el grafo completo entre el inicio, los objetos y la meta.\n\nEntradas:\n    eje:   la zona de la figura donde se dibuja\n    mapa:  el diccionario que devuelve leer_mapa\n    tabla: el diccionario que devuelve costos_entre_puntos\n    orden: lista de objetos en el orden de visita (opcional); su camino se pinta en rojo\n\nNo devuelve nada: solo dibuja.\n\nCómo se construye: se crea un grafo de NetworkX con una arista por cada par de puntos,\ncuyo peso es el costo de la ruta más barata entre ellos. Los puntos se acomodan en círculo."
+ },
+ "nombres_del_orden": {
+  "codigo": "def nombres_del_orden(mapa, orden):\n    nombres = [etiqueta(mapa, objeto) for objeto in orden]\n    return ' -> '.join(['inicio'] + nombres + ['meta'])",
+  "doc": "Escribe un orden de visita como texto.\n\nEntradas:\n    mapa:  el diccionario que devuelve leer_mapa\n    orden: lista de las casillas de los objetos, en el orden en que se visitan\n\nSalida: un texto como 'inicio -> O2 -> O1 -> meta'."
+ }
+};
+
+// ============================================================================
+// 2. VALORES AL ESTILO DE PYTHON
+// La página está hecha en JavaScript, pero muestra los valores como los
+// escribiría Python: tuplas con paréntesis, None, True, diccionarios, etc.
+// ============================================================================
+
+// Crea una tupla: una lista de JavaScript marcada para escribirse con paréntesis.
+function T(...datos) { datos.tupla = true; return datos; }
+
+// Texto que ya viene escrito como se quiere mostrar (no se le ponen comillas).
+class Crudo { constructor(s) { this.s = s; } }
+const crudo = s => new Crudo(s);
+
+// Diccionario de Python. Las llaves pueden ser tuplas, cosa que un objeto de JavaScript no permite.
+class Dic {
+  constructor() { this.m = new Map(); }
+  set(llave, valor) { this.m.set(py(llave), [llave, valor]); return this; }
+  get(llave) { const par = this.m.get(py(llave)); return par ? par[1] : undefined; }
+  has(llave) { return this.m.has(py(llave)); }
+  get pares() { return [...this.m.values()]; }
+  get size() { return this.m.size; }
+}
+
+// Conjunto de Python (set).
+class Conj {
+  constructor(valores = []) { this.m = new Map(); valores.forEach(v => this.add(v)); }
+  add(v) { this.m.set(py(v), v); return this; }
+  has(v) { return this.m.has(py(v)); }
+  get size() { return this.m.size; }
+}
+
+// Escribe un valor como lo mostraría Python.
+function py(v) {
+  if (v === null) return 'None';
+  if (v === true) return 'True';
+  if (v === false) return 'False';
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'string') return "'" + v.replace(/\n/g, '\\n') + "'";
+  if (v instanceof Crudo) return v.s;
+  if (v instanceof Dic) return '{' + v.pares.map(([a, b]) => py(a) + ': ' + py(b)).join(', ') + '}';
+  if (v instanceof Conj) return v.size ? '{' + [...v.m.values()].map(py).join(', ') + '}' : 'set()';
+  if (Array.isArray(v)) {
+    const dentro = v.map(py).join(', ');
+    return v.tupla ? '(' + dentro + (v.length === 1 ? ',' : '') + ')' : '[' + dentro + ']';
+  }
+  return String(v);
+}
+
+// Dice si dos valores son iguales comparando cómo se escriben.
+const igual = (a, b) => py(a) === py(b);
+
+// Compara dos tuplas como Python: dato por dato, de izquierda a derecha.
+function menor(a, b) {
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (Array.isArray(a[i])) {
+      if (menor(a[i], b[i])) return true;
+      if (menor(b[i], a[i])) return false;
+    } else {
+      if (a[i] < b[i]) return true;
+      if (a[i] > b[i]) return false;
+    }
+  }
+  return a.length < b.length;
+}
+
+// Cola de prioridad igual a la de heapq: una lista acomodada como montículo,
+// donde el primer elemento es siempre el menor. Se copia el mismo procedimiento
+// de Python para que la lista se vea en el mismo orden que en el notebook.
+function subir(monticulo, inicio, pos) {
+  const nuevo = monticulo[pos];
+  while (pos > inicio) {
+    const posPadre = (pos - 1) >> 1;
+    const padre = monticulo[posPadre];
+    if (menor(nuevo, padre)) { monticulo[pos] = padre; pos = posPadre; continue; }
+    break;
+  }
+  monticulo[pos] = nuevo;
+}
+function heappush(monticulo, elemento) { monticulo.push(elemento); subir(monticulo, 0, monticulo.length - 1); }
+function heappop(monticulo) {
+  const ultimo = monticulo.pop();
+  if (!monticulo.length) return ultimo;
+  const primero = monticulo[0];
+  monticulo[0] = ultimo;
+  let pos = 0;
+  const fin = monticulo.length, nuevo = monticulo[0];
+  let hijo = 1;
+  while (hijo < fin) {
+    const derecho = hijo + 1;
+    if (derecho < fin && !menor(monticulo[hijo], monticulo[derecho])) hijo = derecho;
+    monticulo[pos] = monticulo[hijo];
+    pos = hijo;
+    hijo = 2 * pos + 1;
+  }
+  monticulo[pos] = nuevo;
+  subir(monticulo, 0, pos);
+  return primero;
+}
+
+// ============================================================================
+// 3. LA GRABADORA DE PASOS
+// Cada función se ejecuta de verdad y, en los momentos importantes, guarda una
+// "foto": qué renglón del código va, cuánto vale cada variable, una explicación
+// y un dibujo. La página solo muestra esas fotos una por una.
+// ============================================================================
+class Grabadora {
+  constructor(nombre) {
+    this.on = true;
+    this.renglones = NOTEBOOK[nombre].codigo.split('\n');
+    this.pasos = [];
+    this.args = [];
+    this.resultado = undefined;
+    this.vistaAnterior = null;
+  }
+  // Busca el número del primer renglón del código que contiene un fragmento de texto.
+  renglon(fragmento) {
+    const i = this.renglones.findIndex(r => r.includes(fragmento));
+    if (i < 0) console.warn('No se encontró el renglón:', fragmento);
+    return i;
+  }
+  // Guarda las entradas con las que se llamó a la función.
+  entradas(valores) { this.args = Object.entries(valores).map(([n, v]) => [n, py(v)]); }
+  // Guarda un paso. 'donde' es un fragmento del renglón que se ejecuta, o una lista de fragmentos.
+  p(donde, variables, nota, vista) {
+    const lista = Array.isArray(donde) ? donde : [donde];
+    if (vista) this.vistaAnterior = vista;
+    this.pasos.push({
+      renglones: lista.map(f => this.renglon(f)),
+      vars: Object.entries(variables).filter(([, v]) => v !== undefined).map(([n, v]) => [n, py(v)]),
+      nota,
+      vista: this.vistaAnterior,
+    });
+  }
+  // Guarda lo que la función devuelve; se muestra en el último paso.
+  fin(valor) {
+    this.resultado = valor === undefined ? 'No devuelve nada: su trabajo es dibujar o imprimir.' : py(valor);
+    if (this.pasos.length) this.pasos[this.pasos.length - 1].devuelve = this.resultado;
+  }
+}
+
+// Grabadora que no hace nada. La usan las funciones cuando otra las llama por dentro:
+// solo se graban los pasos de la función que se está explicando.
+const NADA = { on: false, entradas() {}, p() {}, fin() {} };
+let GRABANDO = null;
+// La función que se está explicando toma la grabadora; las que ella llame ya no la encuentran.
+function tomar() { const g = GRABANDO; GRABANDO = null; return g || NADA; }
+
+// ============================================================================
+// 4. PIEZAS DE DIBUJO
+// Un dibujo es una lista de piezas (cuadros, líneas, círculos, textos) con
+// coordenadas en casillas: la casilla (fila, columna) ocupa de x = columna a
+// x = columna + 1 y de y = fila a y = fila + 1.
+// ============================================================================
+const COSTOS = { '.': 1, 'B': 3, 'A': 5 };
+const COLORES = { '.': '#efe9c8', 'B': '#58a55c', 'A': '#6db3f2', '#': '#3b3b3b' };
+const NOMBRES = { '.': 'Llano (1)', 'B': 'Bosque (3)', 'A': 'Agua (5)', '#': 'Muro' };
+const TERRENO = { '.': 'llano', 'B': 'bosque', 'A': 'agua', '#': 'muro' };
+const COLOR_INICIO = '#00c853';
+const COLOR_META = '#ffc107';
+const MOVIMIENTOS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+const NOMBRE_MOVIMIENTO = ['arriba', 'derecha', 'abajo', 'izquierda'];
+// Colores del papel de cada casilla durante una búsqueda.
+const ROL = { explorada: '#7e57c2', pendiente: '#ffb300', actual: '#d50000', vecina: '#1565c0', ruta: '#e53935' };
+
+// Centro de una casilla en el dibujo.
+const centro = ([f, c]) => [c + 0.5, f + 0.5];
+
+// Los cuadros de las casillas, del color de su terreno.
+function pzCeldas(mapa, pares = mapa.terreno.pares) {
+  return pares.map(([[f, c], t]) => ({ t: 'rect', x: c, y: f, w: 1, h: 1, color: COLORES[t], borde: '#000' }));
+}
+// Velo blanco sobre las casillas que no están en 'marcadas' (las no exploradas).
+function pzVelo(mapa, marcadas) {
+  return mapa.terreno.pares.filter(([cel, t]) => t !== '#' && !marcadas.has(cel))
+    .map(([[f, c]]) => ({ t: 'rect', x: c, y: f, w: 1, h: 1, color: '#fff', alfa: 0.7 }));
+}
+// Los nombres de los objetos: O1, O2...
+function pzNombresObjetos(mapa) {
+  return mapa.objetos.map((o, i) => ({ t: 'texto', x: o[1] + 0.5, y: o[0] + 0.5, s: 'O' + (i + 1), tam: 0.34, negrita: true }));
+}
+// Una ruta: línea roja por los centros de sus casillas.
+function pzRuta(ruta, ancho = 5) {
+  return ruta && ruta.length > 1 ? [{ t: 'linea', pts: ruta.map(centro), color: ROL.ruta, ancho, alfa: 0.85 }] : [];
+}
+// El punto verde del inicio y la estrella de la meta.
+function pzMarcas(mapa, radio = 0.24) {
+  const p = [];
+  if (mapa.inicio) p.push({ t: 'circ', x: mapa.inicio[1] + 0.5, y: mapa.inicio[0] + 0.5, r: radio, color: COLOR_INICIO, borde: '#000' });
+  if (mapa.meta) p.push({ t: 'estrella', x: mapa.meta[1] + 0.5, y: mapa.meta[0] + 0.5, r: radio * 1.55 });
+  return p;
+}
+
+// La cuadrícula completa de un mapa, con el estado de una búsqueda si se da.
+// estado: { exploradas, pendientes, actual, vecina, ruta, numeros (Dic casilla -> texto), velo (Conj) }
+function piezasCuadricula(mapa, estado = {}) {
+  let p = pzCeldas(mapa);
+  if (estado.velo) p = p.concat(pzVelo(mapa, estado.velo));
+  const tinta = (lista, color, alfa) => (lista || []).forEach(([f, c]) => p.push({ t: 'rect', x: c, y: f, w: 1, h: 1, color, alfa }));
+  tinta(estado.exploradas, ROL.explorada, 0.42);
+  tinta(estado.pendientes, ROL.pendiente, 0.6);
+  if (estado.numeros) estado.numeros.pares.forEach(([[f, c], s]) => p.push({ t: 'texto', x: c + 0.5, y: f + 0.82, s: String(s), tam: 0.24 }));
+  p = p.concat(pzNombresObjetos(mapa), pzRuta(estado.ruta), pzMarcas(mapa));
+  if (estado.vecina) p.push({ t: 'rect', x: estado.vecina[1], y: estado.vecina[0], w: 1, h: 1, borde: ROL.vecina, anchoBorde: 5, punteado: true });
+  if (estado.actual) p.push({ t: 'rect', x: estado.actual[1], y: estado.actual[0], w: 1, h: 1, borde: ROL.actual, anchoBorde: 6 });
+  return p;
+}
+
+// Las aristas del grafo de un mapa, sin repetir: cada casilla con su vecina de la derecha y la de abajo.
+function aristasDelMapa(mapa) {
+  const lista = [];
+  mapa.terreno.pares.forEach(([[f, c], t]) => {
+    if (t === '#') return;
+    [[0, 1], [1, 0]].forEach(([df, dc]) => {
+      const v = T(f + df, c + dc);
+      if (mapa.terreno.has(v) && mapa.terreno.get(v) !== '#') lista.push([T(f, c), v]);
+    });
+  });
+  return lista;
+}
+const pzAristas = (aristas, color = '#888', ancho = 2) => aristas.map(([a, b]) => ({ t: 'linea', pts: [centro(a), centro(b)], color, ancho }));
+// Los vértices: un círculo por casilla que no es muro, del color de su terreno.
+function pzNodos(mapa, casillas, marcadas) {
+  return casillas.map(cel => ({
+    t: 'circ', x: cel[1] + 0.5, y: cel[0] + 0.5, r: 0.3, color: COLORES[mapa.terreno.get(cel)], borde: '#000',
+    alfa: marcadas && !marcadas.has(cel) ? 0.25 : 1,
+  }));
+}
+// El texto de cada vértice: nombre del objeto o costo de entrar. El inicio y la meta no llevan texto.
+function pzTextosNodos(mapa, casillas) {
+  return casillas.filter(cel => !igual(cel, mapa.inicio) && !igual(cel, mapa.meta)).map(cel => {
+    const i = mapa.objetos.findIndex(o => igual(o, cel));
+    return { t: 'texto', x: cel[1] + 0.5, y: cel[0] + 0.5, s: i >= 0 ? 'O' + (i + 1) : String(COSTOS[mapa.terreno.get(cel)]), tam: 0.26 };
+  });
+}
+const casillasLibres = mapa => mapa.terreno.pares.filter(([, t]) => t !== '#').map(([cel]) => cel);
+
+// El grafo completo de un mapa, con el resultado de una búsqueda si se da.
+function piezasGrafo(mapa, estado = {}) {
+  const libres = casillasLibres(mapa);
+  const marcadas = estado.exploradas ? new Conj(estado.exploradas) : null;
+  let p = pzAristas(aristasDelMapa(mapa));
+  if (estado.ruta) p = p.concat(pzRuta(estado.ruta, 7));
+  return p.concat(pzNodos(mapa, libres, marcadas), pzTextosNodos(mapa, libres), pzMarcas(mapa, 0.2));
+}
+
+// Un dibujo listo para mostrarse: título, tamaño en casillas y piezas.
+// Los mapas angostos se agrandan para que no se vean diminutos.
+const lienzo = (mapa, piezas, titulo = '') => ({ titulo, w: mapa.columnas, h: mapa.filas, piezas, escala: Math.max(1, 5.5 / mapa.columnas) });
+const lzCuadricula = (mapa, estado, titulo) => lienzo(mapa, piezasCuadricula(mapa, estado), titulo);
+const lzGrafo = (mapa, estado, titulo) => lienzo(mapa, piezasGrafo(mapa, estado), titulo);
+
+// Posición de los puntos del grafo completo: repartidos en un círculo, como nx.circular_layout.
+const ANCHO_COMPLETO = 6, ALTO_COMPLETO = 4.6;
+function posicionesEnCirculo(puntos) {
+  const pos = new Dic();
+  puntos.forEach((p, i) => {
+    const angulo = 2 * Math.PI * i / puntos.length;
+    pos.set(p, [ANCHO_COMPLETO / 2 + 2.3 * Math.cos(angulo), ALTO_COMPLETO / 2 - 1.75 * Math.sin(angulo)]);
+  });
+  return pos;
+}
+const puntosDeInteres = mapa => [mapa.inicio, ...mapa.objetos, mapa.meta];
+// Nombre corto de un punto de interés.
+function nombrePunto(mapa, p) {
+  if (igual(p, mapa.inicio)) return 'inicio';
+  if (igual(p, mapa.meta)) return 'meta';
+  return 'O' + (mapa.objetos.findIndex(o => igual(o, p)) + 1);
+}
+// Todos los pares de puntos, cada par una sola vez.
+function paresDePuntos(puntos) {
+  const pares = [];
+  puntos.forEach(a => puntos.forEach(b => { if (menor(a, b)) pares.push([a, b]); }));
+  return pares;
+}
+// Piezas del grafo completo. op: { aristas, pesos, camino, resalta, sinNodos, sinMarcas }
+function piezasCompleto(mapa, tabla, op = {}) {
+  const puntos = puntosDeInteres(mapa);
+  const pos = posicionesEnCirculo(puntos);
+  const aristas = op.aristas || paresDePuntos(puntos);
+  let p = aristas.map(([a, b]) => ({ t: 'linea', pts: [pos.get(a), pos.get(b)], color: '#999', ancho: 2 }));
+  if (op.camino) {
+    for (let i = 0; i + 1 < op.camino.length; i++) {
+      p.push({ t: 'linea', pts: [pos.get(op.camino[i]), pos.get(op.camino[i + 1])], color: ROL.ruta, ancho: 7 });
+    }
+  }
+  if (op.resalta) p.push({ t: 'linea', pts: [pos.get(op.resalta[0]), pos.get(op.resalta[1])], color: '#ff6d00', ancho: 9 });
+  if (!op.sinNodos) {
+    mapa.objetos.forEach((o, i) => {
+      const [x, y] = pos.get(o);
+      p.push({ t: 'circ', x, y, r: 0.36, color: '#fff3c4', borde: '#000' });
+      if (!op.sinNombres) p.push({ t: 'texto', x, y, s: 'O' + (i + 1), tam: 0.3, negrita: true });
+    });
+  }
+  if (op.pesos !== false) {
+    aristas.forEach(([a, b]) => {
+      const [x1, y1] = pos.get(a), [x2, y2] = pos.get(b);
+      const dato = tabla.get(T(a, b));
+      // El costo se escribe a un cuarto del largo de la arista, para que no se junten en el centro.
+      p.push({ t: 'texto', x: x1 + (x2 - x1) * 0.25, y: y1 + (y2 - y1) * 0.25, s: String(dato[0]), tam: 0.27, fondo: true });
+    });
+  }
+  if (!op.sinMarcas) {
+    const [xi, yi] = pos.get(mapa.inicio), [xm, ym] = pos.get(mapa.meta);
+    p.push({ t: 'circ', x: xi, y: yi, r: 0.3, color: COLOR_INICIO, borde: '#000' });
+    p.push({ t: 'estrella', x: xm, y: ym, r: 0.46 });
+  }
+  return p;
+}
+const lzCompleto = (mapa, tabla, op, titulo = '') => ({ titulo, w: ANCHO_COMPLETO, h: ALTO_COMPLETO, piezas: piezasCompleto(mapa, tabla, op) });
+
+// ============================================================================
+// 5. LAS FUNCIONES DEL NOTEBOOK, CON SUS PASOS
+// ============================================================================
+// Textos fijos para mostrar entradas que no conviene escribir completas.
+const EL_MAPA = crudo('el diccionario del mapa (es el del dibujo)');
+const EL_EJE = crudo('la zona de la figura donde se dibuja');
+const LA_TABLA = crudo('el diccionario que devuelve costos_entre_puntos');
+const cod = s => '<code>' + esc(s) + '</code>';
+
+// Vista de una búsqueda: la cuadrícula con el papel de cada casilla.
+function vistaBusqueda(mapa, e) {
+  return { lienzos: [lzCuadricula(mapa, e)], roles: ['explorada', 'pendiente', 'actual', 'vecina', 'ruta'] };
+}
+// Escribe una lista de casillas resumida cuando es larga.
+const resumen = lista => lista === null ? 'None' : lista.length > 6 ? `[${lista.length} casillas]` : py(lista);
+
+// ---------------------------------------------------------------- leer_mapa
+function leerMapa(texto) {
+  const R = tomar();
+  let lineas, filas, columnas, terreno, inicio, meta, objetos, f, linea, c, caracter;
+  const rellenas = [];
+  const V = () => ({ texto, lineas, filas, columnas, f, linea, c, caracter, inicio, meta, objetos, terreno });
+  const ver = () => {
+    const v = { texto: { crudo: texto, lineas, columnas, rellenas: rellenas.slice(), f, c } };
+    if (terreno && terreno.size) {
+      const parcial = { terreno, filas, columnas, inicio, meta, objetos };
+      v.lienzos = [lienzo(parcial, pzCeldas(parcial).concat(pzNombresObjetos(parcial), pzMarcas(parcial)), 'El mapa que se va armando')];
+    }
+    return v;
+  };
+  R.on && R.entradas({ texto });
+  R.on && R.p('def leer_mapa', V(), 'La función recibe el mapa como <b>un solo texto</b>. Los renglones del mapa están separados por saltos de línea, que dentro de un texto se escriben <code>\\n</code>.', ver());
+
+  lineas = texto.replace(/^\n+|\n+$/g, '').split('\n');
+  R.on && R.p('lineas = texto.strip', V(), `${cod("strip('\\n')")} quita los saltos de línea que sobran al principio y al final. Luego ${cod("split('\\n')")} corta el texto en cada salto de línea. Queda una lista con ${lineas.length} renglones.`, ver());
+  filas = lineas.length;
+  R.on && R.p('filas = len(lineas)', V(), `El mapa tiene tantas filas como renglones: ${filas}.`, ver());
+  columnas = Math.max(...lineas.map(l => l.length));
+  R.on && R.p('columnas = max(', V(), `Los renglones miden ${lineas.map(l => l.length).join(', ')}. El más largo define el ancho del mapa: ${columnas} columnas.`, ver());
+
+  terreno = new Dic(); inicio = null; meta = null; objetos = [];
+  R.on && R.p(['terreno = {}', 'inicio = None', 'meta = None', 'objetos = []'], V(), 'Se preparan vacíos los datos que se van a llenar: el terreno de cada casilla, el inicio, la meta y la lista de objetos.', ver());
+
+  for (f = 0; f < lineas.length; f++) {
+    linea = lineas[f]; c = undefined; caracter = undefined;
+    R.on && R.p('for f, linea in enumerate(lineas)', V(), `Se toma el renglón de la fila ${f}: ${cod(py(linea))}.`, ver());
+    const falta = columnas - linea.length;
+    linea = linea.padEnd(columnas, '#');
+    rellenas[f] = linea;
+    R.on && R.p('linea.ljust(columnas', V(), falta > 0
+      ? `Este renglón mide ${columnas - falta} y el mapa mide ${columnas} de ancho. ${cod('ljust')} le agrega ${falta} ${cod('#')} al final: lo que le falta cuenta como muro.`
+      : `Este renglón ya mide ${columnas}, así que ${cod('ljust')} lo deja igual.`, ver());
+    for (c = 0; c < linea.length; c++) {
+      caracter = linea[c];
+      const original = caracter;
+      if (caracter === ' ') {
+        caracter = '#';
+        R.on && R.p("caracter = '#'", V(), `En la fila ${f}, columna ${c} hay un espacio. Se trata como muro.`, ver());
+      } else if (caracter === 'I') {
+        if (inicio !== null) throw new Error('El mapa tiene más de un inicio (I).');
+        inicio = T(f, c); caracter = '.';
+        R.on && R.p(['inicio = (f, c)', '# el inicio se pisa'], V(), `Es una ${cod('I')}: se anota que el inicio está en ${cod(py(inicio))} y la casilla se guarda como llano.`, ver());
+      } else if (caracter === 'M') {
+        if (meta !== null) throw new Error('El mapa tiene más de una meta (M).');
+        meta = T(f, c); caracter = '.';
+        R.on && R.p(['meta = (f, c)', '# la meta se pisa'], V(), `Es una ${cod('M')}: se anota que la meta está en ${cod(py(meta))} y la casilla se guarda como llano.`, ver());
+      } else if (caracter === 'O') {
+        objetos.push(T(f, c)); caracter = '.';
+        R.on && R.p(['objetos.append((f, c))', '# los objetos están'], V(), `Es una ${cod('O')}: la casilla ${cod(py(T(f, c)))} se agrega a la lista de objetos y se guarda como llano.`, ver());
+      } else if (!(caracter in COLORES)) {
+        throw new Error('Carácter desconocido en el mapa: ' + caracter);
+      }
+      terreno.set(T(f, c), caracter);
+      R.on && R.p('terreno[(f, c)] = caracter', V(), `Se guarda la casilla ${cod(py(T(f, c)))} con terreno ${cod(py(caracter))} (${TERRENO[caracter]})` + (original !== caracter ? `, aunque en el texto decía ${cod(py(original))}.` : '.'), ver());
+    }
+  }
+  f = undefined; c = undefined; caracter = undefined; linea = undefined;
+  if (inicio === null || meta === null) throw new Error('El mapa necesita un inicio (I) y una meta (M).');
+  R.on && R.p('if inicio is None or meta is None', V(), 'Se revisa que el mapa tenga inicio y meta. Los tiene, así que no hay error.', ver());
+
+  const mapa = { terreno, filas, columnas, inicio, meta, objetos };
+  if (R.on) {
+    const mostrado = new Dic().set('terreno', terreno).set('filas', filas).set('columnas', columnas).set('inicio', inicio).set('meta', meta).set('objetos', objetos);
+    R.p("return {'terreno'", V(), 'Se devuelve todo junto en un diccionario. En los dibujos el inicio es el punto verde y la meta es la estrella.', { texto: { crudo: texto, lineas, columnas, rellenas }, lienzos: [lzCuadricula(mapa, {}, 'El mapa terminado')] });
+    R.fin(mostrado);
+  }
+  return mapa;
+}
+
+// ---------------------------------------------------------------- vecinos
+function vecinos(mapa, casilla) {
+  const R = tomar();
+  let f, c, resultado, df, dc, vecina, terreno;
+  const V = () => ({ casilla, f, c, df, dc, vecina, terreno, resultado });
+  const ver = () => ({ lienzos: [lzCuadricula(mapa, { actual: casilla, vecina, pendientes: resultado ? resultado.map(r => r[0]) : [] })], roles: ['actual', 'vecina', 'pendiente'] });
+  R.on && R.entradas({ mapa: EL_MAPA, casilla });
+  [f, c] = casilla;
+  R.on && R.p('f, c = casilla', V(), `La casilla ${cod(py(casilla))} se separa en su fila ${cod('f = ' + f)} y su columna ${cod('c = ' + c)}.`, ver());
+  resultado = [];
+  R.on && R.p('resultado = []', V(), 'Se empieza con una lista vacía. Ahí se van a guardar las vecinas a las que sí se puede pasar.', ver());
+  MOVIMIENTOS.forEach(([a, b], i) => {
+    df = a; dc = b;
+    vecina = T(f + df, c + dc);
+    terreno = mapa.terreno.has(vecina) ? mapa.terreno.get(vecina) : '#';
+    const fuera = !mapa.terreno.has(vecina);
+    R.on && R.p(['for df, dc in MOVIMIENTOS', 'vecina = (f + df, c + dc)', "terreno = mapa['terreno'].get"], V(),
+      `Movimiento hacia <b>${NOMBRE_MOVIMIENTO[i]}</b>: ${cod(`(${df}, ${dc})`)}. Se suma a la casilla y da ${cod(py(vecina))}. ` +
+      (fuera ? `Esa posición queda fuera del mapa, así que ${cod('get')} devuelve ${cod("'#'")}: cuenta como muro.` : `Ahí hay ${TERRENO[terreno]}.`), ver());
+    if (terreno !== '#') {
+      resultado.push(T(vecina, COSTOS[terreno]));
+      R.on && R.p('resultado.append', V(), `No es muro: se agrega el par ${cod(py(T(vecina, COSTOS[terreno])))}, la vecina y lo que cuesta entrar a ella.`, ver());
+    } else {
+      R.on && R.p("if terreno != '#'", V(), 'Es muro: no se agrega.', ver());
+    }
+  });
+  vecina = undefined; df = undefined; dc = undefined; terreno = undefined;
+  R.on && R.p('return resultado', V(), `Se devuelven las ${resultado.length} vecinas, siempre en el orden arriba, derecha, abajo, izquierda. Son las aristas que salen de esta casilla.`, ver());
+  R.on && R.fin(resultado);
+  return resultado;
+}
+
+// ---------------------------------------------------------------- construir_grafo
+function construirGrafo(mapa) {
+  const R = tomar();
+  const nodos = [], aristas = [];
+  let casilla, terreno, vecina, costo;
+  const V = () => ({ casilla, terreno, vecina, costo, grafo: crudo(`grafo con ${nodos.length} vértices y ${aristas.length} aristas`) });
+  const ver = () => {
+    let p = pzAristas(aristas.map(a => [a[0], a[1]]));
+    if (vecina) p.push({ t: 'linea', pts: [centro(casilla), centro(vecina)], color: '#ff6d00', ancho: 7 });
+    p = p.concat(pzNodos(mapa, nodos), pzTextosNodos(mapa, nodos), pzMarcas({ inicio: nodos.some(n => igual(n, mapa.inicio)) && mapa.inicio, meta: nodos.some(n => igual(n, mapa.meta)) && mapa.meta }, 0.2));
+    return { lienzos: [lzCuadricula(mapa, { actual: casilla, vecina }, 'Cuadrícula'), lienzo(mapa, p, 'Grafo que se va armando')], roles: ['actual', 'vecina'] };
+  };
+  R.on && R.entradas({ mapa: EL_MAPA });
+  R.on && R.p('grafo = nx.DiGraph()', V(), 'Se crea un grafo dirigido vacío: todavía no tiene vértices ni aristas. Es dirigido porque ir de llano a agua cuesta 5, pero regresar cuesta 1.', ver());
+  for (const [cel, t] of mapa.terreno.pares) {
+    casilla = cel; terreno = t; vecina = undefined; costo = undefined;
+    if (t === '#') {
+      R.on && R.p("if terreno != '#'", V(), `La casilla ${cod(py(cel))} es muro: no es un vértice del grafo y se salta.`, ver());
+      continue;
+    }
+    nodos.push(cel);
+    R.on && R.p('grafo.add_node(casilla)', V(), `La casilla ${cod(py(cel))} es ${TERRENO[t]}: se agrega como vértice.`, ver());
+    for (const [v, w] of vecinos(mapa, cel)) {
+      vecina = v; costo = w;
+      aristas.push([cel, v, w]);
+      R.on && R.p('grafo.add_edge(casilla, vecina', V(), `Arista de ${cod(py(cel))} hacia ${cod(py(v))} con peso ${w}: lo que cuesta entrar a la vecina.`, ver());
+    }
+  }
+  casilla = undefined; vecina = undefined; terreno = undefined; costo = undefined;
+  R.on && R.p('return grafo', V(), `El grafo quedó con ${nodos.length} vértices y ${aristas.length} aristas dirigidas. En el dibujo cada par de vecinas se ve como una sola línea, pero son dos aristas: una de ida y una de regreso.`, { lienzos: [lzCuadricula(mapa, {}, 'Cuadrícula'), lzGrafo(mapa, {}, 'Grafo terminado')] });
+  R.on && R.fin(crudo(`un grafo dirigido con ${nodos.length} vértices y ${aristas.length} aristas`));
+  return { nodos, aristas };
+}
+
+// ---------------------------------------------------------------- etiqueta
+function etiqueta(mapa, casilla) {
+  const R = tomar();
+  const ver = () => ({ lienzos: [lzCuadricula(mapa, { actual: casilla })], roles: ['actual'] });
+  const i = mapa.objetos.findIndex(o => igual(o, casilla));
+  R.on && R.entradas({ mapa: EL_MAPA, casilla });
+  R.on && R.p("if casilla in mapa['objetos']", { casilla, "mapa['objetos']": mapa.objetos }, `Se pregunta si ${cod(py(casilla))} está en la lista de objetos del mapa. ` + (i >= 0 ? 'Sí está.' : 'No está.'), ver());
+  const texto = i >= 0 ? 'O' + (i + 1) : '';
+  if (i >= 0) {
+    R.on && R.p("return 'O' + str(", { casilla, "mapa['objetos']": mapa.objetos, posición: i }, `${cod('index')} dice que está en la posición ${i} de la lista, contando desde 0. Se le suma 1 y se pega a la letra O: ${cod(py(texto))}.`, ver());
+  } else {
+    R.on && R.p("return ''", { casilla, "mapa['objetos']": mapa.objetos }, 'No es un objeto: se devuelve un texto vacío. Si es el inicio o la meta, tampoco lleva texto, porque se dibujan con el punto verde y la estrella.', ver());
+  }
+  R.on && R.fin(texto);
+  return texto;
+}
+
+// ---------------------------------------------------------------- marcar_inicio_y_meta
+function marcarInicioYMeta(inicio, meta, tamaño) {
+  const R = tomar();
+  const base = { w: 4, h: 3, escala: 1.3 };
+  const V = () => ({ inicio, meta, tamaño });
+  const punto = { t: 'circ', x: inicio[0], y: inicio[1], r: 0.26, color: COLOR_INICIO, borde: '#000' };
+  const estrella = { t: 'estrella', x: meta[0], y: meta[1], r: 0.42 };
+  R.on && R.entradas({ eje: EL_EJE, inicio, meta, tamaño });
+  R.on && R.p('def marcar_inicio_y_meta', V(), `Se recibe dónde va cada símbolo, en coordenadas del dibujo: ${cod('(x, y)')}. Todavía no hay nada dibujado.`, { lienzos: [{ ...base, piezas: [] }], leyenda: false });
+  R.on && R.p("marker='o'", V(), `${cod('plot')} con un solo punto y ${cod("marker='o'")} dibuja un círculo relleno en ${cod(py(inicio))}. Es el inicio.`, { lienzos: [{ ...base, piezas: [punto] }], leyenda: false });
+  R.on && R.p("marker='*'", V(), `Otro ${cod('plot')}, ahora con ${cod("marker='*'")}: una estrella en ${cod(py(meta))}. Es la meta. Se dibuja más grande porque sus puntas la hacen ver más chica.`, { lienzos: [{ ...base, piezas: [punto, estrella] }], leyenda: false });
+  R.on && R.fin(undefined);
+}
+
+// La leyenda con los dos símbolos: el punto verde del inicio y la estrella de la meta.
+const HTML_SIMBOLOS = () => `<div class="leyenda"><span><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="${COLOR_INICIO}" stroke="#000"/></svg>Inicio</span><span><svg viewBox="0 0 16 16"><polygon points="${puntosEstrella(8, 8.5, 8)}" fill="${COLOR_META}" stroke="#000" stroke-width=".8"/></svg>Meta</span></div>`;
+
+// ---------------------------------------------------------------- simbolos_de_leyenda
+function simbolosDeLeyenda() {
+  const R = tomar();
+  R.on && R.entradas({});
+  R.on && R.p('return [Line2D', {}, `Se crean dos elementos de leyenda. Cada uno es una ${cod('Line2D')} sin datos y sin línea: solo muestra su marcador junto a su nombre.`,
+    { html: HTML_SIMBOLOS() });
+  R.on && R.fin(crudo("una lista con dos elementos de leyenda: 'Inicio' y 'Meta'"));
+}
+
+// ---------------------------------------------------------------- dibujar_cuadricula
+function dibujarCuadricula(mapa, ruta, exploradas) {
+  const R = tomar();
+  let lado, marcadas, f, c, terreno, xs, ys;
+  const piezas = [];
+  const V = () => ({ ruta, exploradas, lado, marcadas, f, c, terreno, xs, ys });
+  const ver = () => ({ lienzos: [lienzo(mapa, piezas.slice())] });
+  R.on && R.entradas({ eje: EL_EJE, mapa: EL_MAPA, ruta, exploradas });
+  lado = Math.round(320 / mapa.columnas * 100) / 100;
+  R.on && R.p('lado = 320', V(), `Tamaño aproximado de una casilla, en puntos. Sirve para que los textos y los símbolos salgan proporcionados al mapa.`, ver());
+  marcadas = exploradas ? new Conj(exploradas) : null;
+  R.on && R.p('marcadas = set(exploradas)', V(), exploradas ? 'La lista de exploradas se pasa a conjunto: preguntar si una casilla está ahí es mucho más rápido.' : 'No se dieron casillas exploradas, así que no se va a poner ningún velo.', ver());
+  for (const [[ff, cc], t] of mapa.terreno.pares) {
+    f = ff; c = cc; terreno = t;
+    piezas.push({ t: 'rect', x: c, y: f, w: 1, h: 1, color: COLORES[t], borde: '#000' });
+    R.on && R.p('eje.add_patch(Rectangle((c, f), 1, 1, facecolor=COLORES', V(), `Casilla ${cod(py(T(f, c)))}: un cuadro de lado 1 con esquina en ${cod(`x = ${c}, y = ${f}`)}, del color del ${TERRENO[t]} y con borde negro.`, ver());
+    if (marcadas && t !== '#' && !marcadas.has(T(f, c))) {
+      piezas.push({ t: 'rect', x: c, y: f, w: 1, h: 1, color: '#fff', alfa: 0.7 });
+      R.on && R.p("facecolor='white', alpha=0.7", V(), 'Esta casilla no se exploró: se le pone encima un cuadro blanco semitransparente para que se vea pálida.', ver());
+    }
+    const nombre = etiqueta(mapa, T(f, c));
+    if (nombre) {
+      piezas.push({ t: 'texto', x: c + 0.5, y: f + 0.5, s: nombre, tam: 0.34, negrita: true });
+      R.on && R.p('eje.text(c + 0.5, f + 0.5', V(), `Aquí hay un objeto: se escribe ${cod(nombre)} en el centro de la casilla. En las demás casillas el texto es vacío y no se ve nada.`, ver());
+    }
+  }
+  f = undefined; c = undefined; terreno = undefined;
+  if (ruta) {
+    xs = ruta.map(([, cc]) => cc + 0.5);
+    ys = ruta.map(([ff]) => ff + 0.5);
+    R.on && R.p(['xs = [c + 0.5', 'ys = [f + 0.5'], V(), 'Se calcula el centro de cada casilla de la ruta: la columna más 0.5 en x y la fila más 0.5 en y.', ver());
+    piezas.push(...pzRuta(ruta));
+    R.on && R.p('eje.plot(xs, ys', V(), `${cod('plot')} une esos puntos en orden con una línea roja: es la ruta.`, ver());
+  } else {
+    R.on && R.p('if ruta:', V(), 'No se dio ninguna ruta, así que no se dibuja la línea roja.', ver());
+  }
+  piezas.push(...pzMarcas(mapa));
+  R.on && R.p('marcar_inicio_y_meta(eje', V(), 'El punto verde va en el centro de la casilla de inicio y la estrella en el centro de la casilla de meta.', ver());
+  R.on && R.p(['eje.set_xlim', 'eje.set_ylim', 'eje.set_aspect', 'eje.set_xticks', 'eje.set_yticks'], V(), `Se fijan los límites del dibujo. El eje vertical va al revés (de ${mapa.filas} a 0) para que la fila 0 quede arriba, igual que en el texto. ${cod("set_aspect('equal')")} hace que las casillas salgan cuadradas, y se quitan los números de los ejes.`, ver());
+  R.on && R.fin(undefined);
+}
+
+// ---------------------------------------------------------------- dibujar_grafo
+function dibujarGrafo(mapa, ruta, exploradas) {
+  const R = tomar();
+  let lado, posiciones, nodos, marcadas, colores, opacidad, textos, tramos;
+  let piezas = [];
+  const V = () => ({ ruta, exploradas, lado, posiciones, nodos, marcadas, colores, opacidad, textos, tramos });
+  const ver = () => ({ lienzos: [lienzo(mapa, piezas.slice())] });
+  R.on && R.entradas({ eje: EL_EJE, mapa: EL_MAPA, ruta, exploradas });
+  const grafo = construirGrafo(mapa);
+  R.on && R.p('grafo = construir_grafo(mapa).to_undirected()', V(), `Se arma el grafo del mapa y se le quitan las direcciones con ${cod('to_undirected')}: así cada par de vecinas se dibuja con una sola línea y no con dos flechas encimadas. Todavía no se dibuja nada.`, ver());
+  lado = Math.round(320 / mapa.columnas * 100) / 100;
+  R.on && R.p('lado = 320', V(), 'Tamaño aproximado de una casilla, en puntos, para dar tamaño a los vértices y a sus textos.', ver());
+  posiciones = new Dic();
+  grafo.nodos.forEach(([f, c]) => posiciones.set(T(f, c), T(c, -f)));
+  R.on && R.p('posiciones = {', V(), `NetworkX necesita saber en qué punto del dibujo va cada vértice. A la casilla ${cod('(f, c)')} le toca ${cod('(c, -f)')}: la columna es la x, y la fila con signo menos es la y, para que la fila 0 quede arriba.`, ver());
+  nodos = grafo.nodos.slice();
+  marcadas = new Conj(exploradas || nodos);
+  R.on && R.p(['nodos = list(grafo.nodes)', 'marcadas = set(exploradas)'], V(), 'Se fija el orden de los vértices en una lista. Las listas de colores y opacidades que siguen van en ese mismo orden.', ver());
+  colores = nodos.map(n => COLORES[mapa.terreno.get(n)]);
+  opacidad = nodos.map(n => marcadas.has(n) ? 1.0 : 0.25);
+  R.on && R.p(['colores = [COLORES', 'opacidad = [1.0'], V(), 'Un color por vértice, el de su terreno, y una opacidad: 1 si se exploró y 0.25 (pálido) si no.', ver());
+  textos = new Dic();
+  nodos.forEach(n => textos.set(n, igual(n, mapa.inicio) || igual(n, mapa.meta) ? '' : (etiqueta(mapa, n) || COSTOS[mapa.terreno.get(n)])));
+  R.on && R.p(['textos = {}', "textos[n] = ''", 'textos[n] = etiqueta'], V(), 'El texto de cada vértice: el nombre del objeto si lo hay y, si no, lo que cuesta entrar a esa casilla. El inicio y la meta se quedan sin texto porque encima va su símbolo.', ver());
+
+  piezas = pzAristas(aristasDelMapa(mapa));
+  R.on && R.p("nx.draw_networkx_edges(grafo, posiciones, ax=eje, edge_color='gray')", V(), 'Primera capa: todas las aristas, en gris. Se dibujan primero para que queden debajo de los vértices.', ver());
+  if (ruta) {
+    tramos = [];
+    for (let i = 0; i + 1 < ruta.length; i++) tramos.push(T(ruta[i], ruta[i + 1]));
+    R.on && R.p('tramos = list(zip(ruta, ruta[1:]))', V(), `${cod('zip(ruta, ruta[1:])')} empareja cada casilla de la ruta con la que le sigue. Cada par es una arista de la ruta.`, ver());
+    piezas = piezas.concat(pzRuta(ruta, 7));
+    R.on && R.p('edgelist=tramos', V(), 'Segunda capa: solo las aristas de la ruta, en rojo y más gruesas, encima de las grises.', ver());
+  } else {
+    R.on && R.p('if ruta:', V(), 'No se dio ninguna ruta, así que no hay aristas rojas.', ver());
+  }
+  piezas = piezas.concat(pzNodos(mapa, nodos, exploradas ? marcadas : null));
+  R.on && R.p('nx.draw_networkx_nodes', V(), `Tercera capa: los vértices, cada uno con su color y su opacidad. ${cod('node_size')} es un área, por eso el tamaño va elevado al cuadrado.`, ver());
+  piezas = piezas.concat(pzTextosNodos(mapa, nodos));
+  R.on && R.p('nx.draw_networkx_labels', V(), 'Cuarta capa: el texto de cada vértice.', ver());
+  piezas = piezas.concat(pzMarcas(mapa, 0.2));
+  R.on && R.p('marcar_inicio_y_meta(eje', V(), 'Encima de todo, el punto verde sobre el vértice del inicio y la estrella sobre el de la meta.', ver());
+  R.on && R.p(['eje.set_xlim', 'eje.set_ylim', 'eje.set_aspect', "eje.axis('off')"], V(), 'Se usan los mismos límites que en la cuadrícula para que los dos dibujos se correspondan casilla por casilla, y se quitan el marco y los ejes.', ver());
+  R.on && R.fin(undefined);
+}
+
+// ---------------------------------------------------------------- mostrar_mapa
+function mostrarMapa(mapa, titulo, ruta, exploradas) {
+  const R = tomar();
+  let alto;
+  const V = () => ({ titulo, ruta, exploradas, alto });
+  const vacio = t => ({ titulo: t, w: mapa.columnas, h: mapa.filas, piezas: [] });
+  const e = { ruta, exploradas, velo: exploradas ? new Conj(exploradas) : null };
+  const cuadricula = t => lienzo(mapa, pzCeldas(mapa).concat(e.velo ? pzVelo(mapa, e.velo) : [], pzNombresObjetos(mapa), pzRuta(ruta), pzMarcas(mapa)), t);
+  R.on && R.entradas({ mapa: EL_MAPA, titulo, ruta, exploradas });
+  alto = Math.round((5.5 * mapa.filas / mapa.columnas + 1.3) * 100) / 100;
+  R.on && R.p('alto = 5.5', V(), `El alto de la figura depende de la forma del mapa (${mapa.filas} filas por ${mapa.columnas} columnas), para que las casillas salgan cuadradas.`, null);
+  R.on && R.p('plt.subplots(1, 2', V(), `${cod('subplots(1, 2)')} crea una figura con 1 renglón y 2 columnas de dibujos: dos zonas vacías, una al lado de la otra.`, { lienzos: [vacio(''), vacio('')], leyenda: false });
+  R.on && R.p('dibujar_cuadricula(izquierda', V(), 'En la zona izquierda se dibuja la cuadrícula.', { lienzos: [cuadricula(''), vacio('')], leyenda: false });
+  R.on && R.p('dibujar_grafo(derecha', V(), 'En la zona derecha se dibuja el grafo del mismo mapa.', { lienzos: [cuadricula(''), lzGrafo(mapa, e, '')], leyenda: false });
+  R.on && R.p(["izquierda.set_title('Cuadrícula')", "derecha.set_title('Grafo')"], V(), 'Cada zona recibe su título.', { lienzos: [cuadricula('Cuadrícula'), lzGrafo(mapa, e, 'Grafo')], leyenda: false });
+  R.on && R.p('figura.suptitle', V(), `${cod('suptitle')} pone un título a toda la figura, arriba de los dos dibujos.`, { titulo, lienzos: [cuadricula('Cuadrícula'), lzGrafo(mapa, e, 'Grafo')], leyenda: false });
+  R.on && R.p(['cuadros = [Patch', 'figura.legend'], V(), 'La leyenda: un cuadro de color por cada terreno, más los dos símbolos de inicio y meta. Se coloca abajo y al centro.', { titulo, lienzos: [cuadricula('Cuadrícula'), lzGrafo(mapa, e, 'Grafo')] });
+  R.on && R.p('figura.tight_layout', V(), `${cod('tight_layout')} acomoda los dibujos para que no se encimen, dejando libre la franja de abajo para la leyenda.`, { titulo, lienzos: [cuadricula('Cuadrícula'), lzGrafo(mapa, e, 'Grafo')] });
+  R.on && R.p('plt.show()', V(), 'Se muestra la figura terminada.', { titulo, lienzos: [cuadricula('Cuadrícula'), lzGrafo(mapa, e, 'Grafo')] });
+  R.on && R.fin(undefined);
+}
+
+// ---------------------------------------------------------------- reconstruir_ruta
+function reconstruirRuta(padres, meta, mapa) {
+  const R = tomar();
+  let ruta, casilla;
+  const V = () => ({ meta, ruta, casilla, padres });
+  const ver = () => mapa ? { lienzos: [lzCuadricula(mapa, { exploradas: ruta, actual: casilla })], roles: ['actual', 'explorada'] } : null;
+  R.on && R.entradas({ padres, meta });
+  ruta = [];
+  casilla = meta;
+  R.on && R.p(['ruta = []', 'casilla = meta'], V(), `Se empieza con la ruta vacía y parado en la meta, ${cod(py(meta))}. La ruta se arma al revés: de la meta hacia el inicio.`, ver());
+  while (casilla !== null) {
+    ruta.push(casilla);
+    R.on && R.p(['while casilla is not None', 'ruta.append(casilla)'], V(), `${cod(py(casilla))} no es ${cod('None')}, así que se agrega a la ruta.`, ver());
+    const anterior = casilla;
+    casilla = padres.get(casilla);
+    R.on && R.p('casilla = padres[casilla]', V(), casilla === null
+      ? `El padre de ${cod(py(anterior))} es ${cod('None')}: esa casilla es el inicio y ya no hay a dónde retroceder.`
+      : `Se retrocede: a ${cod(py(anterior))} se llegó desde ${cod(py(casilla))}.`, ver());
+  }
+  casilla = undefined;
+  ruta.reverse();
+  R.on && R.p('ruta.reverse()', V(), 'La ruta quedó de la meta al inicio. Se voltea para que vaya del inicio a la meta.', mapa ? { lienzos: [lzCuadricula(mapa, { ruta })], roles: ['ruta'] } : null);
+  R.on && R.p('return ruta', V(), `Se devuelve la ruta: ${ruta.length} casillas, es decir, ${ruta.length - 1} pasos.`, mapa ? { lienzos: [lzCuadricula(mapa, { ruta })], roles: ['ruta'] } : null);
+  R.on && R.fin(ruta);
+  return ruta;
+}
+
+// ---------------------------------------------------------------- estimacion
+function estimacion(casilla, meta, mapa) {
+  const R = tomar();
+  let filas_que_faltan, columnas_que_faltan;
+  const V = () => ({ casilla, meta, filas_que_faltan, columnas_que_faltan });
+  const ver = etapa => {
+    if (!mapa) return null;
+    const p = piezasCuadricula(mapa, { actual: casilla });
+    const esquina = T(meta[0], casilla[1]);
+    if (etapa >= 1) p.push({ t: 'linea', pts: [centro(casilla), centro(esquina)], color: '#6a1b9a', ancho: 6 });
+    if (etapa >= 2) p.push({ t: 'linea', pts: [centro(esquina), centro(meta)], color: '#ef6c00', ancho: 6 });
+    return { lienzos: [lienzo(mapa, p)], roles: ['actual'] };
+  };
+  R.on && R.entradas({ casilla, meta });
+  filas_que_faltan = Math.abs(casilla[0] - meta[0]);
+  R.on && R.p('filas_que_faltan = abs', V(), `Filas: ${cod(`abs(${casilla[0]} - ${meta[0]}) = ${filas_que_faltan}`)}. ${cod('abs')} quita el signo, porque da igual si la meta está arriba o abajo. Es la línea morada.`, ver(1));
+  columnas_que_faltan = Math.abs(casilla[1] - meta[1]);
+  R.on && R.p('columnas_que_faltan = abs', V(), `Columnas: ${cod(`abs(${casilla[1]} - ${meta[1]}) = ${columnas_que_faltan}`)}. Es la línea naranja.`, ver(2));
+  const total = filas_que_faltan + columnas_que_faltan;
+  R.on && R.p('return filas_que_faltan + columnas_que_faltan', V(), `La estimación es la suma: ${filas_que_faltan} + ${columnas_que_faltan} = <b>${total}</b>. Las líneas pasan encima de muros y de terrenos caros: la estimación no se fija en ellos, y por eso nunca se pasa del costo real.`, ver(2));
+  R.on && R.fin(total);
+  return total;
+}
+
+// ---------------------------------------------------------------- bfs
+function bfs(mapa, inicio, meta) {
+  const R = tomar();
+  let cola, padres, exploradas, actual, vecina;
+  const V = () => ({ inicio, meta, actual, vecina, cola: cola && crudo('deque(' + py(cola) + ')'), exploradas, padres });
+  const ver = (x = {}) => vistaBusqueda(mapa, { actual, vecina, exploradas, pendientes: cola, ...x });
+  R.on && R.entradas({ mapa: EL_MAPA, inicio, meta });
+  cola = [inicio]; padres = new Dic().set(inicio, null); exploradas = [];
+  R.on && R.p(['cola = deque([inicio])', 'padres = {inicio: None}', 'exploradas = []'], V(), 'La cola empieza solo con el inicio. En <code>padres</code> se anota desde dónde se llegó a cada casilla: el inicio no tiene padre.', ver());
+  while (cola.length) {
+    actual = cola.shift(); vecina = undefined;
+    R.on && R.p('actual = cola.popleft()', V(), `Sale de la cola la casilla que lleva más tiempo esperando: ${cod(py(actual))}. Se saca por la izquierda.`, ver());
+    exploradas.push(actual);
+    R.on && R.p('exploradas.append(actual)', V(), `${cod(py(actual))} queda explorada. Van ${exploradas.length}.`, ver());
+    if (igual(actual, meta)) {
+      const ruta = reconstruirRuta(padres, meta);
+      R.on && R.p(['if actual == meta', 'return reconstruir_ruta'], { ...V(), ruta }, `Es la meta. Se arma la ruta caminando hacia atrás por <code>padres</code>: ${ruta.length - 1} pasos.`, ver({ ruta, actual: null }));
+      R.on && R.fin(T(ruta, exploradas));
+      return T(ruta, exploradas);
+    }
+    const lista = vecinos(mapa, actual);
+    R.on && R.p('for vecina, costo in vecinos', V(), `No es la meta. Se revisan sus ${lista.length} vecinas, en orden: ${cod(py(lista.map(v => v[0])))}.`, ver());
+    for (const [v] of lista) {
+      vecina = v;
+      if (!padres.has(v)) {
+        padres.set(v, actual); cola.push(v);
+        R.on && R.p(['if vecina not in padres', 'padres[vecina] = actual', 'cola.append(vecina)'], V(), `${cod(py(v))} no se había descubierto: se anota que se llegó a ella desde ${cod(py(actual))} y entra al final de la cola.`, ver());
+      } else {
+        R.on && R.p('if vecina not in padres', V(), `${cod(py(v))} ya estaba descubierta: se ignora.`, ver());
+      }
+    }
+  }
+  actual = undefined; vecina = undefined;
+  R.on && R.p('return None, exploradas', V(), 'La cola se quedó vacía sin llegar a la meta: no hay camino. Se devuelve <code>None</code> como ruta.', ver({ actual: null }));
+  R.on && R.fin(T(null, exploradas));
+  return T(null, exploradas);
+}
+
+// ---------------------------------------------------------------- dfs
+function dfs(mapa, inicio, meta) {
+  const R = tomar();
+  let pila, padres, exploradas, vistas, actual, vecina;
+  const V = () => ({ inicio, meta, actual, vecina, pila, exploradas, vistas, padres });
+  const ver = (x = {}) => vistaBusqueda(mapa, { actual, vecina, exploradas, pendientes: pila.filter(p => !vistas.has(p)), ...x });
+  R.on && R.entradas({ mapa: EL_MAPA, inicio, meta });
+  pila = [inicio]; padres = new Dic().set(inicio, null); exploradas = []; vistas = new Conj();
+  R.on && R.p(['pila = [inicio]', 'padres = {inicio: None}', 'exploradas = []', 'vistas = set()'], V(), 'La pila empieza solo con el inicio. La última casilla de la lista es la de arriba de la pila.', ver());
+  while (pila.length) {
+    actual = pila.pop(); vecina = undefined;
+    R.on && R.p('actual = pila.pop()', V(), `Sale de la pila la última casilla que entró: ${cod(py(actual))}.`, ver());
+    if (vistas.has(actual)) {
+      R.on && R.p(['if actual in vistas', 'continue'], V(), `${cod(py(actual))} ya se había explorado. Estaba repetida en la pila: se ignora y se saca la siguiente.`, ver());
+      continue;
+    }
+    vistas.add(actual); exploradas.push(actual);
+    R.on && R.p(['vistas.add(actual)', 'exploradas.append(actual)'], V(), `${cod(py(actual))} queda explorada. Van ${exploradas.length}.`, ver());
+    if (igual(actual, meta)) {
+      const ruta = reconstruirRuta(padres, meta);
+      R.on && R.p(['if actual == meta', 'return reconstruir_ruta'], { ...V(), ruta }, `Es la meta. Se arma la ruta caminando hacia atrás por <code>padres</code>: ${ruta.length - 1} pasos.`, ver({ ruta, actual: null }));
+      R.on && R.fin(T(ruta, exploradas));
+      return T(ruta, exploradas);
+    }
+    const lista = vecinos(mapa, actual).slice().reverse();
+    R.on && R.p('for vecina, costo in reversed', V(), `No es la meta. Sus vecinas se recorren al revés, ${cod(py(lista.map(v => v[0])))}, para que la de arriba quede hasta encima de la pila y sea la primera en salir.`, ver());
+    for (const [v] of lista) {
+      vecina = v;
+      if (!vistas.has(v)) {
+        padres.set(v, actual); pila.push(v);
+        R.on && R.p(['if vecina not in vistas', 'padres[vecina] = actual', 'pila.append(vecina)'], V(), `${cod(py(v))} no se ha explorado: se anota que se llegó a ella desde ${cod(py(actual))} y entra arriba de la pila.`, ver());
+      } else {
+        R.on && R.p('if vecina not in vistas', V(), `${cod(py(v))} ya se exploró: se ignora.`, ver());
+      }
+    }
+  }
+  actual = undefined; vecina = undefined;
+  R.on && R.p('return None, exploradas', V(), 'La pila se quedó vacía sin llegar a la meta: no hay camino. Se devuelve <code>None</code> como ruta.', ver({ actual: null }));
+  R.on && R.fin(T(null, exploradas));
+  return T(null, exploradas);
+}
+
+// Casillas que siguen esperando en una cola de prioridad (el último dato de cada elemento es la casilla).
+const enEspera = (cola, vistas) => cola.map(e => e[e.length - 1]).filter(c => !vistas || !vistas.has(c));
+const NOTA_MONTICULO = ' La cola se guarda como montículo: el primero de la lista es siempre el menor, y el resto no está en orden.';
+
+// ---------------------------------------------------------------- dijkstra
+function dijkstra(mapa, inicio, meta) {
+  const R = tomar();
+  let cola, costos, padres, exploradas, vistas, costo, actual, vecina, paso, nuevo;
+  const V = () => ({ inicio, meta, costo, actual, vecina, paso, nuevo, cola, exploradas, costos, vistas, padres });
+  const ver = (x = {}) => vistaBusqueda(mapa, { actual, vecina, exploradas, pendientes: enEspera(cola, vistas), numeros: costos, ...x });
+  R.on && R.entradas({ mapa: EL_MAPA, inicio, meta });
+  cola = [T(0, inicio)]; costos = new Dic().set(inicio, 0); padres = new Dic().set(inicio, null); exploradas = []; vistas = new Conj();
+  R.on && R.p(['cola = [(0, inicio)]', 'costos = {inicio: 0}', 'padres = {inicio: None}', 'exploradas = []', 'vistas = set()'], V(), 'La cola de prioridad empieza con el par <code>(0, inicio)</code>: llegar al inicio cuesta 0. El número en cada casilla del dibujo es el menor costo conocido para llegar a ella.' + NOTA_MONTICULO, ver());
+  while (cola.length) {
+    [costo, actual] = heappop(cola); vecina = undefined; paso = undefined; nuevo = undefined;
+    R.on && R.p('costo, actual = heapq.heappop(cola)', V(), `Sale el par de menor costo: ${cod(py(T(costo, actual)))}. Llegar a ${cod(py(actual))} cuesta ${costo}.`, ver());
+    if (vistas.has(actual)) {
+      R.on && R.p(['if actual in vistas', 'continue'], V(), `${cod(py(actual))} ya se había explorado con un costo menor. Este par era viejo: se ignora.`, ver());
+      continue;
+    }
+    vistas.add(actual); exploradas.push(actual);
+    R.on && R.p(['vistas.add(actual)', 'exploradas.append(actual)'], V(), `${cod(py(actual))} queda explorada: su costo ${costo} ya es definitivo. Van ${exploradas.length}.`, ver());
+    if (igual(actual, meta)) {
+      const ruta = reconstruirRuta(padres, meta);
+      R.on && R.p(['if actual == meta', 'return reconstruir_ruta'], { ...V(), ruta }, `Es la meta, y llegó con costo ${costo}. Como siempre sale lo más barato, ya no puede existir una ruta que cueste menos.`, ver({ ruta, actual: null }));
+      R.on && R.fin(T(ruta, exploradas));
+      return T(ruta, exploradas);
+    }
+    const lista = vecinos(mapa, actual);
+    R.on && R.p('for vecina, paso in vecinos', V(), `No es la meta. Se revisan sus vecinas con lo que cuesta entrar a cada una: ${cod(py(lista))}.`, ver());
+    for (const [v, w] of lista) {
+      vecina = v; paso = w; nuevo = costo + paso;
+      const antes = costos.get(v);
+      if (antes === undefined || nuevo < antes) {
+        costos.set(v, nuevo); padres.set(v, actual); heappush(cola, T(nuevo, v));
+        R.on && R.p(['nuevo = costo + paso', 'if vecina not in costos or nuevo < costos[vecina]', 'costos[vecina] = nuevo', 'padres[vecina] = actual', 'heapq.heappush(cola, (nuevo, vecina))'], V(),
+          `Llegar a ${cod(py(v))} pasando por aquí cuesta ${costo} + ${paso} = <b>${nuevo}</b>. ` + (antes === undefined ? 'Es la primera vez que se llega a ella' : `Mejora el ${antes} que se conocía`) + `: se anota el costo, el padre, y entra a la cola.`, ver());
+      } else {
+        R.on && R.p(['nuevo = costo + paso', 'if vecina not in costos or nuevo < costos[vecina]'], V(), `Llegar a ${cod(py(v))} pasando por aquí costaría ${costo} + ${paso} = ${nuevo}. Ya se conoce una forma de ${antes}, que no es peor: se ignora.`, ver());
+      }
+    }
+  }
+  actual = undefined; vecina = undefined; paso = undefined; nuevo = undefined; costo = undefined;
+  R.on && R.p('return None, exploradas', V(), 'La cola se quedó vacía sin llegar a la meta: no hay camino. Se devuelve <code>None</code> como ruta.', ver({ actual: null }));
+  R.on && R.fin(T(null, exploradas));
+  return T(null, exploradas);
+}
+
+// ---------------------------------------------------------------- voraz
+function voraz(mapa, inicio, meta) {
+  const R = tomar();
+  let cola, padres, exploradas, distancia, actual, vecina;
+  const estimadas = new Dic();
+  const V = () => ({ inicio, meta, distancia, actual, vecina, cola, exploradas, padres });
+  const ver = (x = {}) => vistaBusqueda(mapa, { actual, vecina, exploradas, pendientes: enEspera(cola), numeros: estimadas, ...x });
+  R.on && R.entradas({ mapa: EL_MAPA, inicio, meta });
+  cola = [T(estimacion(inicio, meta), inicio)]; padres = new Dic().set(inicio, null); exploradas = [];
+  estimadas.set(inicio, estimacion(inicio, meta));
+  R.on && R.p(['cola = [(estimacion(inicio, meta), inicio)]', 'padres = {inicio: None}', 'exploradas = []'], V(), `La cola de prioridad empieza con el inicio y su estimación hasta la meta: ${estimacion(inicio, meta)}. El número en cada casilla del dibujo es esa estimación.` + NOTA_MONTICULO, ver());
+  while (cola.length) {
+    [distancia, actual] = heappop(cola); vecina = undefined;
+    R.on && R.p('distancia, actual = heapq.heappop(cola)', V(), `Sale la casilla que parece más cerca de la meta: ${cod(py(actual))}, con estimación ${distancia}.`, ver());
+    exploradas.push(actual);
+    R.on && R.p('exploradas.append(actual)', V(), `${cod(py(actual))} queda explorada. Van ${exploradas.length}.`, ver());
+    if (igual(actual, meta)) {
+      const ruta = reconstruirRuta(padres, meta);
+      R.on && R.p(['if actual == meta', 'return reconstruir_ruta'], { ...V(), ruta }, 'Es la meta. Se arma la ruta. Nadie revisó cuánto costó llegar: el voraz no promete que sea la más barata.', ver({ ruta, actual: null }));
+      R.on && R.fin(T(ruta, exploradas));
+      return T(ruta, exploradas);
+    }
+    const lista = vecinos(mapa, actual);
+    R.on && R.p('for vecina, costo in vecinos', V(), `No es la meta. Se revisan sus vecinas: ${cod(py(lista.map(v => v[0])))}.`, ver());
+    for (const [v, w] of lista) {
+      vecina = v;
+      if (!padres.has(v)) {
+        const h = estimacion(v, meta);
+        padres.set(v, actual); heappush(cola, T(h, v)); estimadas.set(v, h);
+        R.on && R.p(['if vecina not in padres', 'padres[vecina] = actual', 'heapq.heappush(cola, (estimacion(vecina, meta), vecina))'], V(), `${cod(py(v))} es nueva. Su estimación hasta la meta es ${h} y con esa prioridad entra a la cola. Entrar a ella cuesta ${w}, pero ese costo <b>no se usa</b>.`, ver());
+      } else {
+        R.on && R.p('if vecina not in padres', V(), `${cod(py(v))} ya estaba descubierta: se ignora.`, ver());
+      }
+    }
+  }
+  actual = undefined; vecina = undefined; distancia = undefined;
+  R.on && R.p('return None, exploradas', V(), 'La cola se quedó vacía sin llegar a la meta: no hay camino. Se devuelve <code>None</code> como ruta.', ver({ actual: null }));
+  R.on && R.fin(T(null, exploradas));
+  return T(null, exploradas);
+}
+
+// ---------------------------------------------------------------- a_estrella
+function aEstrella(mapa, inicio, meta) {
+  const R = tomar();
+  let distancia, cola, costos, padres, exploradas, vistas, prioridad, actual, vecina, paso, nuevo;
+  const sumas = new Dic();
+  const V = () => ({ inicio, meta, prioridad, distancia, actual, vecina, paso, nuevo, cola, exploradas, costos, vistas, padres });
+  const ver = (x = {}) => vistaBusqueda(mapa, { actual, vecina, exploradas, pendientes: enEspera(cola, vistas), numeros: sumas, ...x });
+  R.on && R.entradas({ mapa: EL_MAPA, inicio, meta });
+  distancia = estimacion(inicio, meta);
+  cola = [T(distancia, distancia, inicio)]; costos = new Dic().set(inicio, 0); padres = new Dic().set(inicio, null); exploradas = []; vistas = new Conj();
+  sumas.set(inicio, '0+' + distancia);
+  R.on && R.p(['distancia = estimacion(inicio, meta)', 'cola = [(distancia, distancia, inicio)]', 'costos = {inicio: 0}', 'padres = {inicio: None}', 'exploradas = []', 'vistas = set()'], V(),
+    `Cada elemento de la cola es <code>(prioridad, estimación, casilla)</code>. La prioridad es lo ya gastado más la estimación de lo que falta. Para el inicio: 0 + ${distancia} = ${distancia}. En el dibujo cada casilla muestra esa suma: gastado + estimación.` + NOTA_MONTICULO, ver());
+  while (cola.length) {
+    [prioridad, distancia, actual] = heappop(cola); vecina = undefined; paso = undefined; nuevo = undefined;
+    R.on && R.p('prioridad, distancia, actual = heapq.heappop(cola)', V(), `Sale el elemento de menor prioridad: ${cod(py(T(prioridad, distancia, actual)))}. Pasar por ${cod(py(actual))} promete una ruta de costo ${prioridad} o más.`, ver());
+    if (vistas.has(actual)) {
+      R.on && R.p(['if actual in vistas', 'continue'], V(), `${cod(py(actual))} ya se había explorado por un camino mejor. Este elemento era viejo: se ignora.`, ver());
+      continue;
+    }
+    vistas.add(actual); exploradas.push(actual);
+    R.on && R.p(['vistas.add(actual)', 'exploradas.append(actual)'], V(), `${cod(py(actual))} queda explorada. Van ${exploradas.length}.`, ver());
+    if (igual(actual, meta)) {
+      const ruta = reconstruirRuta(padres, meta);
+      R.on && R.p(['if actual == meta', 'return reconstruir_ruta'], { ...V(), ruta }, `Es la meta, con costo ${costos.get(meta)}. Todo lo que sigue en la cola tiene prioridad igual o mayor, y como la estimación nunca exagera, ninguna ruta por ahí puede costar menos.`, ver({ ruta, actual: null }));
+      R.on && R.fin(T(ruta, exploradas));
+      return T(ruta, exploradas);
+    }
+    const lista = vecinos(mapa, actual);
+    R.on && R.p('for vecina, paso in vecinos', V(), `No es la meta. Se revisan sus vecinas con lo que cuesta entrar a cada una: ${cod(py(lista))}.`, ver());
+    for (const [v, w] of lista) {
+      vecina = v; paso = w; nuevo = costos.get(actual) + paso;
+      const antes = costos.get(v);
+      if (antes === undefined || nuevo < antes) {
+        costos.set(v, nuevo); padres.set(v, actual);
+        distancia = estimacion(v, meta);
+        heappush(cola, T(nuevo + distancia, distancia, v)); sumas.set(v, nuevo + '+' + distancia);
+        R.on && R.p(['nuevo = costos[actual] + paso', 'if vecina not in costos or nuevo < costos[vecina]', 'costos[vecina] = nuevo', 'padres[vecina] = actual', 'distancia = estimacion(vecina, meta)', 'heapq.heappush(cola, (nuevo + distancia, distancia, vecina))'], V(),
+          `Llegar a ${cod(py(v))} cuesta ${costos.get(actual)} + ${paso} = <b>${nuevo}</b>` + (antes === undefined ? '' : `, mejor que el ${antes} que se conocía`) + `. Desde ahí se estima que faltan ${distancia}. Prioridad: ${nuevo} + ${distancia} = <b>${nuevo + distancia}</b>. Entra a la cola.`, ver());
+      } else {
+        R.on && R.p(['nuevo = costos[actual] + paso', 'if vecina not in costos or nuevo < costos[vecina]'], V(), `Llegar a ${cod(py(v))} por aquí costaría ${nuevo}. Ya se conoce una forma de ${antes}, que no es peor: se ignora.`, ver());
+      }
+    }
+  }
+  actual = undefined; vecina = undefined; paso = undefined; nuevo = undefined; prioridad = undefined; distancia = undefined;
+  R.on && R.p('return None, exploradas', V(), 'La cola se quedó vacía sin llegar a la meta: no hay camino. Se devuelve <code>None</code> como ruta.', ver({ actual: null }));
+  R.on && R.fin(T(null, exploradas));
+  return T(null, exploradas);
+}
+
+// ---------------------------------------------------------------- medir
+const ALGORITMOS = [['BFS', bfs], ['DFS', dfs], ['Dijkstra', dijkstra], ['Voraz', voraz], ['A*', aEstrella]];
+
+function medir(mapa, ruta) {
+  const R = tomar();
+  let pasos, costo;
+  const V = () => ({ ruta, pasos, costo });
+  const ver = (hasta, actual) => ({ lienzos: [lzCuadricula(mapa, { ruta: hasta || ruta, actual })], roles: ['ruta', 'actual'] });
+  R.on && R.entradas({ mapa: EL_MAPA, ruta });
+  pasos = ruta.length - 1;
+  R.on && R.p('pasos = len(ruta) - 1', V(), `La ruta tiene ${ruta.length} casillas. Entre ${ruta.length} casillas hay ${pasos} movimientos.`, ver());
+  let suma = 0;
+  if (R.on) {
+    ruta.slice(1).forEach((cel, i) => {
+      const t = mapa.terreno.get(cel);
+      suma += COSTOS[t];
+      R.p('costo = sum(', { ...V(), casilla: cel, 'suma hasta ahora': suma }, `${cod('ruta[1:]')} deja fuera el inicio, que no se cobra. Entrar a ${cod(py(cel))} (${TERRENO[t]}) cuesta ${COSTOS[t]}. La suma va en <b>${suma}</b>.`, ver(ruta.slice(0, i + 2), cel));
+    });
+  }
+  costo = ruta.slice(1).reduce((s, cel) => s + COSTOS[mapa.terreno.get(cel)], 0);
+  R.on && R.p('return pasos, costo', V(), `Se devuelven las dos medidas juntas: ${pasos} pasos y costo ${costo}.`, ver());
+  R.on && R.fin(T(pasos, costo));
+  return T(pasos, costo);
+}
+
+// Escribe el diccionario de resultados sin listar todas las casillas.
+function pyResultados(resultados) {
+  return crudo('{' + resultados.map(([n, r]) => `'${n}': {'ruta': ${resumen(r.ruta)}, 'exploradas': [${r.exploradas.length} casillas], 'pasos': ${py(r.pasos)}, 'costo': ${py(r.costo)}}`).join(', ') + '}');
+}
+
+// ---------------------------------------------------------------- comparar
+function comparar(mapa) {
+  const R = tomar();
+  const resultados = [];
+  let nombre, ruta, exploradas, pasos, costo;
+  const V = () => ({ nombre, ruta, exploradas, pasos, costo, resultados: pyResultados(resultados) });
+  const ver = () => ({ lienzos: [lzCuadricula(mapa, { ruta, exploradas }, nombre || '')], roles: ['explorada', 'ruta'] });
+  R.on && R.entradas({ mapa: EL_MAPA });
+  R.on && R.p('resultados = {}', V(), 'Se empieza con un diccionario vacío. Ahí va a quedar el resultado de cada algoritmo, con su nombre como llave.', ver());
+  for (const [n, algoritmo] of ALGORITMOS) {
+    nombre = n; pasos = undefined; costo = undefined;
+    [ruta, exploradas] = algoritmo(mapa, mapa.inicio, mapa.meta);
+    R.on && R.p(['for nombre, algoritmo in ALGORITMOS.items()', 'ruta, exploradas = algoritmo('], V(), `Se corre <b>${n}</b> del inicio a la meta. Exploró ${exploradas.length} casillas` + (ruta ? ' y encontró la ruta roja.' : ' y no encontró ruta.'), ver());
+    [pasos, costo] = ruta ? medir(mapa, ruta) : [null, null];
+    R.on && R.p('pasos, costo = medir', V(), ruta ? `Se mide su ruta: ${pasos} pasos y costo ${costo}.` : 'No hay ruta, así que no hay nada que medir: los pasos y el costo quedan en <code>None</code>.', ver());
+    resultados.push([n, { ruta, exploradas, pasos, costo }]);
+    R.on && R.p('resultados[nombre] = {', V(), `Se guardan los cuatro datos de ${n} en el diccionario.`, ver());
+  }
+  nombre = undefined; ruta = undefined; exploradas = undefined; pasos = undefined; costo = undefined;
+  R.on && R.p('return resultados', V(), 'Se devuelve el diccionario con los cinco resultados.', { salida: lineasDeTabla(resultados) });
+  R.on && R.fin(pyResultados(resultados));
+  return resultados;
+}
+
+// Las líneas de la tabla comparativa, con el mismo formato que imprime el notebook.
+function lineasDeTabla(resultados) {
+  const costos = resultados.map(([, r]) => r.costo).filter(c => c !== null);
+  const minimo = costos.length ? Math.min(...costos) : null;
+  const izq = (s, n) => String(s).padEnd(n), der = (s, n) => String(s).padStart(n);
+  const lineas = [izq('Algoritmo', 10) + der('Exploradas', 11) + der('Pasos', 8) + der('Costo', 8) + '   Nota', '-'.repeat(52)];
+  resultados.forEach(([n, r]) => {
+    lineas.push(r.ruta === null
+      ? izq(n, 10) + der(r.exploradas.length, 11) + der('-', 8) + der('-', 8) + '   sin ruta'
+      : izq(n, 10) + der(r.exploradas.length, 11) + der(r.pasos, 8) + der(r.costo, 8) + '   ' + (r.costo === minimo ? 'costo mínimo' : ''));
+  });
+  return lineas;
+}
+
+// ---------------------------------------------------------------- imprimir_tabla
+function imprimirTabla(resultados) {
+  const R = tomar();
+  let costos, minimo, nombre, nota;
+  const todas = lineasDeTabla(resultados);
+  let impresas = 0;
+  const V = () => ({ resultados: pyResultados(resultados), costos, minimo, nombre, nota });
+  const ver = () => ({ salida: todas.slice(0, impresas) });
+  R.on && R.entradas({ resultados: pyResultados(resultados) });
+  costos = resultados.map(([, r]) => r.costo).filter(c => c !== null);
+  R.on && R.p("costos = [r['costo']", V(), 'Se juntan en una lista los costos de los algoritmos que sí encontraron ruta. Los que tienen <code>None</code> se dejan fuera.', ver());
+  minimo = costos.length ? Math.min(...costos) : null;
+  R.on && R.p('minimo = min(costos)', V(), costos.length ? `El menor de esos costos es ${minimo}. Sirve para marcar quién encontró la ruta más barata.` : 'Nadie encontró ruta: no hay mínimo.', ver());
+  impresas = 1;
+  R.on && R.p("{'Algoritmo':<10}", V(), `El encabezado. En el formato, ${cod(':<10')} acomoda el texto a la izquierda en 10 espacios y ${cod(':>11')} a la derecha en 11. Así las columnas quedan alineadas.`, ver());
+  impresas = 2;
+  R.on && R.p("print('-' * 52)", V(), `Un texto multiplicado por un número se repite: ${cod("'-' * 52")} es una raya de 52 guiones.`, ver());
+  resultados.forEach(([n, r], i) => {
+    nombre = n; nota = undefined;
+    impresas = 3 + i;
+    if (r.ruta === null) {
+      R.on && R.p(["if r['ruta'] is None", 'sin ruta")'], V(), `${n} no encontró ruta: se imprimen sus casillas exploradas, guiones en pasos y costo, y la nota "sin ruta".`, ver());
+    } else {
+      nota = r.costo === minimo ? 'costo mínimo' : '';
+      R.on && R.p(["nota = 'costo mínimo'", '{nota}")'], V(), `${n}: su costo es ${r.costo}. ` + (nota ? 'Es igual al mínimo, así que lleva la nota.' : `No es el mínimo (${minimo}), así que la nota queda vacía.`), ver());
+    }
+  });
+  R.on && R.fin(undefined);
+}
+
+// Dice si una ruta sigue aristas del grafo: cada casilla es vecina de la anterior.
+function esCamino(mapa, ruta) {
+  for (let i = 0; i + 1 < ruta.length; i++) {
+    if (!vecinos(mapa, ruta[i]).some(([v]) => igual(v, ruta[i + 1]))) return false;
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------- comprobar
+function comprobar(mapa, resultados) {
+  const R = tomar();
+  const inicio = mapa.inicio, meta = mapa.meta;
+  let nombre, ruta, costo_minimo, pasos_minimos;
+  const salida = [];
+  const dato = n => resultados.find(([x]) => x === n)[1];
+  const V = () => ({ inicio, meta, nombre, ruta, costo_minimo, pasos_minimos });
+  const ver = () => ({ lienzos: [lzCuadricula(mapa, { ruta }, nombre || '')], roles: ['ruta'], salida: salida.slice() });
+  R.on && R.entradas({ mapa: EL_MAPA, resultados: pyResultados(resultados) });
+  R.on && R.p('grafo = construir_grafo(mapa)', V(), 'Se arma el grafo del mapa con NetworkX. En el notebook, las comprobaciones que siguen las hace NetworkX; en esta página se repite el mismo cálculo para mostrar los valores.', ver());
+  const referencia = dijkstra(mapa, inicio, meta)[0];
+  if (referencia === null) {
+    R.on && R.p('if not nx.has_path', V(), `${cod('nx.has_path')} dice que <b>no existe</b> camino del inicio a la meta.`, ver());
+    R.on && R.p('assert all(', V(), `${cod('assert')} exige que sea cierto lo que le sigue: que la ruta de todos los algoritmos sea <code>None</code>. Si alguno hubiera inventado una ruta, aquí se detendría con un error.`, ver());
+    salida.push('Comprobado con NetworkX: no existe camino y ningún algoritmo encontró ruta.');
+    R.on && R.p("print('Comprobado con NetworkX: no existe", V(), 'Todo coincide. Se imprime el aviso y la función termina aquí.', ver());
+    R.on && R.fin(undefined);
+    return;
+  }
+  R.on && R.p('if not nx.has_path', V(), `${cod('nx.has_path')} dice que <b>sí existe</b> camino, así que se revisa la ruta de cada algoritmo.`, ver());
+  for (const [n, r] of resultados) {
+    nombre = n; ruta = r.ruta;
+    if (ruta === null) throw new Error(n + ' no devolvió ninguna ruta, pero sí existe camino.');
+    if (!igual(ruta[0], inicio) || !igual(ruta[ruta.length - 1], meta) || !esCamino(mapa, ruta)) throw new Error('La ruta de ' + n + ' no es válida.');
+    R.on && R.p(["ruta = r['ruta']", 'assert ruta is not None', 'assert ruta[0] == inicio', 'assert nx.is_path'], V(), `<b>${n}</b>: sí devolvió una ruta, empieza en el inicio, termina en la meta, y ${cod('nx.is_path')} confirma que cada paso sigue una arista del grafo. Es una ruta válida.`, ver());
+  }
+  nombre = undefined; ruta = undefined;
+  costo_minimo = medir(mapa, referencia)[1];
+  R.on && R.p('costo_minimo = nx.dijkstra_path_length', V(), `NetworkX calcula por su cuenta el menor costo posible del inicio a la meta: ${costo_minimo}.`, ver());
+  pasos_minimos = bfs(mapa, inicio, meta)[0].length - 1;
+  R.on && R.p('pasos_minimos = nx.shortest_path_length', V(), `Y la menor cantidad de pasos, sin tomar en cuenta los pesos: ${pasos_minimos}.`, ver());
+  if (dato('Dijkstra').costo !== costo_minimo || dato('A*').costo !== costo_minimo || dato('BFS').pasos !== pasos_minimos) throw new Error('Un resultado no coincide con la referencia.');
+  R.on && R.p(["assert resultados['Dijkstra']", "assert resultados['A*']", "assert resultados['BFS']"], V(), `A cada algoritmo se le exige lo que promete: Dijkstra (${dato('Dijkstra').costo}) y A* (${dato('A*').costo}) deben dar el costo mínimo, y BFS (${dato('BFS').pasos}) el mínimo de pasos. DFS y el voraz no prometen nada, por eso solo se revisó que su ruta fuera válida.`, ver());
+  salida.push(`Comprobado con NetworkX: rutas válidas, costo mínimo = ${costo_minimo}, pasos mínimos = ${pasos_minimos}.`);
+  R.on && R.p("print(f'Comprobado con NetworkX: rutas válidas", V(), 'Todo coincide. Se imprime el resumen.', ver());
+  R.on && R.fin(undefined);
+}
+
+// Título de un renglón de mostrar_busquedas: el nombre del algoritmo y sus tres medidas.
+function tituloDeBusqueda(n, r) {
+  return r.ruta === null ? `${n}: ${r.exploradas.length} exploradas, sin ruta` : `${n}: ${r.exploradas.length} exploradas, ${r.pasos} pasos, costo ${r.costo}`;
+}
+// Los dos dibujos del resultado de un algoritmo: cuadrícula y grafo, con lo no explorado pálido.
+function parDeBusqueda(mapa, n, r, conTitulo) {
+  const velo = new Conj(r.exploradas);
+  return [
+    lienzo(mapa, pzCeldas(mapa).concat(pzVelo(mapa, velo), pzNombresObjetos(mapa), pzRuta(r.ruta), pzMarcas(mapa)), conTitulo ? tituloDeBusqueda(n, r) : ''),
+    lzGrafo(mapa, { ruta: r.ruta, exploradas: r.exploradas }, conTitulo ? 'Grafo de ' + n : ''),
+  ];
+}
+
+// ---------------------------------------------------------------- mostrar_busquedas
+function mostrarBusquedas(mapa, resultados) {
+  const R = tomar();
+  let alto, nombre, medidas;
+  const V = () => ({ resultados: pyResultados(resultados), alto, nombre, medidas });
+  const vacio = () => ({ titulo: '', w: mapa.columnas, h: mapa.filas, piezas: [] });
+  const ver = hechos => ({ columnas: 2, leyenda: false, lienzos: resultados.flatMap(([n, r], i) => i < hechos ? parDeBusqueda(mapa, n, r, true) : [vacio(), vacio()]) });
+  R.on && R.entradas({ mapa: EL_MAPA, resultados: pyResultados(resultados) });
+  alto = Math.round((5.5 * mapa.filas / mapa.columnas + 0.6) * 100) / 100;
+  R.on && R.p('alto = 5.5', V(), 'El alto de cada renglón de dibujos, según la forma del mapa.', null);
+  R.on && R.p('figura, ejes = plt.subplots', V(), `${cod('subplots')} crea una figura con ${resultados.length} renglones y 2 columnas: una tabla de zonas vacías. Cada renglón es para un algoritmo.`, ver(0));
+  resultados.forEach(([n, r], i) => {
+    nombre = n;
+    medidas = tituloDeBusqueda(n, r).slice(n.length + 2);
+    R.on && R.p(['for (izquierda, derecha), (nombre, r) in zip', 'dibujar_cuadricula(izquierda', 'dibujar_grafo(derecha', "izquierda.set_title(f'{nombre}", "derecha.set_title(f'Grafo de"], V(),
+      `${cod('zip')} empareja el renglón ${i} de zonas con el resultado de <b>${n}</b>. A la izquierda va su cuadrícula y a la derecha su grafo, con lo no explorado pálido y la ruta en rojo. El título lleva sus medidas.`, ver(i + 1));
+  });
+  R.on && R.p(['figura.tight_layout()', 'plt.show()'], V(), 'Se acomodan los renglones para que no se encimen y se muestra la figura.', ver(resultados.length));
+  R.on && R.fin(undefined);
+}
+
+// ---------------------------------------------------------------- analizar
+function analizar(mapa, titulo) {
+  const R = tomar();
+  let resultados;
+  const V = () => ({ titulo, resultados: resultados && pyResultados(resultados) });
+  const salida = [];
+  R.on && R.entradas({ mapa: EL_MAPA, titulo });
+  R.on && R.p('mostrar_mapa(mapa, titulo)', V(), 'Primero se muestra el mapa: la cuadrícula y su grafo.', { titulo, lienzos: [lzCuadricula(mapa, {}, 'Cuadrícula'), lzGrafo(mapa, {}, 'Grafo')] });
+  resultados = comparar(mapa);
+  R.on && R.p('resultados = comparar(mapa)', V(), 'Se corren los cinco algoritmos y se guarda lo que encontró cada uno.', null);
+  salida.push(...lineasDeTabla(resultados));
+  R.on && R.p('imprimir_tabla(resultados)', V(), 'Se imprime la tabla comparativa.', { salida: salida.slice() });
+  const referencia = dijkstra(mapa, mapa.inicio, mapa.meta)[0];
+  salida.push(referencia === null ? 'Comprobado con NetworkX: no existe camino y ningún algoritmo encontró ruta.'
+    : `Comprobado con NetworkX: rutas válidas, costo mínimo = ${medir(mapa, referencia)[1]}, pasos mínimos = ${bfs(mapa, mapa.inicio, mapa.meta)[0].length - 1}.`);
+  R.on && R.p('comprobar(mapa, resultados)', V(), 'Se comparan los resultados contra NetworkX. Si algo no coincidiera, la ejecución se detendría aquí con un error.', { salida: salida.slice() });
+  R.on && R.p('mostrar_busquedas(mapa, resultados)', V(), 'Se dibuja la búsqueda de cada algoritmo.', { columnas: 2, leyenda: false, lienzos: resultados.flatMap(([n, r]) => parDeBusqueda(mapa, n, r, true)) });
+  R.on && R.p('return resultados', V(), 'Se devuelven los resultados, por si se quieren usar después.', null);
+  R.on && R.fin(pyResultados(resultados));
+  return resultados;
+}
+
+// ---------------------------------------------------------------- comprobar_estimacion
+function comprobarEstimacion(mapa, nombre) {
+  const R = tomar();
+  let reales, se_pasan, inicio, real_inicio;
+  const V = () => ({ nombre, reales, se_pasan, inicio, real_inicio });
+  const numeros = new Dic();
+  const ver = (actual, salida) => ({ lienzos: [lzCuadricula(mapa, { numeros, actual })], roles: ['actual'], salida });
+  R.on && R.entradas({ mapa: EL_MAPA, nombre });
+  R.on && R.p('grafo = construir_grafo(mapa)', V(), 'Se arma el grafo del mapa con NetworkX.', ver());
+  reales = new Dic();
+  casillasLibres(mapa).forEach(cel => {
+    const ruta = dijkstra(mapa, cel, mapa.meta)[0];
+    if (ruta) reales.set(cel, medir(mapa, ruta)[1]);
+  });
+  reales.pares.forEach(([cel, real]) => numeros.set(cel, real));
+  R.on && R.p('reales = nx.single_source', V(), `Se calcula el costo real desde cada casilla hasta la meta. En lugar de buscar una ruta por casilla, se voltean las aristas con ${cod('reverse')} y se mide una sola vez saliendo de la meta. El número de cada casilla en el dibujo es ese costo real.`, ver());
+  se_pasan = [];
+  reales.pares.forEach(([cel, real]) => {
+    const h = estimacion(cel, mapa.meta);
+    numeros.set(cel, h + '/' + real);
+    if (h > real) se_pasan.push(cel);
+    R.on && R.p('se_pasan = [', { ...V(), c: cel, real, 'estimacion(c, meta)': h }, `${cod(py(cel))}: la estimación dice ${h} y el costo real es ${real}. ` + (h > real ? 'Se pasa: entra a la lista.' : h === real ? 'Es exacta, no se pasa.' : 'Se queda corta, y eso está permitido.'), ver(cel));
+  });
+  inicio = mapa.inicio;
+  real_inicio = reales.has(inicio) ? reales.get(inicio) : 'no hay camino';
+  R.on && R.p(["inicio = mapa['inicio']", 'real_inicio = reales.get'], V(), `La lista <code>se_pasan</code> quedó con ${se_pasan.length} casillas. Se busca el costo real desde el inicio; si el inicio no puede llegar a la meta, ${cod('get')} devuelve el texto de aviso.`, ver());
+  const linea = nombre.padEnd(20) + ` casillas revisadas: ${String(reales.size).padStart(3)}   se pasan: ${se_pasan.length}   desde el inicio: estimación ${estimacion(inicio, mapa.meta)}, costo real ${real_inicio}`;
+  R.on && R.p('print(f"{nombre:<20}', V(), 'Se imprime el resumen del mapa en un renglón.', ver(null, [linea]));
+  R.on && R.fin(undefined);
+}
+
+// Escribe la tabla de costos entre puntos sin listar todas las rutas.
+const pyTabla = tabla => crudo('{' + tabla.pares.map(([par, [costo]]) => `${py(par)}: (${py(costo)}, [ruta])`).join(', ') + '}');
+
+// ---------------------------------------------------------------- costos_entre_puntos
+function costosEntrePuntos(mapa) {
+  const R = tomar();
+  let puntos, tabla, a, b, ruta, costo;
+  const V = () => ({ puntos, a, b, ruta, costo, tabla: tabla && pyTabla(tabla) });
+  const ver = () => ({ lienzos: [lzCuadricula(mapa, { ruta }, a && b ? `De ${nombrePunto(mapa, a)} a ${nombrePunto(mapa, b)}` : '')], roles: ['ruta'] });
+  R.on && R.entradas({ mapa: EL_MAPA });
+  puntos = puntosDeInteres(mapa);
+  R.on && R.p("puntos = [mapa['inicio']]", V(), `Los puntos de interés, en orden: el inicio, los ${mapa.objetos.length} objetos y la meta. Son ${puntos.length}.`, ver());
+  tabla = new Dic();
+  R.on && R.p('tabla = {}', V(), 'La tabla empieza vacía. Va a tener una entrada por cada par ordenado de puntos distintos.', ver());
+  for (const x of puntos) {
+    for (const y of puntos) {
+      if (igual(x, y)) continue;
+      a = x; b = y;
+      ruta = dijkstra(mapa, a, b)[0];
+      costo = ruta ? medir(mapa, ruta)[1] : null;
+      tabla.set(T(a, b), T(costo, ruta));
+      R.on && R.p(['ruta, exploradas = dijkstra(mapa, a, b)', 'costo = medir(mapa, ruta)[1]', 'tabla[(a, b)] = (costo, ruta)'], V(),
+        `De <b>${nombrePunto(mapa, a)}</b> a <b>${nombrePunto(mapa, b)}</b>: Dijkstra encuentra la ruta más barata y ${cod('medir')} da su costo, ${costo}. ${cod('medir')} devuelve <code>(pasos, costo)</code> y con ${cod('[1]')} se toma solo el costo. Se guarda en la tabla.`, ver());
+    }
+  }
+  a = undefined; b = undefined; ruta = undefined; costo = undefined;
+  R.on && R.p('return tabla', V(), `La tabla tiene ${tabla.size} entradas. Son los pesos del grafo completo: cada arista pesa el costo de la ruta más barata entre sus dos puntos.`, { lienzos: [lzCompleto(mapa, tabla, {})], leyenda: false });
+  R.on && R.fin(pyTabla(tabla));
+  return tabla;
+}
+
+// ---------------------------------------------------------------- costo_del_orden
+function costoDelOrden(mapa, tabla, orden) {
+  const R = tomar();
+  let paradas;
+  const V = () => ({ orden, paradas });
+  R.on && R.entradas({ mapa: EL_MAPA, tabla: LA_TABLA, orden });
+  paradas = [mapa.inicio, ...orden, mapa.meta];
+  R.on && R.p("paradas = [mapa['inicio']]", V(), `Al orden de los objetos se le agrega el inicio al principio y la meta al final: ${cod(paradas.map(p => nombrePunto(mapa, p)).join(' -> '))}.`, { lienzos: [lzCompleto(mapa, tabla, {})], leyenda: false });
+  let suma = 0;
+  for (let i = 0; i + 1 < paradas.length; i++) {
+    const tramo = tabla.get(T(paradas[i], paradas[i + 1]))[0];
+    suma += tramo;
+    R.on && R.p('return sum(', { ...V(), a: paradas[i], b: paradas[i + 1], 'suma hasta ahora': suma }, `${cod('zip(paradas, paradas[1:])')} da cada parada con la que le sigue. Tramo de ${nombrePunto(mapa, paradas[i])} a ${nombrePunto(mapa, paradas[i + 1])}: cuesta ${tramo}. La suma va en <b>${suma}</b>.`,
+      { lienzos: [lzCompleto(mapa, tabla, { camino: paradas.slice(0, i + 2), resalta: [paradas[i], paradas[i + 1]] })], leyenda: false });
+  }
+  R.on && R.fin(suma);
+  return suma;
+}
+
+// ---------------------------------------------------------------- unir_rutas
+function unirRutas(mapa, tabla, orden) {
+  const R = tomar();
+  let paradas, ruta, a, b;
+  const V = () => ({ orden, paradas, a, b, ruta });
+  const ver = () => ({ lienzos: [lzCuadricula(mapa, { ruta })], roles: ['ruta'] });
+  R.on && R.entradas({ mapa: EL_MAPA, tabla: LA_TABLA, orden });
+  paradas = [mapa.inicio, ...orden, mapa.meta];
+  R.on && R.p('paradas = [', V(), `Las paradas del recorrido: ${cod(paradas.map(p => nombrePunto(mapa, p)).join(' -> '))}.`, ver());
+  ruta = [mapa.inicio];
+  R.on && R.p("ruta = [mapa['inicio']]", V(), 'La ruta completa empieza solo con la casilla de inicio.', ver());
+  for (let i = 0; i + 1 < paradas.length; i++) {
+    a = paradas[i]; b = paradas[i + 1];
+    const tramo = tabla.get(T(a, b))[1];
+    ruta = ruta.concat(tramo.slice(1));
+    R.on && R.p(['for a, b in zip(paradas', 'ruta += tabla'], V(), `Tramo de ${nombrePunto(mapa, a)} a ${nombrePunto(mapa, b)}. Su ruta guardada en la tabla es ${cod(py(tramo))}. Se pega sin su primera casilla (${cod('[1:]')}), porque esa ya es la última de la ruta.`, ver());
+  }
+  a = undefined; b = undefined;
+  R.on && R.p('return ruta', V(), `Se devuelve la ruta completa: ${ruta.length} casillas.`, ver());
+  R.on && R.fin(ruta);
+  return ruta;
+}
+
+// Todas las formas de ordenar una lista, en el mismo orden en que las genera permutations.
+function permutaciones(lista) {
+  if (lista.length <= 1) return [lista.slice()];
+  const todas = [];
+  lista.forEach((x, i) => permutaciones([...lista.slice(0, i), ...lista.slice(i + 1)]).forEach(resto => todas.push([x, ...resto])));
+  return todas;
+}
+const textoOrden = (mapa, orden) => ['inicio', ...orden.map(o => nombrePunto(mapa, o)), 'meta'].join(' -> ');
+
+// ---------------------------------------------------------------- todos_los_ordenes
+function todosLosOrdenes(mapa, tabla) {
+  const R = tomar();
+  let mejor_orden, mejor_costo, revisados, orden, costo;
+  const V = () => ({ orden: orden && T(...orden), costo, revisados, mejor_orden, mejor_costo });
+  const ver = () => ({ lienzos: [lzCompleto(mapa, tabla, orden ? { camino: [mapa.inicio, ...orden, mapa.meta] } : {}, orden ? textoOrden(mapa, orden) : '')], leyenda: false });
+  R.on && R.entradas({ mapa: EL_MAPA, tabla: LA_TABLA });
+  mejor_orden = null; mejor_costo = null; revisados = 0;
+  R.on && R.p(['mejor_orden = None', 'mejor_costo = None', 'revisados = 0'], V(), 'Todavía no se ha revisado ningún orden, así que no hay un mejor.', ver());
+  for (const perm of permutaciones(mapa.objetos)) {
+    orden = perm; costo = undefined;
+    revisados += 1;
+    R.on && R.p(['for orden in permutations', 'revisados += 1'], V(), `${cod('permutations')} entrega otra forma de ordenar los objetos: ${cod(textoOrden(mapa, orden))}. Es el orden número ${revisados}.`, ver());
+    costo = costoDelOrden(mapa, tabla, orden);
+    const mejora = mejor_costo === null || costo < mejor_costo;
+    const anterior = mejor_costo;
+    if (mejora) { mejor_orden = orden.slice(); mejor_costo = costo; }
+    R.on && R.p(mejora ? ['costo = costo_del_orden', 'if mejor_costo is None or', 'mejor_orden, mejor_costo = list(orden), costo'] : ['costo = costo_del_orden', 'if mejor_costo is None or'], V(),
+      `Este orden cuesta <b>${costo}</b>. ` + (anterior === null ? 'Es el primero que se revisa, así que por ahora es el mejor.' : mejora ? `Es más barato que el mejor hasta ahora (${anterior}): pasa a ser el mejor.` : `No mejora al mejor hasta ahora (${anterior}).`), ver());
+  }
+  orden = undefined; costo = undefined;
+  R.on && R.p('return mejor_orden, mejor_costo, revisados', V(), `Se revisaron los ${revisados} órdenes posibles. El mejor cuesta ${mejor_costo}. Como se probaron todos, no puede existir uno más barato.`,
+    { lienzos: [lzCompleto(mapa, tabla, { camino: [mapa.inicio, ...mejor_orden, mapa.meta] }, textoOrden(mapa, mejor_orden))], leyenda: false });
+  R.on && R.fin(T(mejor_orden, mejor_costo, revisados));
+  return T(mejor_orden, mejor_costo, revisados);
+}
+
+// ---------------------------------------------------------------- mas_cercano
+function masCercano(mapa, tabla) {
+  const R = tomar();
+  let actual, pendientes, orden, siguiente;
+  const V = () => ({ actual, pendientes, siguiente, orden });
+  const ver = resalta => ({ lienzos: [lzCompleto(mapa, tabla, { camino: orden ? [mapa.inicio, ...orden] : null, resalta })], leyenda: false });
+  R.on && R.entradas({ mapa: EL_MAPA, tabla: LA_TABLA });
+  actual = mapa.inicio; pendientes = mapa.objetos.slice(); orden = [];
+  R.on && R.p(["actual = mapa['inicio']", 'pendientes = list(', 'orden = []'], V(), 'Se empieza parado en el inicio, con todos los objetos pendientes y el orden vacío.', ver());
+  while (pendientes.length) {
+    const opciones = pendientes.map(o => `${nombrePunto(mapa, o)} cuesta ${tabla.get(T(actual, o))[0]}`).join(', ');
+    siguiente = pendientes.reduce((mejor, o) => tabla.get(T(actual, o))[0] < tabla.get(T(actual, mejor))[0] ? o : mejor);
+    R.on && R.p(['while pendientes', 'siguiente = min('], V(), `Desde ${nombrePunto(mapa, actual)}: ${opciones}. ${cod('min')} con ${cod('key')} elige el de menor costo de ruta: <b>${nombrePunto(mapa, siguiente)}</b>. Si hay empate, se queda con el primero de la lista.`, ver([actual, siguiente]));
+    orden.push(siguiente);
+    pendientes = pendientes.filter(o => !igual(o, siguiente));
+    actual = siguiente;
+    R.on && R.p(['orden.append(siguiente)', 'pendientes.remove(siguiente)', 'actual = siguiente'], V(), `${nombrePunto(mapa, siguiente)} se agrega al orden, se quita de los pendientes, y ahora se está parado ahí.`, ver());
+  }
+  siguiente = undefined;
+  const total = costoDelOrden(mapa, tabla, orden);
+  R.on && R.p('return orden, costo_del_orden', V(), `Ya no quedan pendientes. Se devuelve el orden y su costo total, incluido el tramo final hasta la meta: ${total}. Cada elección fue la mejor en su momento, pero eso no garantiza el mejor total.`,
+    { lienzos: [lzCompleto(mapa, tabla, { camino: [mapa.inicio, ...orden, mapa.meta] }, textoOrden(mapa, orden))], leyenda: false });
+  R.on && R.fin(T(orden, total));
+  return T(orden, total);
+}
+
+// ---------------------------------------------------------------- dibujar_grafo_completo
+function dibujarGrafoCompleto(mapa, tabla, orden) {
+  const R = tomar();
+  let puntos, aristas, posiciones, nombres, pesos, paradas, tramos, a, b;
+  const V = () => ({ orden, puntos, a, b, aristas, posiciones, nombres, pesos, paradas, tramos });
+  const ver = op => ({ lienzos: [op ? lzCompleto(mapa, tabla, op) : { w: ANCHO_COMPLETO, h: ALTO_COMPLETO, piezas: [] }], leyenda: false });
+  R.on && R.entradas({ eje: EL_EJE, mapa: EL_MAPA, tabla: LA_TABLA, orden });
+  puntos = puntosDeInteres(mapa);
+  R.on && R.p("puntos = [mapa['inicio']]", V(), `Los puntos de interés: el inicio, los objetos y la meta. Son ${puntos.length}.`, ver());
+  aristas = [];
+  R.on && R.p(['grafo = nx.Graph()', 'grafo.add_nodes_from(puntos)'], V(), 'Se crea un grafo sin direcciones y se le agregan los puntos como vértices, en ese orden. Todavía no se dibuja nada: el grafo existe solo en la memoria.', ver());
+  for (const [x, y] of paresDePuntos(puntos)) {
+    a = x; b = y;
+    aristas.push(crudo(`(${nombrePunto(mapa, a)}, ${nombrePunto(mapa, b)}, ${tabla.get(T(a, b))[0]})`));
+    R.on && R.p(['if a < b', 'grafo.add_edge(a, b'], V(), `Arista entre ${nombrePunto(mapa, a)} y ${nombrePunto(mapa, b)} con peso ${tabla.get(T(a, b))[0]}. La condición ${cod('a < b')} hace que cada par entre una sola vez, y no también al revés.`, ver());
+  }
+  a = undefined; b = undefined;
+  const pos = posicionesEnCirculo(puntos);
+  posiciones = crudo('{' + pos.pares.map(([p, [x, y]]) => `${nombrePunto(mapa, p)}: (${x.toFixed(1)}, ${y.toFixed(1)})`).join(', ') + '}');
+  R.on && R.p('posiciones = nx.circular_layout', V(), `${cod('circular_layout')} reparte los vértices en un círculo, a la misma distancia uno de otro. Así las aristas no se enciman.`, ver());
+  nombres = crudo('{' + mapa.objetos.map((o, i) => `${py(o)}: 'O${i + 1}'`).join(', ') + '}');
+  pesos = crudo(`{${aristas.length} aristas con su costo}`);
+  R.on && R.p(['nombres = {p: etiqueta', 'pesos = nx.get_edge_attributes'], V(), 'Se preparan los textos: el nombre de cada objeto y el peso de cada arista.', ver());
+  const etapa = { pesos: false, sinNodos: true, sinMarcas: true };
+  R.on && R.p("nx.draw_networkx_edges(grafo, posiciones, ax=eje, edge_color='gray')", V(), 'Primera capa: todas las aristas, en gris.', ver({ ...etapa }));
+  let camino = null;
+  if (orden) {
+    paradas = [mapa.inicio, ...orden, mapa.meta];
+    tramos = crudo('[' + paradas.slice(1).map((p, i) => `(${nombrePunto(mapa, paradas[i])}, ${nombrePunto(mapa, p)})`).join(', ') + ']');
+    camino = paradas;
+    R.on && R.p(['paradas = [', 'tramos = list(zip(paradas'], V(), 'Se dio un orden. Sus paradas se emparejan de dos en dos: cada par es una arista del camino elegido.', ver({ ...etapa }));
+    R.on && R.p('edgelist=tramos', V(), 'Segunda capa: las aristas del camino, en rojo y más gruesas.', ver({ ...etapa, camino }));
+  } else {
+    R.on && R.p('if orden is not None', V(), 'No se dio ningún orden, así que no hay camino rojo.', ver({ ...etapa }));
+  }
+  R.on && R.p('nx.draw_networkx_nodes', V(), `Los objetos se dibujan como círculos. Con ${cod('nodelist')} se indica que solo ellos: el inicio y la meta llevan su propio símbolo.`, ver({ ...etapa, camino, sinNodos: false, sinNombres: true }));
+  R.on && R.p('nx.draw_networkx_labels', V(), 'El nombre de cada objeto, dentro de su círculo.', ver({ ...etapa, camino, sinNodos: false }));
+  R.on && R.p('nx.draw_networkx_edge_labels', V(), `El costo de cada arista. ${cod('label_pos=0.25')} lo escribe a un cuarto del largo de la arista, para que los números no se junten en el centro.`, ver({ camino, sinMarcas: true }));
+  R.on && R.p('marcar_inicio_y_meta(eje', V(), 'El inicio es el punto verde y la meta la estrella, igual que en los mapas.', ver({ camino }));
+  R.on && R.p(['eje.legend(', 'eje.margins', "eje.axis('off')"], V(), 'Se agrega la leyenda de los dos símbolos, se deja aire en las orillas para que nada se corte y se quitan el marco y los ejes.', { ...ver({ camino }), html: HTML_SIMBOLOS() });
+  R.on && R.fin(undefined);
+}
+
+// ---------------------------------------------------------------- nombres_del_orden
+function nombresDelOrden(mapa, orden) {
+  const R = tomar();
+  let nombres;
+  const V = () => ({ orden, nombres });
+  const ver = () => ({ lienzos: [lzCuadricula(mapa, {})] });
+  R.on && R.entradas({ mapa: EL_MAPA, orden });
+  nombres = orden.map(o => etiqueta(mapa, o));
+  R.on && R.p('nombres = [etiqueta', V(), `A cada objeto del orden se le pide su nombre con ${cod('etiqueta')}.`, ver());
+  const texto = ['inicio', ...nombres, 'meta'].join(' -> ');
+  R.on && R.p("return ' -> '.join", V(), `Se pone ${cod("'inicio'")} al principio y ${cod("'meta'")} al final, y ${cod('join')} une todo con una flecha entre cada nombre.`, ver());
+  R.on && R.fin(texto);
+  return texto;
+}
+
+// ============================================================================
+// LOS MAPAS DE EJEMPLO Y LA LISTA DE FUNCIONES
+// ============================================================================
+const TEXTOS = {
+  irregular: '\nI.B\n.#\nOAM.\n',
+  pequeño: '\nI.B\n.#.\n..M\n',
+  terrenos: '\nI.A..\n.#A.#\n..B.M\n.....\n',
+  sinSalida: '\nI..\n.##\n.#M\n',
+  objetos: '\nO...O\n..I..\n.AAA.\n.O..M\n',
+};
+const TITULOS = { irregular: 'Forma irregular', pequeño: 'Mapa pequeño', terrenos: 'Con terrenos', sinSalida: 'Sin salida', objetos: 'Con objetos' };
+
+// Mapas ya leídos y resultados ya calculados, para no repetir el trabajo.
+const guardados = {};
+const recordar = (llave, calcular) => (llave in guardados ? guardados[llave] : (guardados[llave] = calcular()));
+const M = id => recordar('mapa ' + id, () => leerMapa(TEXTOS[id]));
+const RES = id => recordar('resultados ' + id, () => comparar(M(id)));
+const TAB = id => recordar('tabla ' + id, () => costosEntrePuntos(M(id)));
+const dato = (id, nombre) => RES(id).find(([n]) => n === nombre)[1];
+// Diccionario de padres que deja BFS, para el ejemplo de reconstruir_ruta.
+function padresDeBfs(mapa) {
+  const padres = new Dic().set(mapa.inicio, null);
+  const cola = [mapa.inicio];
+  while (cola.length) {
+    const actual = cola.shift();
+    if (igual(actual, mapa.meta)) break;
+    vecinos(mapa, actual).forEach(([v]) => { if (!padres.has(v)) { padres.set(v, actual); cola.push(v); } });
+  }
+  return padres;
+}
+// Un ejemplo por mapa para las funciones que reciben un mapa y nada más.
+const porMapa = (ids, extra = () => []) => ids.map(id => ({ nombre: TITULOS[id], args: () => [M(id), ...extra(id)] }));
+const BUSQUEDA = ['pequeño', 'terrenos', 'sinSalida'];
+const deBusqueda = () => porMapa(BUSQUEDA, id => [M(id).inicio, M(id).meta]);
+
+const FUNCIONES = [
+  { grupo: 'El mapa como grafo', nombre: 'leer_mapa', fn: leerMapa, casos: ['irregular', 'terrenos', 'objetos'].map(id => ({ nombre: TITULOS[id], args: () => [TEXTOS[id]] })) },
+  { grupo: 'El mapa como grafo', nombre: 'vecinos', fn: vecinos, casos: [
+    { nombre: 'Casilla en la orilla', args: () => [M('terrenos'), T(0, 0)] },
+    { nombre: 'Casilla rodeada', args: () => [M('terrenos'), T(2, 2)] },
+    { nombre: 'Junto a muros', args: () => [M('terrenos'), T(1, 3)] }] },
+  { grupo: 'El mapa como grafo', nombre: 'construir_grafo', fn: construirGrafo, casos: porMapa(['pequeño', 'irregular']) },
+
+  { grupo: 'Dibujar el mapa', nombre: 'etiqueta', fn: etiqueta, casos: [
+    { nombre: 'Casilla con objeto', args: () => [M('objetos'), T(0, 4)] },
+    { nombre: 'Casilla sin objeto', args: () => [M('objetos'), T(1, 1)] },
+    { nombre: 'La casilla de inicio', args: () => [M('objetos'), T(1, 2)] }] },
+  { grupo: 'Dibujar el mapa', nombre: 'marcar_inicio_y_meta', fn: marcarInicioYMeta, casos: [{ nombre: 'Dos símbolos', args: () => [T(0.5, 0.5), T(3.5, 2.5), 14] }] },
+  { grupo: 'Dibujar el mapa', nombre: 'simbolos_de_leyenda', fn: simbolosDeLeyenda, casos: [{ nombre: 'Único', args: () => [] }] },
+  { grupo: 'Dibujar el mapa', nombre: 'dibujar_cuadricula', fn: dibujarCuadricula, casos: [
+    { nombre: 'Solo el mapa', args: () => [M('pequeño'), null, null] },
+    { nombre: 'Con ruta y exploradas', args: () => [M('terrenos'), dato('terrenos', 'A*').ruta, dato('terrenos', 'A*').exploradas] },
+    { nombre: 'Con objetos', args: () => [M('irregular'), null, null] }] },
+  { grupo: 'Dibujar el mapa', nombre: 'dibujar_grafo', fn: dibujarGrafo, casos: [
+    { nombre: 'Solo el mapa', args: () => [M('pequeño'), null, null] },
+    { nombre: 'Con ruta y exploradas', args: () => [M('terrenos'), dato('terrenos', 'A*').ruta, dato('terrenos', 'A*').exploradas] }] },
+  { grupo: 'Dibujar el mapa', nombre: 'mostrar_mapa', fn: mostrarMapa, casos: [
+    { nombre: 'Solo el mapa', args: () => [M('terrenos'), 'Un mapa con terrenos', null, null] },
+    { nombre: 'Con ruta y exploradas', args: () => [M('terrenos'), 'La búsqueda de A*', dato('terrenos', 'A*').ruta, dato('terrenos', 'A*').exploradas] }] },
+
+  { grupo: 'Apoyo de los algoritmos', nombre: 'reconstruir_ruta', fn: reconstruirRuta, casos: ['pequeño', 'terrenos'].map(id => ({ nombre: TITULOS[id], args: () => [padresDeBfs(M(id)), M(id).meta, M(id)] })) },
+  { grupo: 'Apoyo de los algoritmos', nombre: 'estimacion', fn: estimacion, casos: [
+    { nombre: 'Desde el inicio', args: () => [M('terrenos').inicio, M('terrenos').meta, M('terrenos')] },
+    { nombre: 'Desde abajo', args: () => [T(3, 1), M('terrenos').meta, M('terrenos')] },
+    { nombre: 'En la misma fila', args: () => [T(2, 0), M('terrenos').meta, M('terrenos')] }] },
+
+  { grupo: 'Los cinco algoritmos', nombre: 'bfs', fn: bfs, casos: deBusqueda() },
+  { grupo: 'Los cinco algoritmos', nombre: 'dfs', fn: dfs, casos: deBusqueda() },
+  { grupo: 'Los cinco algoritmos', nombre: 'dijkstra', fn: dijkstra, casos: deBusqueda() },
+  { grupo: 'Los cinco algoritmos', nombre: 'voraz', fn: voraz, casos: deBusqueda() },
+  { grupo: 'Los cinco algoritmos', nombre: 'a_estrella', fn: aEstrella, casos: deBusqueda() },
+
+  { grupo: 'Medir y comprobar', nombre: 'medir', fn: medir, casos: [
+    { nombre: 'Ruta de BFS', args: () => [M('terrenos'), dato('terrenos', 'BFS').ruta] },
+    { nombre: 'Ruta de A*', args: () => [M('terrenos'), dato('terrenos', 'A*').ruta] }] },
+  { grupo: 'Medir y comprobar', nombre: 'comparar', fn: comparar, casos: porMapa(['terrenos', 'sinSalida']) },
+  { grupo: 'Medir y comprobar', nombre: 'imprimir_tabla', fn: imprimirTabla, casos: ['terrenos', 'sinSalida'].map(id => ({ nombre: TITULOS[id], args: () => [RES(id)] })) },
+  { grupo: 'Medir y comprobar', nombre: 'comprobar', fn: comprobar, casos: porMapa(['terrenos', 'sinSalida'], id => [RES(id)]) },
+  { grupo: 'Medir y comprobar', nombre: 'mostrar_busquedas', fn: mostrarBusquedas, casos: porMapa(['terrenos', 'sinSalida'], id => [RES(id)]) },
+  { grupo: 'Medir y comprobar', nombre: 'analizar', fn: analizar, casos: porMapa(['terrenos', 'sinSalida'], id => ['Mapa: ' + TITULOS[id].toLowerCase()]) },
+  { grupo: 'Medir y comprobar', nombre: 'comprobar_estimacion', fn: comprobarEstimacion, casos: porMapa(['terrenos', 'pequeño', 'sinSalida'], id => [TITULOS[id]]) },
+
+  { grupo: 'Objetos', nombre: 'costos_entre_puntos', fn: costosEntrePuntos, casos: porMapa(['objetos']) },
+  { grupo: 'Objetos', nombre: 'costo_del_orden', fn: costoDelOrden, casos: [
+    { nombre: 'O1, O2, O3', args: () => [M('objetos'), TAB('objetos'), M('objetos').objetos.slice()] },
+    { nombre: 'O2, O1, O3', args: () => { const o = M('objetos').objetos; return [M('objetos'), TAB('objetos'), [o[1], o[0], o[2]]]; } }] },
+  { grupo: 'Objetos', nombre: 'unir_rutas', fn: unirRutas, casos: [
+    { nombre: 'O2, O1, O3', args: () => { const o = M('objetos').objetos; return [M('objetos'), TAB('objetos'), [o[1], o[0], o[2]]]; } }] },
+  { grupo: 'Objetos', nombre: 'todos_los_ordenes', fn: todosLosOrdenes, casos: porMapa(['objetos'], id => [TAB(id)]) },
+  { grupo: 'Objetos', nombre: 'mas_cercano', fn: masCercano, casos: porMapa(['objetos'], id => [TAB(id)]) },
+  { grupo: 'Objetos', nombre: 'dibujar_grafo_completo', fn: dibujarGrafoCompleto, casos: [
+    { nombre: 'Sin orden', args: () => [M('objetos'), TAB('objetos'), null] },
+    { nombre: 'Con el mejor orden', args: () => { const o = M('objetos').objetos; return [M('objetos'), TAB('objetos'), [o[1], o[0], o[2]]]; } }] },
+  { grupo: 'Objetos', nombre: 'nombres_del_orden', fn: nombresDelOrden, casos: [
+    { nombre: 'O2, O1, O3', args: () => { const o = M('objetos').objetos; return [M('objetos'), [o[1], o[0], o[2]]]; } }] },
+];
+
+
+// ============================================================================
+// 6. LA PÁGINA
+// ============================================================================
+const PALABRAS = new Set(('def return if elif else for while in not and or is None True False continue break ' +
+  'raise assert lambda import from as').split(' '));
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// Da color a un renglón de Python: comentarios, textos entre comillas y palabras reservadas.
+function colorear(renglon) {
+  let html = '', i = 0;
+  while (i < renglon.length) {
+    const letra = renglon[i];
+    if (letra === '#') { html += '<span class="com">' + esc(renglon.slice(i)) + '</span>'; break; }
+    if (letra === "'" || letra === '"') {
+      let j = i + 1;
+      while (j < renglon.length && renglon[j] !== letra) { if (renglon[j] === '\\') j++; j++; }
+      html += '<span class="cad">' + esc(renglon.slice(i, j + 1)) + '</span>';
+      i = j + 1;
+      continue;
+    }
+    const palabra = /^[A-Za-z_À-ſ][\wÀ-ſ]*/.exec(renglon.slice(i));
+    if (palabra) {
+      html += PALABRAS.has(palabra[0]) ? '<span class="pal">' + palabra[0] + '</span>' : esc(palabra[0]);
+      i += palabra[0].length;
+      continue;
+    }
+    html += esc(letra);
+    i++;
+  }
+  return html;
+}
+
+// Puntos de una estrella de 5 puntas centrada en (x, y).
+function puntosEstrella(x, y, r) {
+  const pts = [];
+  for (let i = 0; i < 10; i++) {
+    const radio = i % 2 ? r * 0.42 : r;
+    const angulo = -Math.PI / 2 + i * Math.PI / 5;
+    pts.push((x + radio * Math.cos(angulo)).toFixed(2) + ',' + (y + radio * Math.sin(angulo)).toFixed(2));
+  }
+  return pts.join(' ');
+}
+
+// Convierte un lienzo (lista de piezas) en un dibujo SVG.
+function svgDeLienzo(lz) {
+  const U = 60;                                     // pixeles del dibujo por cada casilla
+  const partes = lz.piezas.map(q => {
+    const alfa = q.alfa === undefined ? '' : ` opacity="${q.alfa}"`;
+    if (q.t === 'rect') {
+      const borde = q.borde ? ` stroke="${q.borde}" stroke-width="${q.anchoBorde || 1.5}"${q.punteado ? ' stroke-dasharray="9 6"' : ''}` : '';
+      const m = q.anchoBorde ? q.anchoBorde / 2 : 0;  // los bordes gruesos se meten para no salirse de la casilla
+      return `<rect x="${q.x * U + m}" y="${q.y * U + m}" width="${q.w * U - 2 * m}" height="${q.h * U - 2 * m}" fill="${q.color || 'none'}"${borde}${alfa}/>`;
+    }
+    if (q.t === 'linea') {
+      return `<polyline points="${q.pts.map(([x, y]) => (x * U).toFixed(1) + ',' + (y * U).toFixed(1)).join(' ')}" fill="none" stroke="${q.color}" stroke-width="${q.ancho}" stroke-linecap="round" stroke-linejoin="round"${alfa}/>`;
+    }
+    if (q.t === 'circ') {
+      return `<circle cx="${q.x * U}" cy="${q.y * U}" r="${q.r * U}" fill="${q.color}" stroke="${q.borde || 'none'}" stroke-width="1.5"${alfa}/>`;
+    }
+    if (q.t === 'estrella') {
+      return `<polygon points="${puntosEstrella(q.x * U, q.y * U, q.r * U)}" fill="${COLOR_META}" stroke="#000" stroke-width="1.5"/>`;
+    }
+    if (q.t === 'texto') {
+      const tam = q.tam * U;
+      const fondo = q.fondo ? `<rect x="${q.x * U - q.s.length * tam * 0.34 - 3}" y="${q.y * U - tam * 0.62}" width="${q.s.length * tam * 0.68 + 6}" height="${tam * 1.24}" fill="#fff" rx="3"/>` : '';
+      return fondo + `<text x="${q.x * U}" y="${q.y * U}" font-size="${tam}" text-anchor="middle" dominant-baseline="central" font-family="Segoe UI, Arial, sans-serif"${q.negrita ? ' font-weight="bold"' : ''}>${esc(q.s)}</text>`;
+    }
+    return '';
+  });
+  const clase = lz.piezas.length ? '' : ' class="marco-vacio"';
+  return `<svg viewBox="0 0 ${lz.w * U} ${lz.h * U}" style="max-width:${lz.w * U * (lz.escala || 1)}px"${clase} role="img">${partes.join('')}</svg>`;
+}
+
+// La leyenda de los terrenos y de los símbolos de inicio y meta.
+function htmlLeyendaTerrenos() {
+  const terrenos = Object.keys(COLORES).map(t => `<span><i style="background:${COLORES[t]}"></i>${NOMBRES[t]}</span>`).join('');
+  return `<div class="leyenda">${terrenos}
+    <span><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="${COLOR_INICIO}" stroke="#000"/></svg>Inicio</span>
+    <span><svg viewBox="0 0 16 16"><polygon points="${puntosEstrella(8, 8.5, 8)}" fill="${COLOR_META}" stroke="#000" stroke-width=".8"/></svg>Meta</span></div>`;
+}
+// La leyenda de los colores que se usan durante una búsqueda.
+function htmlLeyendaRoles(roles) {
+  const textos = { explorada: 'Explorada', pendiente: 'Pendiente, en la estructura', actual: 'La que se revisa ahora', vecina: 'Vecina que se mira', ruta: 'Ruta' };
+  return '<div class="leyenda">' + roles.map(r => {
+    const estilo = r === 'actual' || r === 'vecina'
+      ? `background:#fff;border:3px ${r === 'vecina' ? 'dashed' : 'solid'} ${ROL[r]}`
+      : `background:${ROL[r]};opacity:${r === 'ruta' ? 1 : 0.7}`;
+    return `<span><i style="${estilo}"></i>${textos[r]}</span>`;
+  }).join('') + '</div>';
+}
+
+// La vista del texto de un mapa: con los saltos de línea escritos y con los saltos de verdad.
+function htmlTexto(tx) {
+  // 1. En una sola línea, con cada salto de línea escrito como \n.
+  const escrito = '"' + [...tx.crudo].map(ch => ch === '\n' ? '<span class="salto">\\n</span>' : esc(ch)).join('') + '"';
+  // 2. El mismo texto, partiendo el renglón en cada salto de línea.
+  const reales = tx.crudo.split('\n');
+  const real = reales.map((r, i) => {
+    const orilla = r === '' && (i === 0 || i === reales.length - 1);
+    return orilla ? '<span class="vacio">(renglón vacío)</span>' : esc(r);
+  }).join('<span class="salto">\\n</span>\n');
+  let html = `<div class="texto-mapa">
+    <div class="explica">El texto en una sola línea. Cada salto de línea está escrito como <span class="salto">\\n</span>:</div>
+    <div class="cuadro">${escrito}</div>
+    <div class="explica">El mismo texto con los saltos de línea de verdad. Donde había un <span class="salto">\\n</span> empieza un renglón nuevo:</div>
+    <pre class="cuadro" style="margin-top:4px">${real}</pre>`;
+  // 3. Cuando ya se separó en renglones: una tabla con el número de fila y de columna de cada carácter.
+  if (tx.lineas) {
+    const ancho = tx.columnas || Math.max(...tx.lineas.map(l => l.length));
+    html += '<div class="explica">La lista <code>lineas</code>: una fila por renglón y una columna por carácter. En rojo, lo que se rellenó con muro.</div><table><tr><th></th>';
+    for (let c = 0; c < ancho; c++) html += `<th>${c}</th>`;
+    html += '</tr>';
+    tx.lineas.forEach((linea, f) => {
+      const texto = tx.rellenas && tx.rellenas[f] !== undefined ? tx.rellenas[f] : linea;
+      html += `<tr class="${f === tx.f ? 'fila-actual' : ''}"><th>${f}</th>`;
+      for (let c = 0; c < ancho; c++) {
+        const clases = [];
+        if (c >= linea.length && c < texto.length) clases.push('relleno');
+        if (f === tx.f && c === tx.c) clases.push('aqui');
+        html += `<td class="${clases.join(' ')}">${c < texto.length ? esc(texto[c] === ' ' ? '␣' : texto[c]) : ''}</td>`;
+      }
+      html += '</tr>';
+    });
+    html += '</table>';
+  }
+  return html + '</div>';
+}
+
+// Arma el HTML del dibujo de un paso.
+function htmlVista(v) {
+  if (!v) return '<span class="pendiente">Esta función no necesita dibujo.</span>';
+  let html = '';
+  if (v.texto) html += htmlTexto(v.texto);
+  if (v.titulo) html += `<div class="figura-titulo">${esc(v.titulo)}</div>`;
+  if (v.lienzos && v.lienzos.length) {
+    const columnas = v.columnas || Math.min(v.lienzos.length, 2);
+    html += `<div class="lienzos" style="grid-template-columns:repeat(${columnas}, minmax(0, 1fr))">`;
+    html += v.lienzos.map(lz => `<div class="lienzo">${lz.titulo ? `<div class="rotulo">${esc(lz.titulo)}</div>` : ''}${svgDeLienzo(lz)}</div>`).join('');
+    html += '</div>';
+    if (v.leyenda !== false) html += htmlLeyendaTerrenos();
+    if (v.roles) html += htmlLeyendaRoles(v.roles);
+  }
+  if (v.html) html += v.html;
+  if (v.salida) html += `<div class="explica" style="margin-top:8px">Lo que se imprime:</div><pre class="salida">${esc(v.salida.join('\n'))}</pre>`;
+  return html || '<span class="pendiente">Esta función no necesita dibujo.</span>';
+}
+
+// Estado de la página: qué función, qué ejemplo y qué paso se están viendo.
+const estado = { funcion: null, caso: 0, pasos: [], paso: 0, entradas: [] };
+const $ = id => document.getElementById(id);
+
+// Ejecuta una función con un ejemplo y devuelve la grabadora con todos sus pasos.
+function grabar(definicion, numeroDeCaso) {
+  const argumentos = definicion.casos[numeroDeCaso].args();   // se preparan antes de empezar a grabar
+  const grabadora = new Grabadora(definicion.nombre);
+  GRABANDO = grabadora;
+  try {
+    definicion.fn(...argumentos);
+  } finally {
+    GRABANDO = null;
+  }
+  return grabadora;
+}
+
+// Muestra una función: su documentación, su código y sus ejemplos.
+function elegirFuncion(nombre, numeroDeCaso = 0) {
+  const definicion = FUNCIONES.find(d => d.nombre === nombre) || FUNCIONES[0];
+  estado.funcion = definicion;
+  estado.caso = Math.min(numeroDeCaso, definicion.casos.length - 1);
+  const grabadora = grabar(definicion, estado.caso);
+  estado.pasos = grabadora.pasos;
+  estado.entradas = grabadora.args;
+
+  $('ficha-nombre').textContent = definicion.nombre;
+  $('nombre-barra').textContent = definicion.nombre;
+  $('ficha-doc').textContent = NOTEBOOK[definicion.nombre].doc;
+  $('casos').innerHTML = '<span>Ejemplo:</span>' + definicion.casos.map((c, i) =>
+    `<button data-caso="${i}" class="${i === estado.caso ? 'activa' : ''}">${esc(c.nombre)}</button>`).join('');
+  $('entradas').innerHTML = estado.entradas.map(([n, v]) => `<div><b>${esc(n)}</b> = ${esc(v)}</div>`).join('') ||
+    '<span class="pendiente">No recibe nada.</span>';
+  $('codigo').innerHTML = grabadora.renglones.map((r, i) => {
+    // Los comentarios del notebook están alineados con muchos espacios; aquí se acercan al código
+    // para que el renglón no se parta. Si aun así no cabe, lo que sigue se alinea bajo el comienzo.
+    const compacto = r.replace(/(\S) {3,}#/, '$1  #');
+    const sangria = compacto.length - compacto.trimStart().length + 4;
+    return `<div class="renglon" id="renglon-${i}"><span class="num">${i + 1}</span>` +
+      `<span class="txt" style="padding-left:${sangria}ch;text-indent:-${sangria}ch">${colorear(compacto) || ' '}</span></div>`;
+  }).join('');
+  document.querySelectorAll('#indice button').forEach(b => b.classList.toggle('activa', b.dataset.nombre === definicion.nombre));
+  $('deslizador').max = estado.pasos.length - 1;
+  if (location.hash.slice(1) !== definicion.nombre) history.replaceState(null, '', '#' + definicion.nombre);
+  mostrarPaso(0);
+}
+
+// Muestra un paso: renglón resaltado, explicación, dibujo y variables.
+function mostrarPaso(i) {
+  const total = estado.pasos.length;
+  estado.paso = Math.max(0, Math.min(total - 1, i));
+  const paso = estado.pasos[estado.paso];
+  const anterior = estado.paso > 0 ? new Map(estado.pasos[estado.paso - 1].vars) : new Map();
+
+  // Renglones del código que se ejecutan en este paso.
+  document.querySelectorAll('#codigo .renglon.actual').forEach(r => r.classList.remove('actual'));
+  paso.renglones.filter(n => n >= 0).forEach(n => $('renglon-' + n).classList.add('actual'));
+  const primero = paso.renglones.find(n => n >= 0);
+  if (primero !== undefined) {
+    // Se mueve solo el panel del código, no toda la página, para que el renglón quede a la vista.
+    const panel = $('panel-codigo'), renglon = $('renglon-' + primero);
+    // Distancia del renglón al principio del contenido del panel, medida en la pantalla.
+    const arriba = renglon.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+    if (arriba < panel.scrollTop + 40 || arriba > panel.scrollTop + panel.clientHeight - 60) {
+      panel.scrollTop = arriba - panel.clientHeight / 3;
+    }
+  }
+
+  $('nota').innerHTML = paso.nota + (paso.devuelve !== undefined ? `<div class="devuelve"><b>Devuelve:</b> ${esc(paso.devuelve)}</div>` : '');
+  $('vista').innerHTML = htmlVista(paso.vista);
+  $('salida-final').innerHTML = paso.devuelve !== undefined ? esc(paso.devuelve) :
+    '<span class="pendiente">Todavía no termina. Aparece en el último paso.</span>';
+
+  // Variables: se marcan las nuevas y las que cambiaron respecto al paso anterior.
+  $('vars').innerHTML = paso.vars.map(([nombre, valor]) => {
+    const antes = anterior.get(nombre);
+    const marca = estado.paso === 0 ? '' : antes === undefined ? 'nueva' : antes !== valor ? 'cambió' : '';
+    return `<tr class="${marca ? 'cambio' : ''}"><td class="nombre">${esc(nombre)}${marca ? `<span class="marca">${marca}</span>` : ''}</td>` +
+      `<td class="valor"><div>${esc(valor)}</div></td></tr>`;
+  }).join('') || '<tr><td class="pendiente">Todavía no hay variables.</td></tr>';
+
+  $('contador').textContent = `Paso ${estado.paso + 1} de ${total}`;
+  $('deslizador').value = estado.paso;
+  $('b-inicio').disabled = $('b-anterior').disabled = estado.paso === 0;
+  $('b-siguiente').disabled = $('b-final').disabled = estado.paso === total - 1;
+}
+
+// Arma el índice de funciones y conecta los botones y el teclado.
+function iniciar() {
+  let html = '', grupo = '';
+  FUNCIONES.forEach(d => {
+    if (d.grupo !== grupo) { grupo = d.grupo; html += `<h2>${esc(grupo)}</h2>`; }
+    html += `<button data-nombre="${d.nombre}">${d.nombre}</button>`;
+  });
+  $('indice').innerHTML = html;
+  $('indice').addEventListener('click', e => { if (e.target.dataset.nombre) { elegirFuncion(e.target.dataset.nombre); window.scrollTo(0, 0); } });
+  $('casos').addEventListener('click', e => { if (e.target.dataset.caso) elegirFuncion(estado.funcion.nombre, Number(e.target.dataset.caso)); });
+  $('b-inicio').onclick = () => mostrarPaso(0);
+  $('b-anterior').onclick = () => mostrarPaso(estado.paso - 1);
+  $('b-siguiente').onclick = () => mostrarPaso(estado.paso + 1);
+  $('b-final').onclick = () => mostrarPaso(estado.pasos.length - 1);
+  $('deslizador').oninput = e => mostrarPaso(Number(e.target.value));
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;       // el deslizador ya usa las flechas por su cuenta
+    if (e.key === 'ArrowRight') { mostrarPaso(estado.paso + 1); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { mostrarPaso(estado.paso - 1); e.preventDefault(); }
+  });
+  window.addEventListener('hashchange', () => elegirFuncion(location.hash.slice(1)));
+  elegirFuncion(location.hash.slice(1));
+}
+
+if (typeof document !== 'undefined') iniciar();
+</script>
+</body>
+</html>
