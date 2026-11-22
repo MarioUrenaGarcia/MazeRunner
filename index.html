@@ -3403,6 +3403,8 @@ function teclaDeMenu(estado, tecla) {
   if (tecla === 'Escape') { mostrarPortada(estado); return; }
   // El menú tiene tres columnas: fila 0 los juegos (cajas 0 a 2), fila 1 sus versiones de mirar
   // (cajas 3 a 5) y, debajo, Aprender (caja 6), que ocupa las tres columnas.
+  // W A S D mueven igual que las flechas, con o sin mayúsculas.
+  tecla = { w: 'ArrowUp', a: 'ArrowLeft', s: 'ArrowDown', d: 'ArrowRight' }[tecla.toLowerCase()] || tecla;
   const aprender = MODOS.length - 1, actual = estado.elegida;
   if (actual < aprender) estado.columnaDelMenu = actual % 3;         // se recuerda la columna, para volver a ella desde Aprender
   if (tecla === 'ArrowRight') estado.elegida = actual === aprender ? aprender : Math.floor(actual / 3) * 3 + (actual + 1) % 3;
