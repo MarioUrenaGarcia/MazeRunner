@@ -2869,7 +2869,7 @@ def dibujar_estructura(pantalla, fuentes, aprender, paso):
         escribir(pantalla, fuentes['chica'], pie, (zona.x + 12, zona.bottom - 48), (255, 170, 170))
         if tipo == 'prioridad':
             que = {'Dijkstra': 'el costo acumulado', 'Voraz': 'la estimación hasta la meta', 'A*': 'el costo acumulado más la estimación'}[aprender['algoritmo']]
-            escribir(pantalla, fuentes['chica'], f'El número de cada caja es {que}. Al entrar, se acomoda según ese valor.',
+            escribir(pantalla, fuentes['chica'], f'Cada caja lleva {que} y se acomoda por ese valor.',
                      (zona.x + 12, zona.bottom - 26), GRIS_CLARO)
 
 
