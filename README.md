@@ -6,6 +6,8 @@
 
 Proyecto de Matemáticas Discretas: comparación de algoritmos de búsqueda en grafos aplicados a videojuegos.
 
+**Jugar en el navegador:** https://mariourenagarcia.github.io/MazeRunner/
+
 ## Qué es
 
 En muchos videojuegos el mapa es una cuadrícula y los personajes tienen que encontrar un camino de un punto a otro. Ese es un problema de grafos: cada casilla es un vértice, cada movimiento posible es una arista y el costo del terreno es el peso.
@@ -74,7 +76,7 @@ Después, cada parte se abre por separado:
 | Página de funciones | Abrir `funciones.html` en el navegador |
 | Mapa editable | `python fase2_editor.py` |
 | Juegos en 2D | `python fase3_juegos.py` |
-| Juegos en 3D | Abrir `index.html` en el navegador |
+| Juegos en 3D | Entrar a https://mariourenagarcia.github.io/MazeRunner/ o abrir `index.html` en el navegador |
 
 Las dos páginas no necesitan Python ni instalar nada: basta un navegador. El juego 3D requiere que el navegador soporte WebGL.
 
