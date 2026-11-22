@@ -53,8 +53,9 @@
 
   /* Botones al pie: elegir rival y controles del modo. */
   #rivales, #controles { position: absolute; bottom: 34px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 8px; }
-  #rivales span, #controles span { font-size: 15px; text-shadow: 0 1px 3px #000; }
-  #interfaz button { background: #2a2a30; color: #fff; border: 1px solid #6a6a70; border-radius: 9px; padding: 7px 14px; font-size: 15px; }
+  #rivales, #controles { flex-wrap: wrap; row-gap: 6px; padding: 0 10px; }
+  #rivales span, #controles span { font-size: 15px; text-shadow: 0 1px 3px #000; white-space: nowrap; }
+  #interfaz button { background: #2a2a30; color: #fff; border: 1px solid #6a6a70; border-radius: 9px; padding: 7px 12px; font-size: 15px; white-space: nowrap; }
   #interfaz button.activo { background: var(--rojo); border-color: #fff; }
 
   /* El menú. */
@@ -1566,6 +1567,7 @@ function dibujarPartida(estado, juego, segundos, t) {
   // 4. La cámara.
   apuntarCamara(estado.camara, juego, tableros, estado.seguir, estado.momento, t);
   if (estado.pantalla !== 'juego') pasearCamara(estado.camara, tableros, t);
+  camaraDeMirar(estado, juego, tableros, segundos);
   moverCamara(estado.camara, segundos);
   const camara = matrizDeCamara(estado.camara);
   agregarCielo(manchasDeFondo, estado.camara.centro, t);
@@ -1672,7 +1674,8 @@ function interfazDeBandera(estado, juego, escena) {
               corredor.pensando > 0 ? 'globo' : 'nombre', escena.camara);
   }
   // Los botones para elegir rival: del 1 al 6. El elegido va en rojo.
-  poner('rivales', (humano ? '<span>Rival:</span>' : '') + OPCIONES_DE_RIVAL.map((opcion, k) =>
+  // Al solo mirar se elige también el algoritmo del lado izquierdo.
+  poner('rivales', (humano ? '<span>Rival:</span>' : botonesDeIzquierda(juego)) + OPCIONES_DE_RIVAL.map((opcion, k) =>
     `<button data-rival="${opcion}" class="${opcion === juego.eleccion ? 'activo' : ''}">` +
     `${opcion in COLOR_DE ? `<i style="background:${colorCss(COLOR_DE[opcion])}"></i>` : ''}${k + 1} ${opcion}</button>`).join(''));
   poner('aviso', juego.avisoResta > 0 && juego.fase !== 'final' ? juego.aviso : '');
@@ -1705,7 +1708,103 @@ const AYUDA_DE_JUGAR = 'Flechas o W A S D: moverte. C: acercar. R: reiniciar. Es
 const AYUDA_DE_MIRAR = 'Rueda: acercar. Arrastrar: girar. W A S D: mover. Tab: seguir a otro. 0: vista general. R: reiniciar. Esc: menú.';
 
 // ============================================================================
-// 10. PORTADA Y MENÚ
+// 10. MODOS DE SOLO MIRAR
+// Compiten solo los algoritmos y la cámara se mueve con libertad: la rueda
+// acerca y aleja, arrastrar gira, W A S D desplaza, Tab pasa a seguir a otro
+// personaje y 0 vuelve a la vista general.
+// ============================================================================
+
+// Cómo está movida la cámara respecto a la vista normal.
+//   zoom:    1 es la distancia normal; más grande es más cerca
+//   giro:    cuánto se giró alrededor del tablero, en radianes
+//   altura:  cuánto se levantó o se bajó la mirada, en radianes
+//   dx, dz:  cuánto se desplazó el punto al que mira, en casillas
+function vistaNormal() { return { zoom: 1, giro: 0, altura: 0, dx: 0, dz: 0 }; }
+
+// Se llama al empezar cualquier partida: regresa la cámara libre a su lugar.
+function alEmpezar(estado) {
+  estado.vista = vistaNormal();
+  estado.arrastre = null;
+}
+
+// Aplica a la cámara lo que el espectador movió: desplazar, girar, levantar y acercar.
+// La cámara ya trae su meta normal (vista general o siguiendo a alguien); aquí se le ajusta.
+function camaraDeMirar(estado, juego, tableros, segundos) {
+  if (!estado.modo || !estado.modo.startsWith('mirar') || estado.pantalla !== 'juego' || estado.momento) return;
+  const vista = estado.vista, camara = estado.camara;
+  // W A S D desplaza la vista. Se mueve respecto a como está girada la cámara.
+  const rapidez = 9 * segundos / vista.zoom;
+  for (const [df, dc] of estado.direcciones) {
+    vista.dx += (dc * Math.cos(vista.giro) + df * Math.sin(vista.giro)) * rapidez;
+    vista.dz += (df * Math.cos(vista.giro) - dc * Math.sin(vista.giro)) * rapidez;
+  }
+  const centro = [camara.centroMeta[0] + vista.dx, camara.centroMeta[1], camara.centroMeta[2] + vista.dz];
+  // El brazo que va del punto mirado a la cámara: se acorta con el zoom y se gira.
+  let brazo = restar(camara.ojoMeta, camara.centroMeta).map(v => v / vista.zoom);
+  const largo = Math.hypot(...brazo), plano = Math.hypot(brazo[0], brazo[2]);
+  // La altura de la mirada: entre casi a ras de piso y casi desde arriba.
+  const elevacion = Math.min(1.5, Math.max(0.12, Math.atan2(brazo[1], plano) + vista.altura));
+  const rumbo = Math.atan2(brazo[0], brazo[2]) + vista.giro;
+  brazo = [Math.sin(rumbo) * Math.cos(elevacion) * largo, Math.sin(elevacion) * largo, Math.cos(rumbo) * Math.cos(elevacion) * largo];
+  camara.centroMeta = centro;
+  camara.ojoMeta = [centro[0] + brazo[0], centro[1] + brazo[1], centro[2] + brazo[2]];
+}
+
+// Atiende las teclas propias de mirar: Tab, 0 y, en captura la bandera, Mayús + 1 a 5.
+function teclaDeModo(estado, evento, tecla) {
+  if (!estado.modo.startsWith('mirar')) return;
+  const juego = estado.juego;
+  if (tecla === 'Tab') {
+    // Tab pasa a seguir al siguiente personaje.
+    estado.seguir = estado.seguir === null ? 0 : (estado.seguir + 1) % juego.corredores.length;
+    Object.assign(estado.vista, { dx: 0, dz: 0 });
+  } else if (tecla === '0') {
+    estado.seguir = null;                             // 0: la vista general
+    estado.vista = vistaNormal();
+  } else if (juego.tipo === 'bandera' && evento.shiftKey && /^Digit[1-5]$/.test(evento.code)) {
+    // Mayús + 1 a 5: el algoritmo del lado izquierdo, que conserva el color rojo.
+    estado.izquierda = NOMBRES[Number(evento.code.slice(5)) - 1];
+    empezar(estado.modo);
+  }
+}
+
+// Atiende los botones propios de mirar: elegir el algoritmo del lado izquierdo.
+function clicDeModo(estado, boton) {
+  if (boton.dataset.izquierda) { estado.izquierda = boton.dataset.izquierda; empezar(estado.modo); }
+}
+
+// Da los botones para elegir el algoritmo del lado izquierdo en captura la bandera.
+function botonesDeIzquierda(juego) {
+  return '<span>Izquierda (Mayús + 1 a 5):</span>' + NOMBRES.map(nombre =>
+    `<button data-izquierda="${nombre}" class="${nombre === juego.jugador.nombre ? 'activo' : ''}">` +
+    `<i style="background:${colorCss(COLOR_DE['Tú'])}"></i>${nombre}</button>`).join('') + '<span style="margin-left:18px">Derecha (1 a 6):</span>';
+}
+
+// El ratón sobre la escena: la rueda acerca y aleja; arrastrar gira y cambia la altura de la mirada.
+if (typeof document !== 'undefined') {
+  const lienzo = document.getElementById('lienzo');
+  const mirando = () => estado.pantalla === 'juego' && estado.modo && estado.modo.startsWith('mirar');
+  lienzo.addEventListener('wheel', evento => {
+    if (!mirando()) return;
+    evento.preventDefault();
+    estado.vista.zoom = Math.min(6, Math.max(0.5, estado.vista.zoom * Math.pow(1.0012, -evento.deltaY)));
+  }, { passive: false });
+  lienzo.addEventListener('pointerdown', evento => {
+    if (!mirando()) return;
+    estado.arrastre = [evento.clientX, evento.clientY];
+    lienzo.setPointerCapture(evento.pointerId);
+  });
+  lienzo.addEventListener('pointermove', evento => {
+    if (!mirando() || !estado.arrastre) return;
+    estado.vista.giro -= (evento.clientX - estado.arrastre[0]) * 0.006;
+    estado.vista.altura = Math.min(1.2, Math.max(-1.2, estado.vista.altura + (evento.clientY - estado.arrastre[1]) * 0.004));
+    estado.arrastre = [evento.clientX, evento.clientY];
+  });
+  for (const tipo of ['pointerup', 'pointercancel']) lienzo.addEventListener(tipo, () => { estado.arrastre = null; });
+}
+
+// ============================================================================
+// 11. PORTADA Y MENÚ
 // La portada muestra el título sobre una partida que se juega sola. Al oprimir
 // una tecla, el fondo se desenfoca, el título se barre hacia un lado y aparecen
 // los modos en cajas. Al elegir uno, su caja estalla en partículas y hay un
@@ -1862,13 +1961,15 @@ function pasearCamara(camara, tableros, t) {
 }
 
 // ============================================================================
-// 11. EL PROGRAMA
+// 12. EL PROGRAMA
 // ============================================================================
 
 // Los modos del juego: clave, nombre y una línea que lo describe.
 const MODOS = [
   ['gemas', 'Atrapa gemas', 'Carrera contra los cinco algoritmos, cada quien en su tablero.'],
   ['bandera', 'Captura la bandera', 'Uno contra uno: roba la bandera rival. A tres puntos.'],
+  ['mirar_gemas', 'Mirar: atrapa gemas', 'Compiten solo los algoritmos.'],
+  ['mirar_bandera', 'Mirar: captura la bandera', 'Elige el algoritmo de cada lado.'],
 ];
 
 // Todo lo que cambia mientras corre el programa.
@@ -1890,12 +1991,15 @@ function empezar(modo) {
   estado.momento = null;
   estado.efectos = crearEfectos();
   if (modo === 'gemas') estado.juego = crearGemas();
+  else if (modo === 'mirar_gemas') estado.juego = crearGemas(false);
   else if (modo === 'bandera') estado.juego = crearBandera(estado.rival);
+  else if (modo === 'mirar_bandera') estado.juego = crearBandera(estado.rival, estado.izquierda);
   estado.pantalla = 'juego';
   elemento('menu').style.display = 'none';
   elemento('portada').style.display = 'none';
   elemento('lienzo').style.filter = '';
   elemento('barra').style.display = '';
+  alEmpezar(estado);
 }
 
 // Dice si la partida ya terminó: se anunció el resultado o alguien llegó a 3 puntos.
@@ -1925,6 +2029,7 @@ function alOprimir(evento) {
     estado.rival = OPCIONES_DE_RIVAL[Number(tecla) - 1];                         // se conserva para las partidas siguientes
     empezar(estado.modo);
   }
+  else teclaDeModo(estado, evento, tecla);
 }
 
 // Atiende una tecla que se suelta.
@@ -1940,6 +2045,7 @@ function alHacerClic(evento) {
   if (!boton) return;
   if (boton.dataset.modo) clicDeMenu(estado, boton.dataset.modo);
   else if (boton.dataset.rival) { estado.rival = boton.dataset.rival; empezar(estado.modo); }
+  else clicDeModo(estado, boton);
   boton.blur();                                                                  // para que Espacio no vuelva a oprimirlo
 }
 
