@@ -2129,9 +2129,12 @@ def dibujar_gemas(pantalla, fuentes, juego, t, entorno, efectos, con_interfaz=Tr
     if jugador is not None:
         escribir(pantalla, fuentes['normal'], f'Vas en el lugar {orden.index(jugador) + 1} de {len(orden)}',
                  (ANCHO // 2, 24), DORADO, 'centro')
+        escribir(pantalla, fuentes['chica'], AYUDA_DE_JUGAR, (ANCHO // 2, 54), GRIS, 'centro')
     else:
         escribir(pantalla, fuentes['normal'], f"Va ganando {orden[0]['nombre']}", (ANCHO // 2, 24), DORADO, 'centro')
-    escribir(pantalla, fuentes['chica'], AYUDA_DE_JUGAR if jugador is not None else AYUDA_DE_MIRAR, (ANCHO // 2, 54), GRIS, 'centro')
+        # La ayuda de mirar es más ancha que el hueco entre el título y el reloj,
+        # así que va al pie de la pantalla, en la franja libre debajo de los tableros.
+        escribir(pantalla, fuentes['chica'], AYUDA_DE_MIRAR, (ANCHO // 2, 706), GRIS_CLARO, 'centro')
 
     for numero, vista in vistas.items():
         # Encabezado del tablero: el lugar que lleva, su color, su nombre y su avance.
@@ -2299,7 +2302,8 @@ def dibujar_bandera_juego(pantalla, fuentes, juego, t, entorno, efectos):
         # Al solo mirar, también se elige el algoritmo del lado izquierdo, que conserva el rojo.
         for nombre_de_algoritmo, zona in zip(ALGORITMOS, zonas_de_izquierda()):
             dibujar_boton(pantalla, fuentes, zona, nombre_de_algoritmo, nombre_de_algoritmo == jugador['nombre'], ROJO)
-        escribir(pantalla, fuentes['chica'], 'Izquierda: Mayús + 1 a 5', (zonas_de_izquierda()[-1].right + 10, 682), GRIS_CLARO)
+        # El letrero va corto para caber en el hueco entre los dos grupos de botones.
+        escribir(pantalla, fuentes['chica'], 'Mayús + 1 a 5', (zonas_de_izquierda()[-1].right + 10, 682), GRIS_CLARO)
 
     if juego['aviso_resta'] > 0 and juego['fase'] != 'final':
         # El aviso de choque, de robo o de punto, sobre una franja oscura.
@@ -3204,6 +3208,7 @@ def al_menu(estado):
     estado['pantalla'] = 'menu'
     estado['juego'] = None
     estado['aprender'] = None
+    estado['transicion'] = None                      # sin restos de la caja que creció al elegir el modo
     estado['tiempo_en_menu'] = 0.0
     estado['elegida_desde'] = 0.0
     estado['direcciones'] = []
