@@ -68,6 +68,23 @@
                         display: flex; flex-direction: column; justify-content: center; gap: 8px; }
   #menu .cajas button b { font-size: 23px; } #menu .cajas button span { font-size: 15px; color: #d5d5d5; }
   #menu .pie { font-size: 15px; text-shadow: 0 1px 3px #000; }
+  #menu h1.chico { font-size: min(7vw, 64px); margin-bottom: 18px; }
+  #menu.yendose { transition: opacity .35s; opacity: 0; }
+  /* Las cajas del menú llegan una tras otra, subiendo. */
+  #menu .cajas button.entra { animation: entra .4s both; }
+  @keyframes entra { from { opacity: 0; transform: translateY(50px) scale(.9); } to { opacity: 1; transform: none; } }
+
+  /* La portada: el título arriba. Al abrir el menú se barre hacia la izquierda. */
+  #portada { position: absolute; top: 6%; left: 0; right: 0; text-align: center; transition: transform .55s cubic-bezier(.6, 0, .9, .4), opacity .55s; }
+  #portada.fuera { transform: translateX(-130%); opacity: 0; }
+  #portada h1 { margin: 0; font-size: min(13vw, 140px); font-weight: 900; -webkit-text-stroke: 4px #000; text-shadow: 0 8px 0 #000; }
+  #portada .subtitulo { display: inline-block; margin: 0; font-size: min(3.8vw, 36px); font-weight: 700; border-top: 8px solid var(--rojo);
+                        padding-top: 8px; text-shadow: 0 2px 5px #000, 0 0 3px #000; }
+  #portada .parpadea { position: fixed; bottom: 9%; left: 0; right: 0; margin: 0; font-size: min(4vw, 32px); font-weight: 800; color: var(--dorado);
+                       text-shadow: 0 3px 0 #000, 0 0 4px #000; animation: parpadea 1s steps(2, jump-none) infinite; }
+  @keyframes parpadea { from { opacity: 1; } to { opacity: .15; } }
+  /* Los pedazos en que estalla una caja del menú. */
+  .pedazo { position: fixed; border: 1px solid #000; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -83,6 +100,7 @@
   <div id="controles"></div>
   <div id="ayuda"></div>
   <div id="menu"></div>
+  <div id="portada"></div>
 </div>
 <script>
 "use strict";
@@ -1428,6 +1446,7 @@ function dibujarPartida(estado, juego, segundos, t) {
 
   // 3. Los efectos y los momentos especiales de la cámara.
   estado.momento = momentoDeCamara(estado, juego);
+  if (estado.pantalla !== 'juego') estado.momento = null;     // detrás de la portada, la cámara no persigue a nadie
   lanzarEventos(estado.efectos, juego, tableros);
   agregarEfectos(dinamico, estado.efectos);
   if (estado.momento) {
@@ -1437,6 +1456,7 @@ function dibujarPartida(estado, juego, segundos, t) {
 
   // 4. La cámara.
   apuntarCamara(estado.camara, juego, tableros, estado.seguir, estado.momento, t);
+  if (estado.pantalla !== 'juego') pasearCamara(estado.camara, tableros, t);
   moverCamara(estado.camara, segundos);
   const camara = matrizDeCamara(estado.camara);
   agregarCielo(manchasDeFondo, estado.camara.centro, t);
@@ -1576,50 +1596,160 @@ const AYUDA_DE_JUGAR = 'Flechas o W A S D: moverte. C: acercar. R: reiniciar. Es
 const AYUDA_DE_MIRAR = 'Rueda: acercar. Arrastrar: girar. W A S D: mover. Tab: seguir a otro. 0: vista general. R: reiniciar. Esc: menú.';
 
 // ============================================================================
-// 10. EL MENÚ
+// 10. PORTADA Y MENÚ
+// La portada muestra el título sobre una partida que se juega sola. Al oprimir
+// una tecla, el fondo se desenfoca, el título se barre hacia un lado y aparecen
+// los modos en cajas. Al elegir uno, su caja estalla en partículas y hay un
+// salto tipo hiperespacio antes de llegar al tablero.
 // ============================================================================
 
-// Muestra el menú: una caja por modo. La elegida va resaltada.
-function mostrarMenu(estado) {
-  estado.pantalla = 'menu';
+const DURACION_DEL_SALTO = 1.1;         // segundos que dura el salto tipo hiperespacio
+
+// Limpia la interfaz de la partida y deja listo el fondo: una partida entre dos algoritmos.
+function prepararFondo(estado) {
   estado.juego = null;
-  for (const id of ['titulo', 'centro', 'tiempo', 'mensaje', 'ayuda', 'cuenta', 'aviso', 'cartel', 'rivales']) poner(id, '');
+  estado.seguir = null;
+  for (const id of ['titulo', 'centro', 'tiempo', 'mensaje', 'ayuda', 'cuenta', 'aviso', 'cartel', 'rivales', 'controles']) poner(id, '');
   limpiarEtiquetas(); limpiarEtiquetas();
   elemento('barra').style.display = 'none';
+  if (!estado.demo) estado.demo = crearDemo();
+}
+
+// Crea la partida que se juega sola: captura la bandera entre dos algoritmos distintos, sorteados.
+function crearDemo() {
+  const [izquierda, derecha] = muestra(NOMBRES, 2);
+  const demo = crearBandera(derecha, izquierda);
+  demo.cuenta = 0.5;                                  // casi sin cuenta regresiva: aquí solo se mira
+  return demo;
+}
+
+// Muestra la portada: el título arriba y la partida de fondo, sin desenfocar.
+function mostrarPortada(estado) {
+  prepararFondo(estado);
+  estado.pantalla = 'portada';
+  elemento('lienzo').style.filter = '';
+  elemento('menu').style.display = 'none';
+  elemento('portada').style.display = '';
+  elemento('portada').classList.remove('fuera');
+  poner('portada', '<h1>Maze Runner</h1><p class="subtitulo">Proyecto de matemáticas discretas</p><p class="parpadea">Presiona cualquier tecla</p>');
+}
+
+// Muestra el menú: desenfoca el fondo, barre el título hacia un lado y hace aparecer las cajas.
+function mostrarMenu(estado) {
+  prepararFondo(estado);
+  estado.pantalla = 'menu';
+  elemento('lienzo').style.filter = 'blur(7px) brightness(0.8)';
+  elemento('portada').classList.add('fuera');                       // el título se va por la izquierda
   elemento('menu').style.display = '';
-  pintarMenu(estado);
+  pintarMenu(estado, true);
 }
 
-// Escribe las cajas del menú en la página.
-function pintarMenu(estado) {
-  poner('menu', '<h1>Maze Runner</h1><p class="subtitulo">Proyecto de matemáticas discretas</p><div class="cajas">' +
-    MODOS.map((modo, k) => `<button data-modo="${modo[0]}" class="${k === estado.elegida ? 'activo' : ''}"><b>${modo[1]}</b><span>${modo[2]}</span></button>`).join('') +
-    '</div><p class="pie">Elige con las flechas y Enter, o con el ratón.</p>');
+// Escribe las cajas del menú. Con 'entrando', aparecen una tras otra.
+function pintarMenu(estado, entrando = false) {
+  poner('menu', '<h1 class="chico">Maze Runner</h1><div class="cajas">' +
+    MODOS.map((modo, k) => `<button data-modo="${modo[0]}" class="${k === estado.elegida ? 'activo' : ''} ${entrando ? 'entra' : ''}" ` +
+      `style="animation-delay:${k * 60}ms"><b>${modo[1]}</b><span>${modo[2]}</span></button>`).join('') +
+    '</div><p class="pie">Elige con las flechas y Enter, o con el ratón. Esc: portada.</p>');
 }
 
-// Atiende una tecla en el menú: las flechas cambian la caja elegida y Enter entra al modo.
+// Atiende una tecla en la portada o en el menú.
 function teclaDeMenu(estado, tecla) {
-  if (tecla === 'ArrowRight' || tecla === 'ArrowDown') estado.elegida = (estado.elegida + 1) % MODOS.length;
-  else if (tecla === 'ArrowLeft' || tecla === 'ArrowUp') estado.elegida = (estado.elegida + MODOS.length - 1) % MODOS.length;
-  else if (tecla === 'Enter' || tecla === ' ') { empezar(MODOS[estado.elegida][0]); return; }
+  if (estado.pantalla === 'salto') return;                           // durante el salto no se atiende nada
+  if (estado.pantalla === 'portada') { mostrarMenu(estado); return; }   // cualquier tecla abre el menú
+  if (tecla === 'Escape') { mostrarPortada(estado); return; }
+  const columnas = Math.max(1, Math.round(elemento('menu').querySelector('.cajas').clientWidth / 314));
+  if (tecla === 'ArrowRight') estado.elegida = (estado.elegida + 1) % MODOS.length;
+  else if (tecla === 'ArrowLeft') estado.elegida = (estado.elegida + MODOS.length - 1) % MODOS.length;
+  else if (tecla === 'ArrowDown') estado.elegida = Math.min(MODOS.length - 1, estado.elegida + columnas);
+  else if (tecla === 'ArrowUp') estado.elegida = Math.max(0, estado.elegida - columnas);
+  else if (tecla === 'Enter' || tecla === ' ') { clicDeMenu(estado, MODOS[estado.elegida][0]); return; }
+  else return;
   pintarMenu(estado);
 }
 
-// Atiende un clic en el menú.
-function clicDeMenu(estado, modo) { empezar(modo); }
+// Elige un modo: su caja estalla en partículas y empieza el salto tipo hiperespacio.
+function clicDeMenu(estado, modo) {
+  if (estado.pantalla !== 'menu') return;
+  estado.elegida = MODOS.findIndex(m => m[0] === modo);
+  const caja = elemento('menu').querySelector(`button[data-modo="${modo}"]`);
+  if (caja) estallarCaja(caja);
+  estado.pantalla = 'salto';
+  estado.salto = { modo, t: 0 };
+  elemento('menu').classList.add('yendose');                        // las demás cajas se desvanecen
+}
 
-// Dibuja el fondo del menú: el cielo, con la cámara girando despacio.
-function dibujarMenu(estado, segundos, t) {
-  const gl = motor.gl;
-  estado.camara.ojoMeta = [Math.cos(t * 0.05) * 30, 16, Math.sin(t * 0.05) * 30];
-  estado.camara.centroMeta = [0, 2, 0];
-  moverCamara(estado.camara, segundos);
-  const camara = matrizDeCamara(estado.camara);
-  manchasDeFondo.vaciar();
-  agregarCielo(manchasDeFondo, [0, 0, 0], t);
-  gl.clearColor(luz.cielo[0], luz.cielo[1], luz.cielo[2], 1);
+// Hace estallar una caja del menú: se esconde y en su lugar salen volando cuadritos de colores.
+function estallarCaja(caja) {
+  const zona = caja.getBoundingClientRect();
+  caja.style.visibility = 'hidden';
+  for (let k = 0; k < 46; k++) {
+    const pedazo = document.createElement('div');
+    pedazo.className = 'pedazo';
+    const tam = 8 + Math.random() * 14;
+    pedazo.style.cssText = `left:${zona.left + Math.random() * zona.width}px;top:${zona.top + Math.random() * zona.height}px;` +
+      `width:${tam}px;height:${tam}px;background:${elegir(['#c62828', '#ffffff', '#111114', '#ffc107'])}`;
+    elemento('interfaz').appendChild(pedazo);
+    // Cada pedazo sale en una dirección al azar, gira y se desvanece.
+    const angulo = Math.random() * Math.PI * 2, lejos = 160 + Math.random() * 380;
+    pedazo.animate([{ transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+                    { transform: `translate(${Math.cos(angulo) * lejos}px,${Math.sin(angulo) * lejos + 120}px) rotate(${Math.random() * 720 - 360}deg)`, opacity: 0 }],
+                   { duration: 700 + Math.random() * 300, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => pedazo.remove();
+  }
+}
+
+// Las estrellas del salto: cada una tiene su lugar alrededor del centro y qué tan lejos empieza.
+const ESTRELLAS_DEL_SALTO = Array.from({ length: 260 }, () => {
+  const angulo = Math.random() * Math.PI * 2, radio = 1.5 + Math.random() * 11;
+  return { x: Math.cos(angulo) * radio, y: Math.sin(angulo) * radio, z: -Math.random() * 120, color: elegir([BLANCO, BLANCO, ROJO, [0.8, 0.86, 1]]) };
+});
+
+// Dibuja el salto tipo hiperespacio: rayas de luz que pasan volando hacia la cámara, cada vez más rápido.
+function dibujarSalto(estado, segundos) {
+  const gl = motor.gl, salto = estado.salto;
+  salto.t += segundos;
+  const avance = Math.min(1, salto.t / DURACION_DEL_SALTO);
+  const rapidez = 30 + avance * avance * 420;         // acelera conforme avanza
+  dinamico.vaciar();
+  for (const estrella of ESTRELLAS_DEL_SALTO) {
+    estrella.z += rapidez * segundos;
+    if (estrella.z > 2) estrella.z -= 120;            // la que pasa de largo vuelve a empezar al fondo
+    const largo = 0.4 + avance * avance * 22;         // las rayas se alargan con la velocidad
+    dinamico.caja(bloque(estrella.x, estrella.y, estrella.z - largo / 2, 0.07, 0.07, largo), estrella.color, 1);
+  }
+  const camara = multiplicar(perspectiva(0.9 + avance * 0.7, motor.ancho / motor.alto, 0.1, 300), mirarHacia([0, 0, 0], [0, 0, -1]));
+  // El fondo se oscurece y, justo al final, da un destello blanco.
+  const destello = Math.max(0, (avance - 0.86) / 0.14);
+  const fondo = mezcla(mezcla(luz.cielo, [0.01, 0.01, 0.03], Math.min(1, avance * 3)), [1, 1, 1], destello);
+  gl.clearColor(fondo[0], fondo[1], fondo[2], 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  dibujarManchas(manchasDeFondo, camara.total, camara.derecha, camara.arriba, false);
+  dibujarLotes([dinamico], camara, Object.assign({}, luz, { cielo: fondo, lejos: 900 }));
+  if (salto.t >= DURACION_DEL_SALTO) {
+    elemento('menu').classList.remove('yendose');
+    empezar(salto.modo);                              // se llega al tablero
+  }
+}
+
+// Dibuja lo que hay detrás de la portada y del menú: la partida que se juega sola, o el salto.
+function dibujarMenu(estado, segundos, t) {
+  if (estado.pantalla === 'salto') {
+    elemento('lienzo').style.filter = '';
+    elemento('portada').style.display = 'none';
+    dibujarSalto(estado, segundos);
+    return;
+  }
+  const demo = estado.demo;
+  actualizarBandera(demo, segundos, []);
+  demo.vida = (demo.vida || 0) + segundos;
+  // Cuando la partida de fondo termina, o se alarga demasiado, empieza otra.
+  if ((demo.fase === 'final' && demo.vida > demo.reloj + 8) || demo.vida > 150) estado.demo = crearDemo();
+  return dibujarPartida(estado, demo, segundos, t);
+}
+
+// Hace que la cámara pasee despacio alrededor del tablero. Se usa detrás de la portada y del menú.
+function pasearCamara(camara, tableros, t) {
+  const centro = centroDe(tableros[0]);
+  camara.ojoMeta = [centro[0] + Math.cos(t * 0.13) * 15, 9.5, centro[2] + Math.sin(t * 0.13) * 15];
+  camara.centroMeta = [centro[0], 0.5, centro[2]];
 }
 
 // ============================================================================
@@ -1633,7 +1763,7 @@ const MODOS = [
 ];
 
 // Todo lo que cambia mientras corre el programa.
-//   pantalla:    'menu' o 'juego'
+//   pantalla:    'portada', 'menu', 'salto' (el salto tipo hiperespacio) o 'juego'
 //   modo, juego: el modo que se está jugando y su partida
 //   rival:       el rival elegido en captura la bandera; se conserva entre partidas y empieza en A*
 //   izquierda:   el algoritmo del lado izquierdo al solo mirar; empieza en BFS
@@ -1654,6 +1784,8 @@ function empezar(modo) {
   else if (modo === 'bandera') estado.juego = crearBandera(estado.rival);
   estado.pantalla = 'juego';
   elemento('menu').style.display = 'none';
+  elemento('portada').style.display = 'none';
+  elemento('lienzo').style.filter = '';
   elemento('barra').style.display = '';
 }
 
@@ -1694,6 +1826,7 @@ function alSoltar(evento) {
 
 // Atiende un clic sobre un botón de la interfaz.
 function alHacerClic(evento) {
+  if (estado.pantalla === 'portada') { mostrarMenu(estado); return; }             // un clic en la portada abre el menú
   const boton = evento.target.closest('button');
   if (!boton) return;
   if (boton.dataset.modo) clicDeMenu(estado, boton.dataset.modo);
@@ -1740,7 +1873,7 @@ function iniciar() {
   window.addEventListener('keyup', alSoltar);
   document.addEventListener('click', alHacerClic);
   window.addEventListener('blur', () => { estado.direcciones = []; });          // al cambiar de ventana se sueltan las teclas
-  mostrarMenu(estado);
+  mostrarPortada(estado);
   requestAnimationFrame(ahora => { momentoAnterior = ahora; requestAnimationFrame(cuadro); });
 }
 if (typeof document !== 'undefined') iniciar();
