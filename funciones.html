@@ -113,6 +113,24 @@
   .texto-mapa tr.fila-actual th { background: var(--resalte); color: var(--tinta); font-weight: bold; }
   .explica { font: 13px "Segoe UI", system-ui, Arial, sans-serif; color: var(--gris); }
 
+  /* El puntaje: en rojo las cifras del costo y en morado las de las casillas exploradas */
+  .de-costo { color: #c62828; font-weight: bold; }
+  .de-exploradas { color: #5e35b1; font-weight: bold; }
+  .puntaje { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; margin-top: 12px;
+             font: 17px Consolas, "Cascadia Mono", monospace; }
+  .puntaje .dato { display: inline-flex; flex-direction: column; align-items: center; border: 1px solid var(--linea);
+                   border-radius: 6px; padding: 3px 10px; background: #fafafa; }
+  .puntaje .dato small { font: 11.5px "Segoe UI", system-ui, Arial, sans-serif; color: var(--gris); }
+  .puntaje + .explica { text-align: center; margin-top: 8px; }
+  .caja-puntajes { overflow: auto; margin-top: 10px; }
+  table.puntajes { border-collapse: collapse; margin: 0 auto; font: 13px/1.4 Consolas, "Cascadia Mono", monospace; }
+  table.puntajes th, table.puntajes td { border: 1px solid #ccc; padding: 4px 8px; text-align: right; white-space: nowrap; }
+  table.puntajes th { background: #eee; font-weight: normal; color: var(--gris); font-size: 12px; }
+  table.puntajes th:first-child, table.puntajes td:first-child, table.puntajes td:last-child { text-align: left; }
+  table.puntajes tr.fila-actual td { background: var(--resalte); }
+  table.puntajes tr.mas-bajo td { box-shadow: inset 0 -3px 0 #2e7d32; }
+  table.puntajes tr.gana td { background: #dff3e1; font-weight: bold; }
+
   /* Tabla de variables */
   table.vars { width: 100%; border-collapse: collapse; font: 13px/1.45 Consolas, "Cascadia Mono", monospace; }
   table.vars td { border-top: 1px solid var(--linea); padding: 5px 6px; vertical-align: top; }
@@ -335,6 +353,14 @@ const NOTEBOOK = {
  "nombres_del_orden": {
   "codigo": "def nombres_del_orden(mapa, orden):\n    nombres = [etiqueta(mapa, objeto) for objeto in orden]\n    return ' -> '.join(['inicio'] + nombres + ['meta'])",
   "doc": "Escribe un orden de visita como texto.\n\nEntradas:\n    mapa:  el diccionario que devuelve leer_mapa\n    orden: lista de las casillas de los objetos, en el orden en que se visitan\n\nSalida: un texto como 'inicio -> O2 -> O1 -> meta'."
+ },
+ "puntaje": {
+  "codigo": "# El costo se multiplica por este número para que quede en las cifras de la izquierda\n# del puntaje, y las casillas exploradas en las últimas cuatro. Tiene que ser mayor que\n# cualquier cantidad posible de casillas exploradas.\nBASE_DEL_PUNTAJE = 10000\n\n\ndef puntaje(resultado):\n    if resultado['ruta'] is None:\n        return None                                  # sin ruta no hay puntaje: no participa\n    exploradas = len(resultado['exploradas'])\n    if exploradas >= BASE_DEL_PUNTAJE:\n        # Con tantas casillas el número se desbordaría hacia las cifras del costo.\n        raise ValueError(f'El puntaje solo sirve con menos de {BASE_DEL_PUNTAJE} casillas exploradas.')\n    return resultado['costo'] * BASE_DEL_PUNTAJE + exploradas",
+  "doc": "Calcula el puntaje de un algoritmo en un mapa. Mientras más bajo, mejor.\n\n    puntaje = costo * 10 000 + casillas exploradas\n\nEntrada: el resultado de un algoritmo, uno de los valores del diccionario\n         que devuelve comparar. Tiene 'ruta', 'exploradas', 'pasos' y 'costo'.\n\nSalida: el puntaje, un número entero. None si el algoritmo no encontró ruta."
+ },
+ "mejor_opcion": {
+  "codigo": "def mejor_opcion(resultados):\n    # El puntaje de cada algoritmo que sí encontró ruta.\n    puntajes = {nombre: puntaje(r) for nombre, r in resultados.items() if r['ruta'] is not None}\n    if not puntajes:\n        return []                                    # no existe ruta: no hay ganador\n    mas_bajo = min(puntajes.values())\n    return [nombre for nombre, valor in puntajes.items() if valor == mas_bajo]",
+  "doc": "Elige la mejor opción de un mapa: el algoritmo con el puntaje más bajo.\n\nEntrada: el diccionario que devuelve comparar.\n\nSalida: lista con los nombres de los ganadores.\n        Normalmente trae uno solo. Trae varios si empatan en puntaje, y\n        queda vacía si ningún algoritmo encontró ruta."
  }
 };
 
@@ -1651,6 +1677,117 @@ function nombresDelOrden(mapa, orden) {
   return texto;
 }
 
+// ---------------------------------------------------------------- puntaje
+// Tiene que ser mayor que cualquier cantidad posible de casillas exploradas.
+const BASE_DEL_PUNTAJE = 10000;
+
+// Escribe el resultado de un solo algoritmo sin listar todas las casillas.
+function pyResultado(r) {
+  return crudo(`{'ruta': ${resumen(r.ruta)}, 'exploradas': [${r.exploradas.length} casillas], 'pasos': ${py(r.pasos)}, 'costo': ${py(r.costo)}}`);
+}
+// Un puntaje con sus dos partes en color: adelante las cifras del costo y al final las cuatro de las exploradas.
+function htmlCifras(valor) {
+  const texto = String(valor), corte = Math.max(0, texto.length - 4);
+  return `<span class="de-costo">${texto.slice(0, corte)}</span><span class="de-exploradas">${texto.slice(corte)}</span>`;
+}
+// La cuenta del puntaje. Lo que todavía no se conoce se muestra con un signo de interrogación.
+function htmlPuntaje(costo, exploradas, total) {
+  const dato = (rotulo, valor, clase = '') => `<span class="dato"><small>${rotulo}</small><span class="${clase}">${valor === undefined ? '?' : valor}</span></span>`;
+  return `<div class="puntaje">${dato('costo', costo, 'de-costo')}<span>* ${BASE_DEL_PUNTAJE} +</span>${dato('exploradas', exploradas, 'de-exploradas')}<span>=</span>` +
+    dato('puntaje', total === undefined ? undefined : htmlCifras(total)) + '</div>' +
+    (total === undefined ? '' : '<div class="explica">Las cifras de adelante son el costo y las últimas cuatro son las casillas exploradas.</div>');
+}
+// El dibujo de lo que hizo un algoritmo: en morado lo que exploró y en rojo su ruta.
+const lzBusqueda = (mapa, nombre, r) => lzCuadricula(mapa, { ruta: r.ruta, exploradas: r.exploradas }, nombre ? tituloDeBusqueda(nombre, r) : '');
+
+function puntaje(resultado, mapa, nombre) {
+  const R = tomar();
+  let exploradas;
+  const costo = resultado.costo === null ? undefined : resultado.costo;
+  const V = () => ({ resultado: pyResultado(resultado), BASE_DEL_PUNTAJE, exploradas });
+  const ver = (total, conCuenta = true) => ({ lienzos: mapa ? [lzBusqueda(mapa, nombre, resultado)] : [], roles: ['explorada', 'ruta'], html: conCuenta ? htmlPuntaje(costo, exploradas, total) : '' });
+  R.on && R.entradas({ resultado: pyResultado(resultado) });
+  R.on && R.p('BASE_DEL_PUNTAJE = 10000', V(), `Antes de la función se fija la base del puntaje: ${cod('10000')}. El costo se va a multiplicar por ella para que quede en las cifras de la izquierda, y las últimas cuatro cifras quedan libres para las casillas exploradas.`, ver(undefined, resultado.ruta !== null));
+  if (resultado.ruta === null) {
+    R.on && R.p("if resultado['ruta'] is None", V(), `Se pregunta si el algoritmo se quedó sin ruta. Sí: su ruta es ${cod('None')}. En el dibujo no hay línea roja, solo las casillas que exploró.`, ver(undefined, false));
+    R.on && R.p('return None', V(), `Sin ruta no hay costo que comparar, así que no hay puntaje. Se devuelve ${cod('None')}: este algoritmo no participa.`, ver(undefined, false));
+    R.on && R.fin(null);
+    return null;
+  }
+  R.on && R.p("if resultado['ruta'] is None", V(), `Se pregunta si el algoritmo se quedó sin ruta. No: sí encontró una, la línea roja del dibujo, y su costo es ${resultado.costo}. Se sigue adelante.`, ver());
+  exploradas = resultado.exploradas.length;
+  R.on && R.p('exploradas = len(', V(), `${cod('len')} cuenta las casillas exploradas: ${exploradas}. Son las casillas moradas del dibujo.`, ver());
+  if (exploradas >= BASE_DEL_PUNTAJE) throw new Error(`El puntaje solo sirve con menos de ${BASE_DEL_PUNTAJE} casillas exploradas.`);
+  R.on && R.p('if exploradas >= BASE_DEL_PUNTAJE', V(), `${exploradas} es menor que ${BASE_DEL_PUNTAJE}, así que cabe en las últimas cuatro cifras y no hay error. Si no cupiera, se desbordaría hacia las cifras del costo y el puntaje dejaría de servir.`, ver());
+  const total = resultado.costo * BASE_DEL_PUNTAJE + exploradas;
+  R.on && R.p("return resultado['costo'] * BASE_DEL_PUNTAJE + exploradas", V(), `${resultado.costo} * ${BASE_DEL_PUNTAJE} = ${resultado.costo * BASE_DEL_PUNTAJE}, y al sumar ${exploradas} queda <b>${total}</b>. Mientras más bajo, mejor: primero manda el costo, y las casillas exploradas solo deciden cuando el costo empata.`, ver(total));
+  R.on && R.fin(total);
+  return total;
+}
+
+// ---------------------------------------------------------------- mejor_opcion
+// La tabla de los cinco algoritmos con su puntaje.
+// op: { revisados (cuántos renglones ya se calcularon), actual, mas_bajo, ganadores }
+function htmlTablaPuntajes(resultados, puntajes, op = {}) {
+  const renglones = resultados.map(([n, r], i) => {
+    const visto = i < op.revisados;
+    const valor = puntajes.get(n);
+    const gana = op.ganadores && op.ganadores.includes(n);
+    const clases = [n === op.actual ? 'fila-actual' : '', op.mas_bajo !== undefined && valor === op.mas_bajo ? 'mas-bajo' : '', gana ? 'gana' : ''].join(' ');
+    return `<tr class="${clases}"><td>${esc(n)}</td><td class="de-costo">${r.costo === null ? '-' : r.costo}</td><td class="de-exploradas">${r.exploradas.length}</td>` +
+      `<td>${valor !== undefined ? htmlCifras(valor) : visto ? '-' : ''}</td><td>${gana ? 'gana' : visto && r.ruta === null ? 'sin ruta' : ''}</td></tr>`;
+  }).join('');
+  return `<div class="caja-puntajes"><table class="puntajes"><tr><th>Algoritmo</th><th>Costo</th><th>Exploradas</th><th>Puntaje</th><th></th></tr>${renglones}</table></div>`;
+}
+
+function mejorOpcion(resultados, mapa) {
+  const R = tomar();
+  let nombre, r, puntajes, mas_bajo, valor, ganadores;
+  let revisados = 0;
+  const V = () => ({ resultados: pyResultados(resultados), nombre, r: r && pyResultado(r), valor, puntajes, mas_bajo, 'lista hasta ahora': ganadores });
+  // Cada paso muestra arriba la búsqueda de los algoritmos que se indiquen y abajo la tabla de puntajes.
+  const ver = (nombres = []) => ({
+    lienzos: nombres.length ? nombres.map(n => lzBusqueda(mapa, n, resultados.find(([x]) => x === n)[1])) : [lzCuadricula(mapa, {})],
+    roles: nombres.length ? ['explorada', 'ruta'] : undefined,
+    html: htmlTablaPuntajes(resultados, puntajes, { revisados, actual: nombre, mas_bajo, ganadores }),
+  });
+  R.on && R.entradas({ resultados: pyResultados(resultados) });
+  puntajes = new Dic();
+  for (const [n, x] of resultados) {
+    nombre = n; r = x;
+    revisados += 1;
+    if (x.ruta === null) {
+      R.on && R.p('puntajes = {nombre: puntaje(r)', V(), `<b>${n}</b> no encontró ruta. La condición ${cod("if r['ruta'] is not None")} lo deja fuera del diccionario: no tiene puntaje y no participa.`, ver([n]));
+      continue;
+    }
+    const p = puntaje(x);
+    puntajes.set(n, p);
+    R.on && R.p('puntajes = {nombre: puntaje(r)', V(), `<b>${n}</b> sí encontró ruta, así que se le calcula el puntaje: ${x.costo} * ${BASE_DEL_PUNTAJE} + ${x.exploradas.length} = <b>${p}</b>. Se guarda en el diccionario con su nombre como llave.`, ver([n]));
+  }
+  nombre = undefined; r = undefined;
+  if (!puntajes.size) {
+    R.on && R.p('if not puntajes', V(), 'El diccionario quedó vacío: ningún algoritmo encontró ruta. Un diccionario vacío cuenta como falso, así que la condición se cumple.', ver());
+    R.on && R.p('return []', V(), 'No existe ruta en este mapa, así que no hay ganador: se devuelve una lista vacía.', ver());
+    R.on && R.fin([]);
+    return [];
+  }
+  R.on && R.p('if not puntajes', V(), `El diccionario tiene ${puntajes.size} puntajes. No está vacío, así que sí hay de dónde elegir y se sigue adelante.`, ver());
+  mas_bajo = Math.min(...puntajes.pares.map(([, v]) => v));
+  R.on && R.p('mas_bajo = min(puntajes.values())', V(), `${cod('values()')} da solo los puntajes, sin los nombres, y ${cod('min')} toma el menor: <b>${mas_bajo}</b>. En la tabla es el renglón subrayado en verde.`, ver());
+  ganadores = [];
+  for (const [n, v] of puntajes.pares) {
+    nombre = n; valor = v;
+    if (v === mas_bajo) ganadores.push(n);
+    R.on && R.p('return [nombre for nombre, valor', V(), `<b>${n}</b>: su puntaje es ${v}. ` + (v === mas_bajo ? `Es igual al más bajo, así que entra a la lista de ganadores.` : `No es igual al más bajo (${mas_bajo}), así que no entra a la lista.`), ver([n]));
+  }
+  nombre = undefined; valor = undefined;
+  R.on && R.p('return [nombre for nombre, valor', V(), ganadores.length > 1
+    ? `Se revisaron todos. Hay ${ganadores.length} algoritmos con el puntaje más bajo: mismo costo y mismas casillas exploradas. Es un empate y se devuelven todos: ${ganadores.join(', ')}.`
+    : `Se revisaron todos. Solo <b>${ganadores[0]}</b> tiene el puntaje más bajo: es la mejor opción de este mapa. Se devuelve dentro de una lista, porque cuando hay empate la lista trae a todos los empatados.`, ver(ganadores));
+  R.on && R.fin(ganadores);
+  return ganadores;
+}
+
 // ============================================================================
 // LOS MAPAS DE EJEMPLO Y LA LISTA DE FUNCIONES
 // ============================================================================
@@ -1660,8 +1797,14 @@ const TEXTOS = {
   terrenos: '\nI.A..\n.#A.#\n..B.M\n.....\n',
   sinSalida: '\nI..\n.##\n.#M\n',
   objetos: '\nO...O\n..I..\n.AAA.\n.O..M\n',
+  // Cuatro mapas de la comparación del notebook, para que los puntajes sean los mismos de su tabla.
+  abierto: '\n...........\n.I.........\n...........\n...........\n...........\n...........\n.........M.\n...........\n',
+  mezclados: '\n...........\n....AAA....\n.I..AAA..M.\n....AAA....\n....BBB....\n....BBB....\n...........\n',
+  laberinto: '\n#############\n#I....#.....#\n#.###.#.###.#\n#.#.......#.#\n#.#.#####.#.#\n#.#.#...#.#.#\n#.#.#.#.#.#.#\n#.....#M....#\n#############\n',
+  sinSolucion: '\n..........\n.I........\n......###.\n......#M#.\n......###.\n..........\n',
 };
-const TITULOS = { irregular: 'Forma irregular', pequeño: 'Mapa pequeño', terrenos: 'Con terrenos', sinSalida: 'Sin salida', objetos: 'Con objetos' };
+const TITULOS = { irregular: 'Forma irregular', pequeño: 'Mapa pequeño', terrenos: 'Con terrenos', sinSalida: 'Sin salida', objetos: 'Con objetos',
+  abierto: 'Campo abierto', mezclados: 'Terrenos mezclados', laberinto: 'Laberinto', sinSolucion: 'Sin solución' };
 
 // Mapas ya leídos y resultados ya calculados, para no repetir el trabajo.
 const guardados = {};
@@ -1746,6 +1889,12 @@ const FUNCIONES = [
     { nombre: 'Con el mejor orden', args: () => { const o = M('objetos').objetos; return [M('objetos'), TAB('objetos'), [o[1], o[0], o[2]]]; } }] },
   { grupo: 'Objetos', nombre: 'nombres_del_orden', fn: nombresDelOrden, casos: [
     { nombre: 'O2, O1, O3', args: () => { const o = M('objetos').objetos; return [M('objetos'), [o[1], o[0], o[2]]]; } }] },
+
+  { grupo: 'Criterio de mejor opción', nombre: 'puntaje', fn: puntaje, casos: [
+    { nombre: 'A* en terrenos mezclados', args: () => [dato('mezclados', 'A*'), M('mezclados'), 'A*'] },
+    { nombre: 'Voraz en terrenos mezclados', args: () => [dato('mezclados', 'Voraz'), M('mezclados'), 'Voraz'] },
+    { nombre: 'Sin ruta', args: () => [dato('sinSolucion', 'BFS'), M('sinSolucion'), 'BFS'] }] },
+  { grupo: 'Criterio de mejor opción', nombre: 'mejor_opcion', fn: mejorOpcion, casos: ['mezclados', 'abierto', 'laberinto', 'sinSolucion'].map(id => ({ nombre: TITULOS[id], args: () => [RES(id), M(id)] })) },
 ];
 
 
