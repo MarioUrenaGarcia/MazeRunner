@@ -70,9 +70,12 @@
   #menu h1 { margin: 0; font-size: min(11vw, 110px); font-weight: 900; -webkit-text-stroke: 3px #000; text-shadow: 0 6px 0 #000; }
   #menu .subtitulo { margin: 0 0 28px; font-size: min(3.4vw, 30px); font-weight: 700; border-top: 7px solid var(--rojo);
                      padding-top: 8px; text-shadow: 0 2px 4px #000; }
-  #menu .cajas { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; max-width: 980px; padding: 0 12px; }
+  /* Tres columnas: arriba los juegos, debajo de cada uno su versión de mirar y, al final, Aprender a todo lo ancho. */
+  #menu .cajas { display: grid; grid-template-columns: repeat(3, minmax(0, 300px)); justify-content: center; gap: 14px;
+                 width: 100%; max-width: 980px; padding: 0 12px; }
+  #menu .cajas button[data-modo="aprender"] { grid-column: 1 / -1; height: 96px; }
   /* Todas las cajas miden lo mismo y su texto se parte en las líneas que haga falta. */
-  #menu .cajas button { width: 300px; max-width: 92vw; height: 138px; padding: 12px 16px; border-radius: 16px; background: rgba(24, 24, 28, .9);
+  #menu .cajas button { width: 100%; height: 138px; padding: 12px 16px; border-radius: 16px; background: rgba(24, 24, 28, .9);
                         border: 2px solid #8a8a90; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;
                         white-space: normal; overflow: hidden; transition: background .15s, border-color .15s; }
   #menu .cajas button b { font-size: 22px; line-height: 1.15; } #menu .cajas button span { font-size: 15px; line-height: 1.25; color: #e2e2e2; }
@@ -100,6 +103,134 @@
   @keyframes parpadea { from { opacity: 1; } to { opacity: .15; } }
   /* Los pedazos en que estalla una caja del menú. */
   .pedazo { position: fixed; border: 1px solid #000; pointer-events: none; }
+
+  /* El modo Aprender. A la izquierda queda el tablero 3D, con los botones para elegir arriba y la leyenda abajo;
+     a la derecha, un panel que se puede recorrer. --lado es el ancho de ese panel. */
+  #aprender { position: absolute; top: 64px; left: 0; right: 0; bottom: 0; --lado: clamp(340px, 42vw, 600px); }
+  #eleccion, #leyenda { position: absolute; left: 10px; right: calc(var(--lado) + 10px); display: flex; flex-wrap: wrap; align-items: center; }
+  #eleccion { top: 8px; gap: 6px; } #eleccion .corte { flex-basis: 100%; height: 0; }
+  #eleccion p { flex-basis: 100%; margin: 0; font-size: 14px; text-shadow: 0 1px 3px #000, 0 0 2px #000; }
+  #leyenda { bottom: 8px; gap: 4px 14px; font-size: 13px; text-shadow: 0 1px 3px #000, 0 0 2px #000; }
+  #leyenda span { white-space: nowrap; } #leyenda em, #leyenda svg { display: inline-block; width: 14px; height: 14px; margin: 0 5px -2px 0; }
+  #leyenda em.punto { border-radius: 50%; border: 1px solid #000; }
+  .rotulo { font-size: 13px; font-weight: 700; background: rgba(17, 17, 20, .85); padding: 1px 7px 2px; border-radius: 5px; text-shadow: none; }
+  #lado { position: absolute; top: 0; right: 0; bottom: 0; width: var(--lado); padding: 0 12px 12px; overflow-y: auto; pointer-events: auto;
+          background: rgba(17, 17, 20, .94); border-left: 4px solid var(--rojo); touch-action: pan-y; overscroll-behavior: contain; }
+  /* El número de paso y los botones se quedan a la vista aunque se baje a leer el código. */
+  #fijo { position: sticky; top: 0; z-index: 1; background: var(--negro); padding: 10px 0 8px; border-bottom: 1px solid #3a3a40; }
+  #numeroDePaso { font-size: 18px; font-weight: 800; color: var(--dorado); }
+  #botonesDePaso { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  #explicacion { margin: 10px 0; font-size: 15px; line-height: 1.4; min-height: 4.2em; }
+  /* El código: letra de ancho fijo, del tamaño que deje caber el renglón más largo cuando el panel es ancho. */
+  #codigo { background: #1e2026; border-radius: 8px; padding: 8px 6px; white-space: pre-wrap; overflow-wrap: anywhere; color: #c8c8c8;
+            font: clamp(10.5px, calc((var(--lado) - 44px) / 46), 13px)/1.45 Consolas, "Courier New", monospace; }
+  #codigo div { padding: 0 6px; border-radius: 3px; } #codigo div.actual { background: #ffeb3b; color: #111; font-weight: 700; }
+  #teclas { margin-top: 10px; font-size: 12px; color: #b4b4b8; }
+  /* La estructura de datos y la tabla: cajas oscuras dentro del panel. */
+  #estructura, #tabla, #tablaFija { background: #1e2026; border-radius: 8px; padding: 8px 10px; margin-top: 10px; font-size: 13px; }
+  #lado h3 { margin: 0 0 8px; font-size: 13px; font-weight: 400; color: #c8c8c8; } #lado p { margin: 8px 0 0; color: #c8c8c8; }
+  .caja { flex: none; width: 42px; height: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+          background: #ffe082; color: #111; border: 2px solid #000; border-radius: 4px; font: 12px/1 Consolas, "Courier New", monospace; }
+  .caja.sale { background: var(--rojo); color: #fff; } .caja b { font: 700 14px/1.1 "Segoe UI", system-ui, Arial, sans-serif; }
+  /* La cola es un tubo: dos líneas, abierto por los dos lados. */
+  .cola { display: flex; align-items: center; gap: 8px; } .cola > span { flex: none; width: 46px; text-align: center; font-size: 12px; }
+  .tubo { flex: 1; display: flex; gap: 4px; height: 42px; padding: 0 6px; align-items: center; overflow: hidden;
+          border-top: 3px solid #fff; border-bottom: 3px solid #fff; }
+  .cola.prioridad .tubo { height: 56px; } .cola.prioridad .caja { height: 38px; }
+  /* La pila es un vaso: dos paredes y un fondo, abierto solo por arriba. */
+  .pila { display: flex; align-items: flex-end; gap: 10px; } .pila small { flex: none; width: 76px; text-align: right; color: #c8c8c8; padding-bottom: 6px; }
+  .vaso { flex: none; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; width: 60px; height: 130px; padding: 5px 6px;
+          border: 3px solid #fff; border-top: none; }
+  .vaso .caja { height: 21px; }
+  .rotulos { display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+  .comparacion table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .comparacion th { font-weight: 400; color: #c8c8c8; text-align: right; padding: 0 5px 3px; } .comparacion th:first-child { text-align: left; }
+  .comparacion td { text-align: right; padding: 2px 5px; } .comparacion td:first-child { text-align: left; white-space: nowrap; }
+  .comparacion tr.elegido { background: #40424a; } .comparacion tr.gana td:first-child, .comparacion tr.gana td:last-child, .verde { color: #78e68c; }
+  .comparacion .gris { color: #9a9aa0; } .comparacion i { width: 10px; height: 14px; border-width: 1px; margin: 0 6px -2px 0; } .comparacion p { margin: 8px 0 0; color: #c8c8c8; }
+  /* La tabla está escrita dos veces. En pantallas amplias se muestra la que va sobre la escena, arriba y junto
+     al panel: así siempre está a la vista. En las demás se muestra la del panel, al final. */
+  #tablaFija { display: none; position: absolute; top: 8px; right: calc(var(--lado) + 10px); width: 340px; margin: 0; background: rgba(17, 17, 20, .9); }
+  @media (min-width: 1100px) and (min-height: 560px) {
+    #tablaFija { display: block; } #tabla { display: none; } #eleccion { right: calc(var(--lado) + 360px); }
+  }
+  /* En ventanas angostas y altas el panel pasa abajo y el tablero queda arriba. */
+  @media (max-width: 700px) and (orientation: portrait) {
+    #lado { top: auto; left: 0; width: auto; height: 46%; border-left: none; border-top: 4px solid var(--rojo); }
+    #eleccion { right: 10px; } #leyenda { right: 10px; bottom: calc(46% + 8px); }
+    #aprender { --lado: 100vw; }
+  }
+
+  /* Teléfonos y ventanas chicas. La altura de la barra (--barra) y la del texto de ayuda (--pie) las mide el
+     programa en cada cuadro; lo demás se coloca a partir de ellas, y así nada se encima. */
+  :root { --barra: 64px; --pie: 19px; }
+  html, body { touch-action: none; } #interfaz button { touch-action: manipulation; }
+  #mensaje { top: calc(var(--barra) + 14px); padding: 0 8px; } #aprender { top: var(--barra); }
+  #cartel { top: calc(var(--barra) + 32px); max-width: calc(100vw - 20px); }
+  #rivales, #controles { bottom: calc(var(--pie) + 15px); }
+  /* Lo que solo sirve con teclado se esconde cuando se juega con los dedos, y al revés. */
+  .conDedo, #tactil { display: none; } body.tactil .conDedo { display: inline; } body.tactil #tactil { display: block; }
+  body.tactil .conTeclado, body.tactil #ayuda, body.tactil #teclas, body.tactil #cartel p,
+  body.tactil #controles button[data-accion="acercar"] { display: none !important; }
+  body.tactil #rivales, body.tactil #controles { bottom: 8px; padding: 0 122px 0 144px; gap: 5px; }
+  /* La cruceta: un disco con cuatro flechas. La flecha hacia donde apunta el dedo se pinta de dorado. */
+  #cruceta { position: absolute; left: 12px; bottom: 12px; width: 124px; height: 124px; border-radius: 50%; pointer-events: auto;
+             touch-action: none; background: rgba(17, 17, 20, .5); border: 2px solid rgba(255, 255, 255, .7); }
+  #cruceta span { position: absolute; left: 50%; top: 50%; margin: -11px; border: 11px solid transparent; pointer-events: none; }
+  #cruceta .arriba { transform: translateY(-40px); border-top-width: 0; border-bottom: 16px solid #fff; }
+  #cruceta .abajo { transform: translateY(40px); border-bottom-width: 0; border-top: 16px solid #fff; }
+  #cruceta .izquierda { transform: translateX(-40px); border-left-width: 0; border-right: 16px solid #fff; }
+  #cruceta .derecha { transform: translateX(40px); border-right-width: 0; border-left: 16px solid #fff; }
+  #cruceta .arriba.activa { border-bottom-color: var(--dorado); } #cruceta .abajo.activa { border-top-color: var(--dorado); }
+  #cruceta .izquierda.activa { border-right-color: var(--dorado); } #cruceta .derecha.activa { border-left-color: var(--dorado); }
+  #botonesTactiles { position: absolute; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 7px; }
+  #interfaz #botonesTactiles button { min-width: 104px; padding: 9px 10px; font-size: 14px; background: rgba(42, 42, 48, .85); }
+  #interfaz #botonesTactiles button.activo { background: var(--rojo); }
+  /* El aviso de girar el teléfono tapa todo: mientras se ve, el juego está en pausa. */
+  #girar { position: absolute; inset: 0; background: var(--negro); display: flex; flex-direction: column; align-items: center;
+           justify-content: center; text-align: center; padding: 24px; pointer-events: auto; }
+  #girar b { font-size: 26px; margin: 26px 0 8px; } #girar span { font-size: 16px; color: #cfcfcf; }
+  #girar i { width: 54px; height: 96px; margin: 0; border: 4px solid #fff; border-radius: 10px; background: var(--rojo); animation: gira 2.2s ease-in-out infinite; }
+  @keyframes gira { 0%, 25% { transform: rotate(0deg); } 60%, 100% { transform: rotate(-90deg); } }
+  /* Ventanas angostas: la barra se hace de dos renglones, con el marcador abajo y completo; la cuenta
+     regresiva va en ese segundo renglón, sin tocar el título. */
+  @media (max-width: 760px) {
+    #barra { height: auto; min-height: 64px; flex-wrap: wrap; align-content: center; padding: 4px 12px; gap: 0 10px; }
+    #titulo { flex: 1; font-size: 18px; } #tiempo { font-size: 19px; min-width: 0; }
+    #centro { order: 3; flex-basis: 100%; min-height: 32px; white-space: normal; font-size: 15px; line-height: 30px; } #centro b { font-size: 19px; }
+    .puesto { font-size: 12px; line-height: 1.5; margin: 2px; padding: 0 5px 1px 3px; } .puesto b { font-size: 14px !important; }
+    .puesto i { width: 8px; height: 12px; margin: 0 4px -2px 2px; }
+    #cuenta { top: 32px; height: 30px; line-height: 30px; font-size: 30px; -webkit-text-stroke-width: 1px; }
+    #mensaje { font-size: 15px; } #aviso { font-size: 22px; } #cartel { right: 10px; padding: 10px 12px; }
+    #interfaz button { padding: 5px 9px; font-size: 13px; } #rivales span, #controles span { font-size: 13px; }
+    #menu .cajas { gap: 6px; padding: 0 6px; } #menu .cajas button { height: 128px; padding: 6px; gap: 5px; border-radius: 12px; }
+    #menu .cajas button[data-modo="aprender"] { height: 70px; }
+    #menu .cajas button b { font-size: 14px; } #menu .cajas button span { font-size: 11px; line-height: 1.2; }
+  }
+  /* Teléfono en horizontal: poca altura. Todo se compacta y las cajas del menú se hacen más bajas. */
+  @media (max-height: 520px) {
+    #barra { height: 40px; min-height: 0; flex-wrap: nowrap; border-bottom-width: 4px; padding: 0 12px; gap: 12px; }
+    #titulo { flex: none; font-size: 18px; } #tiempo { font-size: 19px; min-width: 60px; }
+    #centro { order: 0; flex: 1; min-height: 0; white-space: nowrap; font-size: 15px; line-height: normal; } #centro b { font-size: 19px; }
+    .puesto { font-size: 12px; margin: 0 2px; padding: 0 5px 1px 3px; } .puesto b { font-size: 14px !important; }
+    .puesto i { width: 8px; height: 12px; margin: 0 4px -2px 2px; }
+    #cuenta { top: 0; height: 40px; line-height: 38px; font-size: 36px; -webkit-text-stroke-width: 1px; }
+    #mensaje { top: calc(var(--barra) + 6px); font-size: 14px; } #aviso { font-size: 22px; padding: 8px 0; }
+    #cartel { top: calc(var(--barra) + 6px); right: 10px; width: 290px; padding: 8px 12px; border-width: 3px; }
+    #cartel h2 { font-size: 19px; margin-bottom: 4px; } #cartel table { font-size: 14px; } #cartel td { padding: 1px 2px; }
+    #interfaz button { padding: 5px 7px; font-size: 13px; } #rivales span, #controles span { font-size: 13px; }
+    .letrero { font-size: 12px; padding: 2px 6px 2px 4px; } .letrero b { font-size: 15px; } .letrero small { display: none; }
+    .letrero i { width: 8px; height: 12px; margin: 0 4px -2px 2px; }
+    #menu h1.chico { font-size: 30px; margin-bottom: 8px; -webkit-text-stroke-width: 2px; text-shadow: 0 3px 0 #000; }
+    #menu .cajas { gap: 6px; grid-template-columns: repeat(3, minmax(0, 250px)); } #menu .cajas button { height: 72px; padding: 5px; gap: 3px; border-radius: 12px; }
+    #menu .cajas button[data-modo="aprender"] { height: 48px; }
+    #menu .cajas button b { font-size: 15px; } #menu .cajas button span { font-size: 11px; line-height: 1.15; } #menu .pie { margin: 8px 0 0; font-size: 13px; }
+    #portada h1 { font-size: min(13vw, 22vh); } #portada .parpadea { bottom: 7%; }
+    #aprender { --lado: clamp(300px, 42vw, 600px); } #eleccion { top: 5px; gap: 4px; } #eleccion p { font-size: 12px; }
+    #leyenda { bottom: 4px; gap: 2px 9px; font-size: 11px; } #leyenda em, #leyenda svg { width: 11px; height: 11px; margin-right: 3px; }
+    #lado { padding: 0 9px 9px; } #fijo { padding: 6px 0 6px; } #numeroDePaso { font-size: 15px; } #botonesDePaso { gap: 4px; margin-top: 4px; }
+    #explicacion { margin: 7px 0; font-size: 13px; line-height: 1.3; }
+  }
 </style>
 </head>
 <body>
@@ -114,8 +245,24 @@
   <div id="rivales"></div>
   <div id="controles"></div>
   <div id="ayuda"></div>
+  <div id="aprender" style="display:none">
+    <div id="eleccion"></div><div id="leyenda"></div>
+    <div id="tablaFija" class="comparacion"></div>
+    <div id="lado">
+      <div id="fijo"><div id="numeroDePaso"></div><div id="botonesDePaso"></div></div>
+      <div id="explicacion"></div><div id="codigo"></div>
+      <div id="estructura"></div>
+      <div id="teclas"></div>
+      <div id="tabla" class="comparacion"></div>
+    </div>
+  </div>
+  <div id="tactil">
+    <div id="cruceta"><span class="arriba"></span><span class="derecha"></span><span class="abajo"></span><span class="izquierda"></span></div>
+    <div id="botonesTactiles"></div>
+  </div>
   <div id="menu"></div>
   <div id="portada"></div>
+  <div id="girar" style="display:none"><i></i><b>Gira tu teléfono</b><span>Maze Runner se juega en horizontal. El juego está en pausa.</span></div>
 </div>
 <script>
 "use strict";
@@ -252,9 +399,9 @@ class Manchas {
 const SOMBREADOR_DE_VERTICES = `
 attribute vec3 aPosicion, aNormal, aColor, aEsquina;
 attribute float aBrillo;
-uniform mat4 uCamara;
+uniform mat4 uCamara, uLuz;
 uniform float uBorde;
-varying vec3 vNormal, vColor, vPosicion;
+varying vec3 vNormal, vColor, vPosicion, vSombra;
 varying float vBrillo, vLejos;
 void main() {
   // Para el borde, cada vértice se empuja un poco hacia afuera siguiendo su esquina.
@@ -262,13 +409,29 @@ void main() {
   vNormal = aNormal; vColor = aColor; vBrillo = aBrillo; vPosicion = p;
   gl_Position = uCamara * vec4(p, 1.0);
   vLejos = gl_Position.w;
+  // Dónde cae este punto visto desde el sol: sirve para saber si algo le hace sombra. Se separa
+  // un poco de su cara, para que una cara no se haga sombra a sí misma.
+  vSombra = (uLuz * vec4(aPosicion + aNormal * 0.05, 1.0)).xyz * 0.5 + 0.5;
 }`;
-const SOMBREADOR_DE_COLOR = `
+// Las sombras comparan distancias muy parecidas: se pide la mayor precisión que tenga la tarjeta.
+const PRECISION = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
-varying vec3 vNormal, vColor, vPosicion;
+#endif`;
+const LADO_DEL_MAPA = 2048;             // el mapa de sombras mide 2048 x 2048 puntos
+const SOMBREADOR_DE_COLOR = PRECISION + `
+varying vec3 vNormal, vColor, vPosicion, vSombra;
 varying float vBrillo, vLejos;
 uniform vec3 uSol, uColorSol, uContraluz, uAmbiente, uNiebla, uColorBorde;
-uniform float uEsBorde, uLejosNiebla;
+uniform float uEsBorde, uLejosNiebla, uSombra;
+uniform sampler2D uMapa;         // el mapa de sombras: qué tan lejos del sol está lo primero que su luz toca
+// Dice si un punto del mapa de sombras tiene algo más cerca del sol que este punto (1) o no (0).
+float tapado(vec2 lugar) {
+  float primero = dot(texture2D(uMapa, lugar), vec4(1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0));
+  return step(primero + 0.0008, vSombra.z);
+}
 uniform vec4 uFaros[8];          // luces de noche: posición (x, y, z) y alcance
 uniform vec3 uColorFaro;
 void main() {
@@ -276,10 +439,19 @@ void main() {
   vec3 n = normalize(vNormal);
   // Luz de caricatura: en lugar de un degradado, tres tonos según qué tan de frente da el sol.
   float d = dot(n, uSol);
-  float tono = d > 0.5 ? 1.0 : (d > 0.0 ? 0.72 : 0.46);
-  vec3 luz = uAmbiente + uColorSol * tono;
-  // La luz blanca de contraste: un filo claro en las caras que ven hacia el otro lado.
-  luz += vec3(0.20) * step(0.55, dot(n, uContraluz));
+  float tono = d > 0.5 ? 1.0 : (d > 0.0 ? 0.72 : 0.0);
+  // La sombra proyectada: se pregunta en cuatro puntos vecinos del mapa y se promedia, para que
+  // el filo de la sombra quede definido pero sin dientes. Fuera del mapa no hay sombra.
+  float sombra = 0.0;
+  if (uSombra > 0.0 && d > 0.0 && vSombra.x > 0.0 && vSombra.x < 1.0 && vSombra.y > 0.0 && vSombra.y < 1.0 && vSombra.z < 1.0) {
+    float m = 0.6 / ${LADO_DEL_MAPA}.0;
+    sombra = (tapado(vSombra.xy + vec2(m, m)) + tapado(vSombra.xy + vec2(-m, m)) + tapado(vSombra.xy + vec2(m, -m)) + tapado(vSombra.xy + vec2(-m, -m))) * 0.25 * uSombra;
+  }
+  // A lo que le da el sol le llega su luz cálida; lo que queda en sombra, o da la espalda al sol,
+  // se queda solo con la luz del ambiente, que es más fría y suave, nunca negra.
+  vec3 luz = uAmbiente + uColorSol * tono * (1.0 - sombra);
+  // La luz de contraste: un filo frío y claro en las caras que ven hacia el lado contrario al sol.
+  luz += vec3(0.10, 0.12, 0.17) * step(0.55, dot(n, uContraluz));
   // De noche, las lámparas y las linternas alumbran lo que tienen cerca.
   for (int i = 0; i < 8; i++) {
     float cerca = 1.0 - distance(vPosicion, uFaros[i].xyz) / max(uFaros[i].w, 0.001);
@@ -289,6 +461,22 @@ void main() {
   // La niebla: lo lejano se funde con el color del cielo.
   float niebla = clamp((vLejos - uLejosNiebla) / (uLejosNiebla * 1.6), 0.0, 0.85);
   gl_FragColor = vec4(mix(color, uNiebla, niebla), 1.0);
+}`;
+// El programa que hace el mapa de sombras: dibuja la escena vista desde el sol y, en lugar de un
+// color, guarda en cada punto qué tan lejos está del sol, repartido en los cuatro canales.
+const SOMBRA_DE_VERTICES = `
+attribute vec3 aPosicion;
+uniform mat4 uLuz;
+varying float vHondo;
+void main() {
+  gl_Position = uLuz * vec4(aPosicion, 1.0);
+  vHondo = gl_Position.z * 0.5 + 0.5;
+}`;
+const SOMBRA_DE_COLOR = PRECISION + `
+varying float vHondo;
+void main() {
+  vec4 partes = fract(vHondo * vec4(1.0, 255.0, 65025.0, 16581375.0));
+  gl_FragColor = partes - partes.yzww * vec4(1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0, 0.0);
 }`;
 const MANCHA_DE_VERTICES = `
 attribute vec3 aCentro;
@@ -316,8 +504,8 @@ void main() {
   gl_FragColor = vec4(vColor.rgb, vColor.a * alfa);
 }`;
 
-// El motor: guarda el contexto de WebGL y los dos programas.
-const motor = { gl: null, solido: null, mancha: null, ancho: 1, alto: 1 };
+// El motor: guarda el contexto de WebGL, los tres programas y el mapa de sombras.
+const motor = { gl: null, solido: null, mancha: null, sombra: null, mapa: null, marco: null, ancho: 1, alto: 1 };
 
 // Compila un programa a partir de sus dos sombreadores y anota dónde va cada dato.
 function crearPrograma(gl, vertices, color, atributos, uniformes) {
@@ -344,11 +532,65 @@ function iniciarMotor(lienzo) {
   motor.gl = gl;
   motor.solido = crearPrograma(gl, SOMBREADOR_DE_VERTICES, SOMBREADOR_DE_COLOR,
     ['aPosicion', 'aNormal', 'aColor', 'aBrillo', 'aEsquina'],
-    ['uCamara', 'uBorde', 'uSol', 'uColorSol', 'uContraluz', 'uAmbiente', 'uNiebla', 'uColorBorde', 'uEsBorde', 'uLejosNiebla', 'uFaros', 'uColorFaro']);
+    ['uCamara', 'uBorde', 'uSol', 'uColorSol', 'uContraluz', 'uAmbiente', 'uNiebla', 'uColorBorde', 'uEsBorde', 'uLejosNiebla', 'uFaros', 'uColorFaro',
+     'uLuz', 'uSombra', 'uMapa']);
   motor.mancha = crearPrograma(gl, MANCHA_DE_VERTICES, MANCHA_DE_COLOR,
     ['aCentro', 'aEsquina', 'aRadio', 'aColor', 'aDureza'], ['uCamara', 'uDerecha', 'uArriba']);
+  motor.sombra = crearPrograma(gl, SOMBRA_DE_VERTICES, SOMBRA_DE_COLOR, ['aPosicion'], ['uLuz']);
+  // El mapa de sombras: una imagen donde se dibuja la escena vista desde el sol, con su propia
+  // memoria de profundidad para que quede guardado lo más cercano al sol en cada punto.
+  motor.mapa = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, motor.mapa);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, LADO_DEL_MAPA, LADO_DEL_MAPA, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  for (const [dato, valor] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST],
+                               [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, dato, valor);
+  const hondo = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, hondo);
+  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, LADO_DEL_MAPA, LADO_DEL_MAPA);
+  motor.marco = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, motor.marco);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, motor.mapa, 0);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, hondo);
+  // Si la tarjeta no acepta este marco, el juego sigue igual pero sin sombras proyectadas.
+  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) motor.marco = null;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.CULL_FACE);
+  return true;
+}
+
+// Da la matriz con la que el sol "ve" la escena: una vista sin perspectiva (sus rayos son
+// paralelos) que abarca una esfera con el centro y el radio dados.
+function matrizDelSol(sol, centro, radio) {
+  const lejos = radio + 30, hondo = 2 * lejos;
+  const ojo = [centro[0] + sol[0] * lejos, centro[1] + sol[1] * lejos, centro[2] + sol[2] * lejos];
+  const sinPerspectiva = [1 / radio, 0, 0, 0, 0, 1 / radio, 0, 0, 0, 0, -2 / hondo, 0, 0, 0, -1, 1];
+  return multiplicar(sinPerspectiva, mirarHacia(ojo, centro));
+}
+
+// Hace el mapa de sombras: dibuja los lotes vistos desde el sol y guarda, en cada punto, qué tan
+// lejos queda lo primero que toca su luz. Después, al dibujar la escena, lo que quede más lejos
+// que eso está en sombra. Devuelve false si esta tarjeta no puede hacerlo.
+function dibujarSombras(lotes, matriz) {
+  const gl = motor.gl, p = motor.sombra;
+  if (!motor.marco) return false;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, motor.marco);
+  gl.viewport(0, 0, LADO_DEL_MAPA, LADO_DEL_MAPA);
+  gl.clearColor(1, 1, 1, 1);                          // todo blanco: lo más lejos posible, sin nada que tape
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(p.programa);
+  gl.uniformMatrix4fv(p.u.uLuz, false, matriz);
+  gl.disable(gl.CULL_FACE);                           // todas las caras cuentan, también las que no ve la cámara
+  for (const lote of lotes) {
+    if (!lote.vertices) continue;
+    subir(lote, lote.dinamico);
+    gl.enableVertexAttribArray(p.a.aPosicion);
+    gl.vertexAttribPointer(p.a.aPosicion, 3, gl.FLOAT, false, 13 * 4, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, lote.vertices);
+  }
+  gl.enable(gl.CULL_FACE);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
   return true;
 }
 
@@ -377,6 +619,7 @@ function subir(lote, dinamico) {
 // las mismas figuras, un poco infladas y mostrando sus caras de atrás, en un solo color.
 // Con 'sinTapar', lo dibujado no tapa a lo que venga después: sirve para el halo de un
 // personaje, que se dibuja antes que él y así solo se ve por fuera de su silueta.
+// Si la luz trae 'matriz' y 'sombra', se usan el mapa de sombras y esa fuerza (de 0 a 1).
 function dibujarLotes(lotes, camara, luz, borde = 0, colorBorde = [0, 0, 0], sinTapar = false) {
   const gl = motor.gl, p = motor.solido;
   gl.useProgram(p.programa);
@@ -390,6 +633,11 @@ function dibujarLotes(lotes, camara, luz, borde = 0, colorBorde = [0, 0, 0], sin
   gl.uniform3fv(p.u.uAmbiente, luz.ambiente);
   gl.uniform3fv(p.u.uNiebla, luz.cielo);
   gl.uniform1f(p.u.uLejosNiebla, luz.lejos);
+  gl.uniform1f(p.u.uSombra, luz.matriz ? luz.sombra || 0 : 0);
+  if (luz.matriz) gl.uniformMatrix4fv(p.u.uLuz, false, luz.matriz);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, motor.mapa);
+  gl.uniform1i(p.u.uMapa, 0);
   const faros = new Float32Array(32);
   (luz.faros || []).slice(0, 8).forEach((f, i) => faros.set(f, i * 4));
   gl.uniform4fv(p.u.uFaros, faros);
@@ -1189,7 +1437,393 @@ function actualizarLaberinto(juego, segundos, direcciones) {
 }
 
 // ============================================================================
-// 7. LA ESCENA
+// 7. MODO APRENDER: LOS PASOS
+// Recorre un algoritmo deteniéndose en cada momento: qué casilla sale de la
+// estructura, cuáles entran, qué renglón del código se ejecuta y cómo queda la
+// pila o la cola. Da los mismos pasos que el programa de Python.
+// ============================================================================
+
+// Cinco mapas, cada uno pensado para que se note una diferencia entre los algoritmos.
+// Se escriben con un carácter por casilla: '.' llano, 'A' agua, '#' muro, 'I' inicio y 'M' meta.
+const MAPAS_DE_APRENDER = [
+  ['Campo abierto', `
+............
+.I..........
+............
+............
+............
+..........M.
+............
+............
+`],
+  ['Pantano', `
+............
+....AAAA....
+.I..AAAA..M.
+....AAAA....
+....AAAA....
+............
+............
+............
+`],
+  ['Pared', `
+.....AAA....
+....#####...
+........#...
+.I......#.M.
+........#...
+....#####...
+............
+............
+`],
+  ['Laberinto', `
+############
+#I...#.....#
+#.##.#.###.#
+#.#....#...#
+#.#.####.#.#
+#...#....#M#
+#.#...##...#
+############
+`],
+  ['Sin salida', `
+............
+.I......###.
+........#M#.
+........###.
+............
+............
+............
+............
+`],
+];
+// Lo que enseña cada mapa, en una frase.
+const QUE_ENSEÑA = {
+  'Campo abierto': 'Todo cuesta 1: se ve quién explora de más para llegar a la misma ruta.',
+  'Pantano': 'Cruzar el agua es corto pero caro: conviene rodear. Menos pasos no es menos costo.',
+  'Pared': 'Una pared en U engaña al voraz: se mete en ella y sale por el lado del agua. A* rodea por el lado barato.',
+  'Laberinto': 'Los muros obligan a alejarse de la meta: la estimación ayuda menos.',
+  'Sin salida': 'La meta está encerrada: para saberlo hay que revisar todo lo alcanzable.',
+};
+
+// El código que se muestra de cada algoritmo, renglón por renglón. Es el del notebook, en Python.
+const CODIGO = {
+  'BFS': ['cola = deque([inicio])',
+          'padres = {inicio: None}',
+          'while cola:',
+          '    actual = cola.popleft()',
+          '    if actual == meta:',
+          '        return reconstruir_ruta(padres, meta)',
+          '    for vecina, costo in vecinos(mapa, actual):',
+          '        if vecina not in padres:',
+          '            padres[vecina] = actual',
+          '            cola.append(vecina)',
+          'return None'],
+  'DFS': ['pila = [inicio]',
+          'padres = {inicio: None};  vistas = set()',
+          'while pila:',
+          '    actual = pila.pop()',
+          '    if actual in vistas: continue',
+          '    vistas.add(actual)',
+          '    if actual == meta:',
+          '        return reconstruir_ruta(padres, meta)',
+          '    for vecina, costo in reversed(vecinos(mapa, actual)):',
+          '        if vecina not in vistas:',
+          '            padres[vecina] = actual',
+          '            pila.append(vecina)',
+          'return None'],
+  'Dijkstra': ['cola = [(0, inicio)]',
+               'costos = {inicio: 0};  padres = {inicio: None}',
+               'while cola:',
+               '    costo, actual = heapq.heappop(cola)',
+               '    if actual in vistas: continue',
+               '    vistas.add(actual)',
+               '    if actual == meta:',
+               '        return reconstruir_ruta(padres, meta)',
+               '    for vecina, paso in vecinos(mapa, actual):',
+               '        nuevo = costo + paso',
+               '        if vecina not in costos or nuevo < costos[vecina]:',
+               '            costos[vecina] = nuevo;  padres[vecina] = actual',
+               '            heapq.heappush(cola, (nuevo, vecina))',
+               'return None'],
+  'Voraz': ['cola = [(estimacion(inicio, meta), inicio)]',
+            'padres = {inicio: None}',
+            'while cola:',
+            '    distancia, actual = heapq.heappop(cola)',
+            '    if actual == meta:',
+            '        return reconstruir_ruta(padres, meta)',
+            '    for vecina, costo in vecinos(mapa, actual):',
+            '        if vecina not in padres:',
+            '            padres[vecina] = actual',
+            '            heapq.heappush(cola, (estimacion(vecina, meta), vecina))',
+            'return None'],
+  'A*': ['cola = [(estimacion(inicio, meta), inicio)]',
+         'costos = {inicio: 0};  padres = {inicio: None}',
+         'while cola:',
+         '    prioridad, actual = heapq.heappop(cola)',
+         '    if actual in vistas: continue',
+         '    vistas.add(actual)',
+         '    if actual == meta:',
+         '        return reconstruir_ruta(padres, meta)',
+         '    for vecina, paso in vecinos(mapa, actual):',
+         '        nuevo = costos[actual] + paso',
+         '        if vecina not in costos or nuevo < costos[vecina]:',
+         '            costos[vecina] = nuevo;  padres[vecina] = actual',
+         '            heapq.heappush(cola, (nuevo + estimacion(vecina, meta), vecina))',
+         'return None'],
+};
+// En qué renglón del código cae cada momento del recorrido, para resaltarlo.
+const RENGLONES = {
+  'BFS': { inicio: 0, sale: 3, meta: 5, entran: 9, fin: 10 },
+  'DFS': { inicio: 0, sale: 3, repetida: 4, meta: 7, entran: 11, fin: 12 },
+  'Dijkstra': { inicio: 0, sale: 3, repetida: 4, meta: 7, entran: 12, fin: 13 },
+  'Voraz': { inicio: 0, sale: 3, meta: 5, entran: 9, fin: 10 },
+  'A*': { inicio: 0, sale: 3, repetida: 4, meta: 7, entran: 12, fin: 13 },
+};
+// La estructura de datos que usa cada algoritmo.
+const ESTRUCTURA_DE = { 'BFS': 'cola', 'DFS': 'pila', 'Dijkstra': 'prioridad', 'Voraz': 'prioridad', 'A*': 'prioridad' };
+// Las velocidades del avance automático: nombre y pasos por segundo.
+const VELOCIDADES_DE_APRENDER = [['lenta', 1.5], ['media', 5.0], ['rápida', 16.0]];
+
+// Convierte el texto de un mapa en un mapa.
+//   texto:  el mapa escrito con un carácter por casilla
+// Devuelve [mapa, inicio, meta]. A una fila corta, lo que le falta se le completa con muro.
+function mapaDeTexto(texto) {
+  const lineas = texto.split('\n').filter(linea => linea.length > 0);
+  const columnas = Math.max(...lineas.map(linea => linea.length));
+  const mapa = mapaVacio(lineas.length, columnas);
+  let inicio = null, meta = null;
+  lineas.forEach((linea, f) => {
+    [...linea.padEnd(columnas, '#')].forEach((caracter, c) => {
+      const i = casilla(mapa, f, c);
+      if (caracter === 'I') { inicio = i; caracter = '.'; }
+      else if (caracter === 'M') { meta = i; caracter = '.'; }
+      mapa.t[i] = caracter;
+    });
+  });
+  return [mapa, inicio, meta];
+}
+
+// Escribe una casilla como (fila, columna), para las explicaciones.
+const textoDeCasilla = (mapa, i) => `(${filaDe(mapa, i)}, ${columnaDe(mapa, i)})`;
+
+// Suma lo que cuesta caminar una ruta: el costo de entrar a cada casilla, sin contar la de inicio.
+const costoDeRuta = (mapa, ruta) => ruta.slice(1).reduce((suma, i) => suma + COSTOS[mapa.t[i]], 0);
+
+// Recorre un algoritmo y guarda una foto de cada momento, para mostrarlo paso a paso.
+//   nombre:        el nombre del algoritmo
+//   mapa, inicio, meta
+// Devuelve la lista de pasos. Cada paso tiene:
+//   renglon:    qué renglón del código se está ejecutando
+//   texto:      la explicación en palabras
+//   actual:     la casilla que se está explorando, o null
+//   exploradas: las casillas ya exploradas, en orden
+//   estructura: lo que hay en la pila o en la cola: lista de [valor, casilla], con la próxima
+//               en salir al principio. En la pila y en la cola simple el valor es null.
+//   nuevas:     las casillas que acaban de entrar
+//   ruta:       la ruta final, cuando ya se encontró; si no, null
+// Hace lo mismo que las funciones de la sección 2, pero deteniéndose a anotar.
+function pasosDeAprender(nombre, mapa, inicio, meta) {
+  const tipo = ESTRUCTURA_DE[nombre], renglon = RENGLONES[nombre];
+  const pasos = [], exploradas = [];
+  const estructura = tipo === 'prioridad' ? new Monticulo() : [];     // la pila, la cola o la cola de prioridad
+  const padres = { [inicio]: -1 }, costos = { [inicio]: 0 }, vistas = new Set();
+  const escribir = i => textoDeCasilla(mapa, i);
+
+  // El valor con el que una casilla entra a la cola de prioridad, según el algoritmo.
+  const prioridadDe = i => nombre === 'Dijkstra' ? costos[i] : nombre === 'Voraz' ? estimacion(mapa, i, meta) : costos[i] + estimacion(mapa, i, meta);
+  // El segundo dato de cada elemento de la cola, que decide los empates. En A* es la estimación:
+  // entre dos casillas con el mismo valor sale la más cercana a la meta. En Dijkstra y en el
+  // voraz no hay segundo dato, así que los empates los decide la posición de la casilla.
+  const desempateDe = i => nombre === 'A*' ? estimacion(mapa, i, meta) : 0;
+  // Mete una casilla a la estructura.
+  const meter = i => {
+    if (tipo === 'prioridad') estructura.meter([prioridadDe(i), desempateDe(i), i]);
+    else estructura.push(i);
+  };
+
+  // Guarda la foto de este momento.
+  const anotar = (momento, texto, actual = null, nuevas = [], ruta = null) => {
+    let contenido;
+    if (tipo === 'cola') contenido = estructura.map(i => [null, i]);                       // sale la primera
+    else if (tipo === 'pila') contenido = estructura.slice().reverse().map(i => [null, i]);   // sale la última que entró
+    else {
+      // Sale la de menor valor: se acomodan de menor a mayor, con la misma regla del montículo.
+      contenido = estructura.d.slice().sort((a, b) => Monticulo.menor(a, b) ? -1 : 1).map(e => [e[0], e[2]]);
+    }
+    pasos.push({ renglon: renglon[momento], texto, actual, exploradas: exploradas.slice(), estructura: contenido, nuevas: nuevas.slice(), ruta });
+  };
+
+  // ---- Al empezar, la estructura solo tiene el inicio.
+  meter(inicio);
+  const nombreDe = { cola: 'La cola', pila: 'La pila', prioridad: 'La cola de prioridad' }[tipo];
+  anotar('inicio', `${nombreDe} empieza solo con la casilla de inicio, ${escribir(inicio)}.`, null, [inicio]);
+
+  while (tipo === 'prioridad' ? !estructura.vacio : estructura.length) {
+    // ---- Sale una casilla. Cuál sale es lo que distingue a cada algoritmo.
+    let actual, porque;
+    if (tipo === 'cola') {
+      actual = estructura.shift();
+      porque = 'es la que lleva más tiempo esperando: la primera que entró es la primera que sale.';
+    } else if (tipo === 'pila') {
+      actual = estructura.pop();
+      porque = 'es la última que entró: la pila entrega primero lo más reciente.';
+    } else {
+      const menor = estructura.sacar(), valor = menor[0];
+      actual = menor[2];
+      if (nombre === 'Dijkstra') porque = `es la de menor costo acumulado desde el inicio: ${valor}.`;
+      else if (nombre === 'Voraz') porque = `es la que parece más cerca de la meta: le faltan ${valor} casillas en línea recta, sin diagonales.`;
+      else porque = `es la de menor suma: ${costos[actual]} ya gastado más ${estimacion(mapa, actual, meta)} que se estima ` +
+                    `que falta, ${valor} en total. En empates gana la más cercana a la meta.`;
+    }
+
+    if (nombre !== 'BFS' && nombre !== 'Voraz' && vistas.has(actual)) {
+      anotar('repetida', `Sale ${escribir(actual)}, pero ya se había explorado antes: estaba repetida. Se ignora.`, actual);
+      continue;
+    }
+    vistas.add(actual);
+    exploradas.push(actual);
+    anotar('sale', `Sale ${escribir(actual)} porque ${porque} Queda explorada: van ${exploradas.length}.`, actual);
+
+    if (actual === meta) {
+      const ruta = reconstruirRuta(padres, meta);
+      anotar('meta', `Es la meta. La ruta se arma caminando hacia atrás por los padres: ${ruta.length - 1} pasos, ` +
+                     `costo ${costoDeRuta(mapa, ruta)}. Se exploraron ${exploradas.length} casillas.`, actual, [], ruta);
+      return pasos;
+    }
+
+    // ---- Entran sus vecinas, según la regla de cada algoritmo.
+    const entran = [];
+    let ignoradas = 0;
+    let lista = vecinos(mapa, actual);
+    if (tipo === 'pila') lista = lista.reverse();        // al revés, para que la de arriba salga primero
+    for (const [vecina, paso] of lista) {
+      let sirve;
+      if (nombre === 'BFS' || nombre === 'Voraz') sirve = !(vecina in padres);      // solo las que nunca se habían descubierto
+      else if (nombre === 'DFS') sirve = !vistas.has(vecina);
+      else {
+        const nuevo = costos[actual] + paso;
+        sirve = !(vecina in costos) || nuevo < costos[vecina];                     // primera vez, o un camino más barato
+        if (sirve) costos[vecina] = nuevo;
+      }
+      if (!sirve) { ignoradas += 1; continue; }
+      padres[vecina] = actual;
+      entran.push(vecina);
+      meter(vecina);
+    }
+    let texto = entran.length ? `No es la meta. Se revisan sus vecinas. Entran ${entran.length}: [${entran.map(escribir).join(', ')}].`
+                              : 'No es la meta, y ninguna de sus vecinas entra.';
+    if (ignoradas) texto += ` Se ignoran ${ignoradas}, que ya se conocían.`;
+    anotar('entran', texto, actual, entran);
+  }
+
+  anotar('fin', `${nombreDe} se quedó vacía sin llegar a la meta: no hay camino. Se exploraron ${exploradas.length} casillas.`);
+  return pasos;
+}
+
+// Compara a los cinco algoritmos en un mapa.
+// Devuelve, por cada nombre, [exploradas, pasos, costo, puntaje]; sin ruta, los tres últimos son null.
+// El puntaje es el mismo del notebook y del editor: costo * 10 000 + casillas exploradas.
+function tablaDeAprender(mapa, inicio, meta) {
+  const tabla = {};
+  for (const nombre of NOMBRES) {
+    const [ruta, exploradas] = ALGORITMOS[nombre](mapa, inicio, meta);
+    if (ruta === null) tabla[nombre] = [exploradas.length, null, null, null];
+    else {
+      const costo = costoDeRuta(mapa, ruta);
+      tabla[nombre] = [exploradas.length, ruta.length - 1, costo, costo * 10000 + exploradas.length];
+    }
+  }
+  return tabla;
+}
+
+// Prepara el modo Aprender para un algoritmo y un mapa.
+//   algoritmo:    el nombre del algoritmo
+//   numeroDeMapa: la posición en MAPAS_DE_APRENDER
+// Devuelve el estado del modo:
+//   algoritmo, numeroDeMapa, mapa, inicio, meta
+//   pasos:      todas las fotos del recorrido
+//   paso:       en cuál se está
+//   auto:       true si avanza solo
+//   velocidad:  la posición en VELOCIDADES_DE_APRENDER
+//   cuenta:     fracción de paso acumulada mientras avanza solo
+//   tabla:      la comparación de los cinco algoritmos en este mapa
+//   personaje:  el muñeco del algoritmo, que camina la ruta cuando la búsqueda termina
+//   recorrido:  cuántas casillas de la ruta lleva caminadas el personaje
+// Los campos tipo, corredores, jugador, eventos, reloj y fase son los que tiene cualquier
+// partida: así el modo se dibuja con las mismas funciones que los juegos.
+function crearAprender(algoritmo = 'BFS', numeroDeMapa = 0) {
+  const [mapa, inicio, meta] = mapaDeTexto(MAPAS_DE_APRENDER[numeroDeMapa][1]);
+  const personaje = crearCorredor(algoritmo, inicio, ALGORITMOS[algoritmo]);
+  return { tipo: 'aprender', algoritmo, numeroDeMapa, mapa, inicio, meta,
+           pasos: pasosDeAprender(algoritmo, mapa, inicio, meta), paso: 0, auto: false, velocidad: 1, cuenta: 0,
+           tabla: tablaDeAprender(mapa, inicio, meta), personaje, recorrido: 1,
+           corredores: [personaje], jugador: null, eventos: [], reloj: 0, fase: 'aprender', anuncio: false };
+}
+
+// Avanza el modo Aprender durante un cuadro.
+//   aprender: el estado del modo
+//   segundos: los que pasaron desde el cuadro anterior
+// En automático pasa al siguiente paso cuando toca. Además mueve al personaje: mientras
+// dura la búsqueda espera pensando en el inicio y, cuando ya hay ruta, la recorre.
+function actualizarAprender(aprender, segundos) {
+  if (aprender.auto) {
+    aprender.cuenta += segundos * VELOCIDADES_DE_APRENDER[aprender.velocidad][1];
+    while (aprender.cuenta >= 1) {                      // con la velocidad rápida pueden tocar varios pasos por cuadro
+      aprender.cuenta -= 1;
+      if (aprender.paso < aprender.pasos.length - 1) aprender.paso += 1;
+      else aprender.auto = false;                       // llegó al final: se detiene solo
+    }
+  }
+  const personaje = aprender.personaje, ruta = aprender.pasos[aprender.paso].ruta;
+  if (!ruta) {
+    // Todavía no hay ruta (o se regresó de paso): el personaje espera en el inicio.
+    const buscando = aprender.paso < aprender.pasos.length - 1;
+    Object.assign(personaje, { casilla: aprender.inicio, destino: null, avance: 0, sobra: 0, final: null, rumbo: 0, pensando: buscando ? 1 : 0 });
+    aprender.recorrido = 1;
+    return;
+  }
+  personaje.pensando = 0;
+  avanzar(personaje, segundos);
+  if (personaje.destino === null && personaje.final === null) {
+    if (aprender.recorrido < ruta.length) {
+      empezarPaso(personaje, aprender.mapa, ruta[aprender.recorrido]);     // el costo del terreno se vuelve tiempo
+      aprender.recorrido += 1;
+    } else {
+      personaje.final = aprender.recorrido;             // llegó a la meta: festeja
+      anotarEvento(aprender, 'recoger', personaje);
+    }
+  }
+}
+
+// Ejecuta una acción del modo Aprender: la de un botón o la de su tecla.
+//   aprender: el estado del modo
+//   accion:   'algoritmo', 'mapa', 'reiniciar', 'anterior', 'siguiente', 'auto' o 'velocidad'
+//   valor:    el nombre del algoritmo o el número del mapa, cuando la acción lo necesita
+// Devuelve el estado que queda: uno nuevo si cambió el algoritmo o el mapa, o el mismo.
+function hacerEnAprender(aprender, accion, valor) {
+  const ultimo = aprender.pasos.length - 1;
+  if (accion === 'algoritmo' || accion === 'mapa') {
+    const nuevo = accion === 'algoritmo' ? crearAprender(valor, aprender.numeroDeMapa) : crearAprender(aprender.algoritmo, valor);
+    nuevo.velocidad = aprender.velocidad;               // la velocidad elegida se conserva
+    return nuevo;
+  }
+  if (accion === 'reiniciar') Object.assign(aprender, { paso: 0, auto: false });
+  else if (accion === 'anterior') Object.assign(aprender, { paso: Math.max(0, aprender.paso - 1), auto: false });
+  else if (accion === 'siguiente') Object.assign(aprender, { paso: Math.min(ultimo, aprender.paso + 1), auto: false });
+  else if (accion === 'auto') {
+    if (aprender.paso === ultimo) aprender.paso = 0;    // si ya estaba al final, el automático empieza de nuevo
+    aprender.auto = !aprender.auto;
+  }
+  else if (accion === 'velocidad') {
+    // Cambia a la siguiente velocidad; se puede hacer mientras se reproduce.
+    aprender.velocidad = (aprender.velocidad + 1) % VELOCIDADES_DE_APRENDER.length;
+  }
+  return aprender;
+}
+
+// ============================================================================
+// 8. LA ESCENA
 // Convierte el estado del juego en figuras. En el mundo 3D, una casilla mide
 // 1 de lado: la columna es la x, la fila es la z y la altura es la y.
 // ============================================================================
@@ -1375,12 +2009,17 @@ function agregarEfectos(lote, efectos) {
 
 // ---- El cielo: el tablero flota sobre un mar de nubes, con un sol rojo y una luz blanca de contraste.
 
-// La luz de la escena: un sol rojo que tiñe todo de un tono cálido y, del lado contrario, una luz
-// blanca de contraste. 'faros' son las luces de noche: lámparas y linternas.
-const CIELO_DE_DIA = [0.80, 0.36, 0.36], SOL_DE_DIA = [0.98, 0.60, 0.48], AMBIENTE_DE_DIA = [0.44, 0.38, 0.40];
+// La luz de la escena, de hora dorada tirando a rojiza: un sol bajo que pega de lado, con luz
+// cálida entre dorado y rojo, y un ambiente más frío que es lo único que alumbra las sombras.
+// 'faros' son las luces de noche: lámparas y linternas.
+//   RUMBO_DEL_SOL: hacia dónde está el sol, visto desde el tablero: a la izquierda, bajo y un poco al frente
+const RUMBO_DEL_SOL = unitario([-0.8, 0.5, 0.25]);
+const CIELO_DE_DIA = [0.62, 0.21, 0.24], SOL_DE_DIA = [0.98, 0.60, 0.28], AMBIENTE_DE_DIA = [0.38, 0.41, 0.54];
+//   matriz, sombra: cómo ve el sol la escena y qué tan fuertes son las sombras proyectadas (de 0 a 1)
 function crearLuz() {
-  return { sol: unitario([-0.5, 0.72, -0.5]), colorSol: SOL_DE_DIA.slice(), contraluz: unitario([0.6, 0.3, 0.7]),
-           ambiente: AMBIENTE_DE_DIA.slice(), cielo: CIELO_DE_DIA.slice(), lejos: 46, faros: [], colorFaro: [0, 0, 0] };
+  return { sol: RUMBO_DEL_SOL.slice(), colorSol: SOL_DE_DIA.slice(), contraluz: unitario([0.8, 0.25, -0.4]),
+           ambiente: AMBIENTE_DE_DIA.slice(), cielo: CIELO_DE_DIA.slice(), lejos: 46, faros: [], colorFaro: [0, 0, 0],
+           matriz: null, sombra: 0 };
 }
 
 // Las nubes del mar de nubes: se sortean una vez y después solo se deslizan.
@@ -1404,7 +2043,11 @@ function moverCamara(camara, segundos, rapidez = 3.2) {
 // Da la matriz completa de la cámara (perspectiva por vista) y sus direcciones derecha y arriba.
 function matrizDeCamara(camara) {
   const vista = mirarHacia(camara.ojo, camara.centro);
-  const total = multiplicar(perspectiva(0.72, motor.ancho / motor.alto, 0.5, 400), vista);
+  const lente = perspectiva(0.72, motor.ancho / motor.alto, 0.5, 400);
+  // Con 'corrimiento', toda la imagen se recorre en la pantalla sin deformarse, como al mover la
+  // lente de una cámara: [a lo ancho, a lo alto], donde 1 es media pantalla.
+  if (camara.corrimiento) { lente[8] = -camara.corrimiento[0]; lente[9] = -camara.corrimiento[1]; }
+  const total = multiplicar(lente, vista);
   return { total, derecha: [vista[0], vista[4], vista[8]], arriba: [vista[1], vista[5], vista[9]] };
 }
 
@@ -1484,13 +2127,13 @@ function apuntarCamara(camara, juego, tableros, seguir, momento, t) {
   const centro = [(Math.min(...xs) + Math.max(...xs)) / 2, 0, (Math.min(...zs) + Math.max(...zs)) / 2];
   const direccion = unitario([0, 0.8, 0.6]);
   // Arriba se deja lugar para la barra y los letreros; abajo, para la ayuda y los botones.
-  const lejos = encuadrar(centro, direccion, puntos, { lados: 24, arriba: juego.tipo === 'gemas' ? 122 : 112, abajo: juego.tipo === 'gemas' ? 40 : 84 });
+  const lejos = encuadrar(centro, direccion, puntos, margenesDeLaInterfaz(juego));
   camara.ojoMeta = [centro[0] + direccion[0] * lejos, direccion[1] * lejos, centro[2] + direccion[2] * lejos];
   camara.centroMeta = centro;
 }
 
 // ============================================================================
-// 8. LOS PERSONAJES
+// 9. LOS PERSONAJES
 // Cada personaje es un muñequito de bloques con cabeza, cuerpo, brazos y
 // piernas. Su postura se calcula en cada cuadro: cada algoritmo camina y
 // festeja según su personalidad.
@@ -1638,7 +2281,7 @@ function agregarPersonaje(lote, lugar, corredor, t, carga = null) {
 }
 
 // ============================================================================
-// 9. AMBIENTACIÓN
+// 10. AMBIENTACIÓN
 // Lo que le da vida al escenario: adornos en los tableros, nubes, pájaros,
 // cometas, de vez en cuando un dragón o un leviatán, y el ciclo de día y noche.
 // ============================================================================
@@ -1738,18 +2381,15 @@ function puntoDelCielo(ojos, vista, aLoAncho, aLoAlto, distancia) {
   return [0, 1, 2].map(k => ojos.ojo[k] + (adelante[k] + vista.derecha[k] * aLoAncho * abertura * aspecto + vista.arriba[k] * aLoAlto * abertura) * distancia);
 }
 
-// Llena el cielo según la hora: el sol rojo y su resplandor, la luz blanca del otro lado, la luna,
-// las estrellas, las nubes y el mar de nubes. Todo va difuminado, así que el fondo se ve desenfocado.
+// Llena el cielo según la hora: el sol y su resplandor, la luna, las estrellas, las nubes y el mar
+// de nubes. Todo va difuminado, así que el fondo se ve desenfocado.
 //   fondo:  manchas que van detrás de todo
 //   encima: manchas que van encima de todo; con ellas el resplandor del sol baña la escena
 function agregarCieloVivo(fondo, encima, ojos, vista, t, noche) {
   const dia = 1 - noche, centro = ojos.centro;
-  // El sol rojo, arriba a la izquierda. Al atardecer baja; de noche no está.
-  const sol = puntoDelCielo(ojos, vista, -0.6, 0.56 - noche * 0.9, 170);
-  // La luz blanca de contraste, del lado contrario.
-  const blanca = puntoDelCielo(ojos, vista, 0.7, 0.5, 170);
-  fondo.mancha(blanca[0], blanca[1], blanca[2], 55, [1, 1, 1], 0.22 * dia);
-  // La luna sale de noche, del lado de la luz blanca.
+  // El sol está donde dice el rumbo de la luz: bajo y a un lado. Al anochecer se hunde.
+  const sol = [centro[0] + RUMBO_DEL_SOL[0] * 170, (RUMBO_DEL_SOL[1] - noche * 0.9) * 170, centro[2] + RUMBO_DEL_SOL[2] * 170];
+  // La luna sale de noche, del lado contrario.
   const luna = puntoDelCielo(ojos, vista, 0.62, -0.35 + noche * 0.9, 170);
   fondo.mancha(luna[0], luna[1], luna[2], 22, [0.75, 0.82, 1], 0.25 * noche);
   fondo.mancha(luna[0], luna[1], luna[2], 7.5, [0.96, 0.97, 1], noche, 0.8);
@@ -1759,33 +2399,30 @@ function agregarCieloVivo(fondo, encima, ojos, vista, t, noche) {
       fondo.mancha(centro[0] + e[0] * 170, e[1] * 170, centro[2] + e[2] * 170 - 30, 0.7 * e[3], [1, 1, 0.95], noche * (0.6 + 0.4 * Math.sin(t * 2 + e[4])), 0.3);
     }
   }
-  // Las nubes se tiñen de rojizo del lado del sol y quedan blancas del otro. De noche se apagan.
-  const tono = 1 - noche * 0.62;
-  const colorDeNube = (x, y, z, claro) => {
-    const lado = ((x - centro[0]) * vista.derecha[0] + (y - centro[1]) * vista.derecha[1] + (z - centro[2]) * vista.derecha[2]) / 70;
-    const calido = Math.min(1, Math.max(0, 0.5 - lado * 0.75)) * dia;
-    return mezcla([claro * tono, claro * tono, tono + 0.04], [1.0, 0.56, 0.46], calido * 0.8);
+  // Cada nube es de una sola pieza, suave y translúcida, pero con volumen: primero su cuerpo en
+  // sombra, oscuro y frío, y encima, corrida hacia el sol, su parte iluminada, dorada y rojiza.
+  // Así se separa del cielo y se nota de qué lado le pega la luz. De noche las dos se apagan.
+  const enSombra = mezcla([0.40, 0.17, 0.27], [0.07, 0.09, 0.17], noche);
+  const alSol = mezcla([1.0, 0.74, 0.50], [0.22, 0.26, 0.40], noche);
+  const nube = (x, y, z, radio, alfa) => {
+    fondo.mancha(x, y, z, radio, enSombra, alfa);
+    fondo.mancha(x + RUMBO_DEL_SOL[0] * radio * 0.34, y + RUMBO_DEL_SOL[1] * radio * 0.34, z + RUMBO_DEL_SOL[2] * radio * 0.34, radio * 0.72, alSol, alfa * 0.85);
   };
-  // Nubes suaves y translúcidas, cada una de una sola pieza, que cruzan despacio.
-  for (const nube of NUBES_ALTAS) {
-    const x = centro[0] + ((nube.x + t * nube.vel + 80) % 160) - 80, z = centro[2] + nube.z;
-    fondo.mancha(x, nube.y, z, nube.r, colorDeNube(x, nube.y, z, 1), 0.42);
+  // Las nubes altas cruzan despacio por detrás del tablero.
+  for (const alta of NUBES_ALTAS) {
+    nube(centro[0] + ((alta.x + t * alta.vel + 80) % 160) - 80, alta.y, centro[2] + alta.z, alta.r, 0.5);
   }
   // El mar de nubes, muy por debajo del tablero.
-  for (const nube of NUBES_DEL_MAR) {
-    const x = centro[0] + ((nube.x + t * nube.vel + 90) % 180) - 90, z = centro[2] + nube.z;
-    fondo.mancha(x, -9 - nube.r * 0.2, z, nube.r, colorDeNube(x, -9, z, nube.tono), 0.7);
+  for (const baja of NUBES_DEL_MAR) {
+    nube(centro[0] + ((baja.x + t * baja.vel + 90) % 180) - 90, -9 - baja.r * 0.2, centro[2] + baja.z, baja.r, 0.62);
   }
   // El sol se dibuja después de las nubes, para que ninguna lo tape. Es translúcido, para no
-  // deslumbrar: un disco de color salmón y, alrededor, un halo más grande y más tenue.
-  fondo.mancha(sol[0], sol[1], sol[2], 46, [1.0, 0.45, 0.36], 0.12 * dia);
-  fondo.mancha(sol[0], sol[1], sol[2], 21, [1.0, 0.5, 0.42], 0.26 * dia, 0.7);
-  fondo.mancha(sol[0], sol[1], sol[2], 12.5, [1.0, 0.45, 0.36], 0.7 * dia, 0.82);
-  // El resplandor: un velo rojizo y cálido que sale del sol y cae sobre el tablero y las nubes,
-  // y uno blanco, más tenue, del lado de la luz de contraste.
-  encima.mancha(sol[0], sol[1], sol[2], 150, [1.0, 0.3, 0.16], 0.08 * dia);
-  encima.mancha(blanca[0], blanca[1], blanca[2], 110, [1, 1, 1], 0.04 * dia);
-  return sol;
+  // deslumbrar: un disco dorado rojizo y, alrededor, un halo más grande y más tenue.
+  fondo.mancha(sol[0], sol[1], sol[2], 46, [1.0, 0.55, 0.30], 0.14 * dia);
+  fondo.mancha(sol[0], sol[1], sol[2], 21, [1.0, 0.58, 0.36], 0.28 * dia, 0.7);
+  fondo.mancha(sol[0], sol[1], sol[2], 12.5, [1.0, 0.56, 0.34], 0.72 * dia, 0.82);
+  // El resplandor: un velo cálido muy tenue que sale del lado del sol y cae sobre la escena.
+  encima.mancha(sol[0], sol[1], sol[2], 150, [1.0, 0.45, 0.16], 0.07 * dia);
 }
 
 // Agrega lo que cruza el cielo: bandadas de pájaros sobre los tableros, cometas de noche y, muy
@@ -1846,7 +2483,7 @@ function agregarVuelos(lote, manchas, centro, t, noche) {
 // Agrega toda la ambientación de un cuadro y ajusta la luz según la hora.
 function agregarAmbiente(estado, juego, tableros, t, segundos, vista) {
   const noche = nivelDeNoche(t), faros = [], ojos = estado.camara;
-  // De día manda el sol rojo: su luz es cálida y el cielo se tiñe de rojizo. De noche casi no hay
+  // De día manda el sol bajo: su luz es cálida, entre dorada y roja, y el cielo es rojo. De noche casi no hay
   // sol, el cielo es azul oscuro y alumbran las lámparas y las linternas.
   luz.cielo = mezcla(CIELO_DE_DIA, [0.04, 0.06, 0.15], noche);
   luz.colorSol = mezcla(SOL_DE_DIA, [0.16, 0.18, 0.3], noche);
@@ -1868,16 +2505,14 @@ function agregarAmbiente(estado, juego, tableros, t, segundos, vista) {
   const centro = ojos.centro;
   faros.sort((a, b) => Math.hypot(a[0] - centro[0], a[2] - centro[2]) - Math.hypot(b[0] - centro[0], b[2] - centro[2]));
   luz.faros = faros.slice(0, 8);
-  const sol = agregarCieloVivo(manchasDeFondo, manchasDeEncima, ojos, vista, t, noche);
-  // La luz llega desde donde se ve el sol, y la de contraste desde el lado contrario.
-  const haciaElSol = unitario([sol[0] - centro[0], 0, sol[2] - centro[2]]);
-  luz.sol = unitario([haciaElSol[0] * 0.7, 0.72, haciaElSol[2] * 0.7]);
-  luz.contraluz = unitario([-haciaElSol[0], 0.3, -haciaElSol[2]]);
+  agregarCieloVivo(manchasDeFondo, manchasDeEncima, ojos, vista, t, noche);
+  // De noche las sombras proyectadas casi desaparecen: la poca luz que queda ya no viene del sol.
+  luz.sombra = 1 - noche * 0.8;
   agregarVuelos(dinamico, manchasDeFrente, centro, t, noche);
 }
 
 // ============================================================================
-// 10. DIBUJAR UNA PARTIDA
+// 11. DIBUJAR UNA PARTIDA
 // ============================================================================
 
 // Los lotes que se llenan de nuevo en cada cuadro. Los personajes van en su propio lote porque
@@ -1980,6 +2615,7 @@ function dibujarPartida(estado, juego, segundos, t) {
   // 1. Los tableros. Solo se reconstruyen mientras su terreno está cambiando.
   const estaticos = tableros.map((tablero, numero) => {
     if (juego.tipo === 'laberinto') return tableroDelLaberinto(juego);
+    if (juego.tipo === 'aprender') return tableroDeAprender(juego);
     const [anterior, progreso] = cambioDeTablero(juego, tablero);
     return loteDeTablero(juego.tipo + numero, tablero.mapa, tablero.origen, anterior, progreso);
   });
@@ -1987,6 +2623,7 @@ function dibujarPartida(estado, juego, segundos, t) {
   // 2. Lo que se mueve.
   if (juego.tipo === 'gemas') agregarGemas(juego, tableros, t, segundos);
   else if (juego.tipo === 'bandera') agregarBanderas(juego, tableros[0], t, segundos);
+  else if (juego.tipo === 'aprender') agregarAprender(juego, tableros[0], t, segundos);
   else agregarLaberinto(juego, tableros[0], t, segundos, estado);
 
   // 3. Los efectos y los momentos especiales de la cámara.
@@ -2003,13 +2640,27 @@ function dibujarPartida(estado, juego, segundos, t) {
   apuntarCamara(estado.camara, juego, tableros, estado.seguir, estado.momento, t);
   if (estado.pantalla !== 'juego') pasearCamara(estado.camara, tableros, t);
   camaraDeMirar(estado, juego, tableros, segundos);
+  estado.camara.corrimiento = null;
+  if (juego.tipo === 'aprender') camaraDeAprender(estado.camara, juego, tableros[0]);
   moverCamara(estado.camara, segundos);
   const camara = matrizDeCamara(estado.camara);
   agregarAmbiente(estado, juego, tableros, t, segundos, camara);
 
   // 5. A dibujar. El orden importa:
+  //    0) el mapa de sombras, visto desde el sol;
   //    a) el cielo; b) tableros y adornos, sin borde; c) el halo blanco de quien recogió algo;
   //    d) los personajes; e) su borde negro; f) lo translúcido; g) el resplandor del sol.
+  // El sol tiene que abarcar todos los tableros: se toma la esfera que los encierra.
+  const xs = tableros.flatMap(tb => [tb.origen[0] - 1, tb.origen[0] + tb.mapa.columnas]);
+  const zs = tableros.flatMap(tb => [tb.origen[1] - 1, tb.origen[1] + tb.mapa.filas]);
+  const medio = [(Math.min(...xs) + Math.max(...xs)) / 2, 0, (Math.min(...zs) + Math.max(...zs)) / 2];
+  const radio = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) / 2 + 3;
+  // Con la cámara cerca, el mapa de sombras se concentra en lo que se está viendo: así sus
+  // puntos alcanzan para más detalle y el filo de las sombras queda limpio.
+  const alcance = Math.hypot(...restar(estado.camara.ojo, estado.camara.centro)) * 1.1 + 4;
+  if (alcance < radio) luz.matriz = matrizDelSol(luz.sol, [estado.camara.centro[0], 0, estado.camara.centro[2]], alcance);
+  else luz.matriz = matrizDelSol(luz.sol, medio, radio);
+  if (!dibujarSombras(estaticos.concat([dinamico, personajes]), luz.matriz)) luz.matriz = null;
   gl.clearColor(luz.cielo[0], luz.cielo[1], luz.cielo[2], 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   dibujarManchas(manchasDeFondo, camara.total, camara.derecha, camara.arriba, false);
@@ -2030,7 +2681,7 @@ function dibujarPartida(estado, juego, segundos, t) {
 }
 
 // ============================================================================
-// 11. LA INTERFAZ, AL ESTILO DE UN JUEGO DE CARRERAS
+// 12. LA INTERFAZ, AL ESTILO DE UN JUEGO DE CARRERAS
 // Los textos y los botones son elementos de la página, encima del lienzo 3D.
 // ============================================================================
 
@@ -2133,6 +2784,7 @@ function interfazDeBandera(estado, juego, escena) {
 
 // Actualiza toda la interfaz de la partida en curso.
 function actualizarInterfaz(estado, juego, escena) {
+  if (juego.tipo === 'aprender') { interfazDeAprender(estado, juego, escena); return; }    // ese modo tiene su propia interfaz
   poner('tiempo', textoDeTiempo(juego.reloj));
   poner('cartel', '');
   if (juego.tipo !== 'bandera') { poner('rivales', ''); poner('mensaje', ''); poner('aviso', ''); }
@@ -2154,7 +2806,7 @@ const AYUDA_DE_JUGAR = 'Flechas o W A S D: moverte. C: acercar. R: reiniciar. Es
 const AYUDA_DE_MIRAR = 'Rueda: acercar. Arrastrar: girar. W A S D: mover. Tab: seguir a otro. 0: vista general. R: reiniciar. Esc: menú.';
 
 // ============================================================================
-// 12. MAZE RUNNER EN PANTALLA
+// 13. MAZE RUNNER EN PANTALLA
 // ============================================================================
 
 // El lote del laberinto que no se mueve. Se rehace solo dos veces por cambio:
@@ -2257,7 +2909,7 @@ function interfazDeLaberinto(estado, juego, escena) {
 }
 
 // ============================================================================
-// 13. MODOS DE SOLO MIRAR
+// 14. MODOS DE SOLO MIRAR
 // Compiten solo los algoritmos y la cámara se mueve con libertad: la rueda
 // acerca y aleja, arrastrar gira, W A S D desplaza, Tab pasa a seguir a otro
 // personaje y 0 vuelve a la vista general.
@@ -2353,7 +3005,306 @@ if (typeof document !== 'undefined') {
 }
 
 // ============================================================================
-// 14. PORTADA Y MENÚ
+// 15. MODO APRENDER EN PANTALLA
+// A la izquierda, el tablero en 3D con cada casilla pintada según su papel. A
+// la derecha, un panel con el número de paso, los botones, la explicación, el
+// código con el renglón actual resaltado, la estructura de datos y la tabla.
+// ============================================================================
+
+// El color de cada papel que puede tener una casilla, y su nombre en la leyenda.
+const COLOR_DE_PAPEL = { explorada: [0.49, 0.34, 0.76], espera: [1.0, 0.70, 0.0], nueva: [1.0, 0.34, 0.13], actual: [0.84, 0.0, 0.0], ruta: [0.90, 0.22, 0.21] };
+const TEXTO_DE_PAPEL = [['actual', 'Explorando'], ['nueva', 'Acaba de entrar'], ['espera', 'Espera'], ['explorada', 'Explorada'], ['ruta', 'Ruta']];
+// Los botones que controlan los pasos: acción y texto.
+const BOTONES_DE_APRENDER = [['reiniciar', 'Reiniciar (R)'], ['anterior', 'Anterior'], ['siguiente', 'Siguiente'], ['auto', 'Automático'], ['velocidad', '']];
+const AYUDA_DE_APRENDER = 'Flechas: pasos. Espacio: automático. V: velocidad. R: reiniciar. 1 a 5: algoritmo. M: mapa. Esc: menú.';
+
+// Calcula las 10 esquinas de una estrella de 5 puntas, alternando una punta y un hueco.
+//   radio: el de las puntas
+// Devuelve la lista de puntos [x, y], con la primera punta hacia arriba (y positiva).
+function puntosDeEstrella(radio) {
+  return Array.from({ length: 10 }, (nada, k) => {
+    const r = k % 2 === 0 ? radio : radio * 0.42, angulo = Math.PI / 2 + k * Math.PI / 5;
+    return [r * Math.cos(angulo), r * Math.sin(angulo)];
+  });
+}
+
+// La estrella como figura 3D: una estrella plana con un poco de grosor. Sirve para marcar la meta.
+// El frente y la espalda se arman con triángulos que salen del centro; el canto, con un cuadro por lado.
+const CARAS_DE_ESTRELLA = [];
+{
+  const p = puntosDeEstrella(0.5);
+  for (let k = 0; k < 10; k++) {
+    const a = p[k], b = p[(k + 1) % 10];
+    CARAS_DE_ESTRELLA.push([[0, 0, 0.5], [a[0], a[1], 0.5], [b[0], b[1], 0.5]]);                                   // frente
+    CARAS_DE_ESTRELLA.push([[0, 0, -0.5], [b[0], b[1], -0.5], [a[0], a[1], -0.5]]);                                // espalda
+    CARAS_DE_ESTRELLA.push([[a[0], a[1], 0.5], [a[0], a[1], -0.5], [b[0], b[1], -0.5], [b[0], b[1], 0.5]]);        // canto
+  }
+}
+
+// Empieza el modo Aprender con el primer algoritmo y el primer mapa.
+// Devuelve el estado del modo. Su tablero no lleva adornos: flores, rocas y lámparas taparían
+// los colores de las casillas, que aquí son lo que importa.
+function empezarAprender() {
+  adornosHechos.set('aprender0', { fijos: [], luciernagas: [], abejas: [], motas: [] });
+  return crearAprender();
+}
+
+// El tablero del mapa elegido, ya construido. Solo se rehace al cambiar de mapa.
+const tableroHechoDeAprender = { lote: null, mapa: null };
+// Da el lote con el tablero del modo Aprender. Los muros van bajos, como en el laberinto,
+// para que no tapen las casillas que tienen detrás.
+function tableroDeAprender(aprender) {
+  const hecho = tableroHechoDeAprender;
+  if (hecho.mapa !== aprender.mapa) {
+    if (hecho.lote && hecho.lote.bufer) motor.gl.deleteBuffer(hecho.lote.bufer);     // se libera el anterior
+    hecho.lote = construirTablero(aprender.mapa, [0, 0], null, 1, null, MUROS_BAJOS);
+    hecho.mapa = aprender.mapa;
+  }
+  return hecho.lote;
+}
+
+// Agrega al lote dinámico todo lo que cambia en el modo Aprender: el papel de cada casilla en
+// este paso, la ruta, el inicio, la meta y el personaje.
+//   aprender: el estado del modo
+//   tablero:  su tablero (mapa y lugar en el mundo)
+//   t, segundos: el tiempo total y el del cuadro
+// Los colores llevan brillo propio para que se lean igual de día que de noche.
+function agregarAprender(aprender, tablero, t, segundos) {
+  const { mapa, origen } = tablero, paso = aprender.pasos[aprender.paso];
+  const lugarDe = i => enMundo(origen, posDeCasilla(mapa, i));
+  // 1. El papel de cada casilla: una loseta de color sobre el piso, que deja ver el terreno en la orilla.
+  const nuevas = new Set(paso.nuevas), exploradas = new Set(paso.exploradas);
+  const esperan = new Set(paso.estructura.map(par => par[1]));
+  for (let i = 0; i < mapa.t.length; i++) {
+    let papel = null;
+    if (nuevas.has(i)) papel = 'nueva';
+    else if (esperan.has(i) && !exploradas.has(i)) papel = 'espera';
+    else if (exploradas.has(i)) papel = 'explorada';
+    if (!papel) continue;
+    const p = lugarDe(i), lado = papel === 'nueva' ? 0.78 + 0.06 * Math.sin(t * 8) : 0.78;     // la que acaba de entrar late
+    dinamico.caja(bloque(p[0], 0.02, p[2], lado, 0.04, lado), COLOR_DE_PAPEL[papel], 0.75);
+  }
+  // 2. La ruta final, cuando ya se encontró.
+  if (paso.ruta) agregarRuta(dinamico, origen, paso.ruta.map(i => posDeCasilla(mapa, i)), COLOR_DE_PAPEL.ruta, 0.1);
+  // 3. La casilla que se está explorando: un marco rojo alrededor, que sube y baja un poco.
+  if (paso.actual !== null) {
+    const p = lugarDe(paso.actual), alto = 0.12 + 0.05 * Math.sin(t * 6);
+    for (const [dx, dz, ancho, fondo] of [[0, -0.44, 0.98, 0.1], [0, 0.44, 0.98, 0.1], [-0.44, 0, 0.1, 0.98], [0.44, 0, 0.1, 0.98]]) {
+      dinamico.caja(bloque(p[0] + dx, alto / 2, p[2] + dz, ancho, alto, fondo), COLOR_DE_PAPEL.actual, 0.9);
+    }
+  }
+  // 4. El inicio es un punto verde y la meta una estrella dorada, acostados sobre el piso.
+  //    Debajo llevan la misma figura en oscuro y un poco más grande, para que resalten sobre cualquier color.
+  const inicio = lugarDe(aprender.inicio), meta = lugarDe(aprender.meta);
+  agregarPunto(dinamico, [inicio[0], 0, inicio[2]], NEGRO, 0.35);
+  for (const giro of [0, Math.PI / 4]) dinamico.caja(componer(mover(inicio[0], 0.08, inicio[2]), girarY(giro), escalar(0.44, 0.06, 0.44)), VERDE_INICIO, 0.7);
+  for (const [tam, alto, color, brillo] of [[1.0, 0.07, NEGRO, 0], [0.84, 0.1, DORADO, 0.7]]) {
+    dinamico.figura(CARAS_DE_ESTRELLA, componer(mover(meta[0], alto, meta[2]), girarY(t * 0.6), girarX(-Math.PI / 2), escalar(tam, tam, 0.06)), color, brillo);
+  }
+  // 5. El personaje del algoritmo.
+  const personaje = aprender.personaje;
+  girarHacia(personaje, segundos);
+  const lugar = enMundo(origen, posicion(personaje, mapa));
+  agregarPersonaje(personajes, lugar, personaje, t);
+  if (personaje.brillo > 0) agregarPersonaje(brillantes, lugar, personaje, t);       // brilla un momento al llegar
+}
+
+// Da los puntos del mundo donde cuelgan los letreros del inicio y de la meta.
+function letrerosDeAprender(aprender, tablero) {
+  return [aprender.inicio, aprender.meta].map(i => enMundo(tablero.origen, posDeCasilla(tablero.mapa, i), 1.55));
+}
+
+// Coloca la cámara del modo Aprender: casi desde arriba y a la distancia justa para que el
+// tablero completo quepa en el espacio que deja libre la interfaz.
+//   camara:   la cámara del programa
+//   aprender: el estado del modo
+//   tablero:  su tablero
+// El espacio libre se mide en la página: lo que no tapan la barra, los botones, la leyenda y
+// el panel. Como ese espacio no queda al centro de la pantalla, la cámara mira al centro del
+// tablero y después la imagen completa se recorre hasta ese hueco.
+function camaraDeAprender(camara, aprender, tablero) {
+  const ancho = motor.ancho, alto = motor.alto;
+  const panel = elemento('lado').getBoundingClientRect();
+  const alLado = panel.left > ancho * 0.3;             // el panel va a la derecha; en ventanas angostas va abajo
+  // Arriba estorban los botones para elegir y, cuando va sobre la escena, la tabla.
+  const arriba = Math.max(elemento('eleccion').getBoundingClientRect().bottom, elemento('tablaFija').getBoundingClientRect().bottom) + 10;
+  const abajo = elemento('leyenda').getBoundingClientRect().top - 8;
+  const izquierda = 12, derecha = (alLado ? panel.left : ancho) - 12;
+  // Lo que debe caber: las esquinas del tablero, abajo y arriba, y los dos letreros.
+  const puntos = letrerosDeAprender(aprender, tablero).map(p => [p[0], p[1] + 0.5, p[2]]);
+  for (const x of [-0.8, tablero.mapa.columnas - 0.2]) {
+    for (const z of [-0.8, tablero.mapa.filas - 0.2]) puntos.push([x, -0.6, z], [x, 0.6, z]);
+  }
+  // Se encuadra como si el hueco estuviera al centro de la pantalla: mismos márgenes de los dos lados.
+  const centro = centroDe(tablero), direccion = unitario([0, 0.92, 0.4]);
+  const margenes = { lados: Math.max(0, (ancho - (derecha - izquierda)) / 2), arriba: Math.max(0, (alto - (abajo - arriba)) / 2) };
+  margenes.abajo = margenes.arriba;
+  const lejos = encuadrar(centro, direccion, puntos, margenes);
+  camara.centroMeta = centro;
+  camara.ojoMeta = [centro[0] + direccion[0] * lejos, direccion[1] * lejos, centro[2] + direccion[2] * lejos];
+  // Y la imagen se recorre del centro de la pantalla al centro del hueco.
+  camara.corrimiento = [((izquierda + derecha) / 2 - ancho / 2) / (ancho / 2), (alto / 2 - (arriba + abajo) / 2) / (alto / 2)];
+}
+
+// Cambia los caracteres que en una página tienen significado propio, para poder mostrar código.
+const escaparHtml = texto => texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// Da la leyenda de colores: un cuadrito por cada papel, más el punto del inicio y la estrella de la meta.
+function htmlDeLeyenda() {
+  const papeles = TEXTO_DE_PAPEL.map(([papel, texto]) => {
+    const color = colorCss(COLOR_DE_PAPEL[papel]);
+    // La casilla que se explora se marca con un marco, así que su cuadrito va hueco.
+    return `<span><em style="${papel === 'actual' ? `border:3px solid ${color}` : `background:${color}`}"></em>${texto}</span>`;
+  }).join('');
+  const estrella = puntosDeEstrella(9).map(p => `${p[0].toFixed(1)},${(-p[1]).toFixed(1)}`).join(' ');
+  return papeles + `<span><em class="punto" style="background:${colorCss(VERDE_INICIO)}"></em>Inicio</span>` +
+    `<span><svg viewBox="-10 -10 20 20"><polygon points="${estrella}" fill="${colorCss(DORADO)}" stroke="#000"/></svg>Meta</span>`;
+}
+
+// Dibuja la estructura de datos del algoritmo con lo que tiene en este paso.
+//   aprender: el estado del modo
+//   paso:     el paso que se muestra
+//   caben:    cuántas cajas caben a lo ancho en el dibujo de la cola
+// Devuelve el HTML del dibujo. La pila es un vaso abierto solo por arriba: lo que entra queda
+// encima y es lo primero que sale. La cola es un tubo abierto por los dos lados: se entra por un
+// extremo y se sale por el otro. En la cola de prioridad cada caja lleva su valor y sale siempre
+// la de menor valor. La próxima en salir va en rojo.
+function htmlDeEstructura(aprender, paso, caben) {
+  const tipo = ESTRUCTURA_DE[aprender.algoritmo], contenido = paso.estructura, mapa = aprender.mapa;
+  const titulo = { pila: 'PILA: entra y sale por arriba', cola: 'COLA: entra por el fin y sale por el inicio',
+                   prioridad: 'COLA DE PRIORIDAD: sale siempre la de menor valor' }[tipo];
+  // Una caja con una casilla; en la cola de prioridad lleva arriba su valor.
+  const caja = ([valor, i], sale) => `<div class="caja${sale ? ' sale' : ''}">${valor === null ? '' : `<b>${valor}</b>`}` +
+                                     `${filaDe(mapa, i)},${columnaDe(mapa, i)}</div>`;
+  let dibujo, pie = 'En rojo: la próxima en salir.';
+  if (tipo === 'pila') {
+    // El vaso: dos paredes y un fondo. Las cajas se apilan desde el fondo; la de arriba es la que sale.
+    const visibles = contenido.slice(0, 5);
+    dibujo = `<div class="pila"><small>${contenido.length > 5 ? `y ${contenido.length - 5} más abajo` : ''}</small>` +
+      `<div class="vaso">${visibles.map((par, k) => caja(par, k === 0)).join('')}</div>` +
+      // Los rótulos miden lo mismo que el montón de cajas: así el del tope queda junto a la caja de arriba.
+      `<div class="rotulos" style="height:${Math.max(2, visibles.length) * 24}px"><span class="dorado">TOPE (inicio): por aquí entra y por aquí sale</span>` +
+      '<span>FONDO (fin): lo más viejo</span></div></div>';
+  } else {
+    // El tubo: dos líneas, abierto por los dos lados. La primera caja de la izquierda es la que sale.
+    dibujo = `<div class="cola${tipo === 'prioridad' ? ' prioridad' : ''}"><span class="dorado">INICIO<br>sale</span>` +
+      `<div class="tubo">${contenido.slice(0, caben).map((par, k) => caja(par, k === 0)).join('')}</div><span>FIN<br>entra</span></div>`;
+    if (contenido.length > caben) pie += ` Hay ${contenido.length - caben} más que no caben en el dibujo.`;
+    if (tipo === 'prioridad') {
+      const que = { 'Dijkstra': 'el costo acumulado', 'Voraz': 'la estimación hasta la meta', 'A*': 'el costo acumulado más la estimación' }[aprender.algoritmo];
+      pie += `<br>El número de cada caja es ${que}. Al entrar, se acomoda según ese valor.`;
+    }
+  }
+  return `<h3>${titulo}. Tiene ${contenido.length} casillas.</h3>${dibujo}<p>${pie}</p>`;
+}
+
+// Une nombres en una frase: "A", "A y B" o "A, B y C".
+const enLista = nombres => nombres.length < 2 ? nombres.join('') : nombres.slice(0, -1).join(', ') + ' y ' + nombres[nombres.length - 1];
+
+// Da la tabla que compara a los cinco algoritmos en el mapa elegido.
+//   aprender: el estado del modo
+// Devuelve el HTML: una fila por algoritmo con sus casillas exploradas, pasos, costo y puntaje;
+// el mejor en verde, la fila del algoritmo elegido resaltada y, al pie, por qué gana el mejor.
+function htmlDeTabla(aprender) {
+  const tabla = aprender.tabla, conRuta = NOMBRES.filter(nombre => tabla[nombre][3] !== null);
+  const mejor = conRuta.length ? Math.min(...conRuta.map(nombre => tabla[nombre][3])) : null;
+  const filas = NOMBRES.map(nombre => {
+    const [exploradas, pasos, costo, puntaje] = tabla[nombre], gana = puntaje !== null && puntaje === mejor;
+    const datos = puntaje === null ? '<td colspan="3" class="gris">sin ruta</td>'
+                                   : `<td>${pasos}</td><td>${costo}</td><td>${puntaje}</td>`;
+    return `<tr class="${nombre === aprender.algoritmo ? 'elegido' : ''}${gana ? ' gana' : ''}">` +
+      `<td><i style="background:${colorCss(COLOR_DE[nombre])}"></i>${nombre}</td><td>${exploradas}</td>${datos}</tr>`;
+  }).join('');
+  let pie = 'Ningún algoritmo puede llegar: no hay mejor.';
+  if (mejor !== null) {
+    // Por qué gana: su ruta es de las más baratas y, entre quienes logran ese costo, es quien menos exploró.
+    const ganan = conRuta.filter(nombre => tabla[nombre][3] === mejor), [exploradas, , costo] = tabla[ganan[0]];
+    const igualDeBaratos = conRuta.filter(nombre => tabla[nombre][2] === costo && !ganan.includes(nombre));
+    pie = `<b class="verde">En verde, el mejor: ${enLista(ganan)}.</b> Su ruta cuesta ${costo}, lo mínimo` +
+      (igualDeBaratos.length ? ` (igual que la de ${enLista(igualDeBaratos)}), pero con menos casillas exploradas: ${exploradas}.`
+                             : `, y nadie más lo consigue. Exploró ${exploradas} casillas.`) +
+      ' Puntaje = costo x 10 000 + exploradas; gana el más bajo.';
+  }
+  return `<table><tr><th>En "${MAPAS_DE_APRENDER[aprender.numeroDeMapa][0]}"</th><th>Exploradas</th><th>Pasos</th>` +
+    `<th>Costo</th><th>Puntaje</th></tr>${filas}</table><p>${pie}</p>`;
+}
+
+// Actualiza toda la interfaz del modo Aprender.
+//   estado:   el estado del programa
+//   aprender: el estado del modo
+//   escena:   los tableros y la cámara con que se dibujó este cuadro
+// Cada parte del panel se escribe por separado y solo cuando cambia: así el panel no pierde
+// el lugar hasta donde se bajó a leer.
+function interfazDeAprender(estado, aprender, escena) {
+  const paso = aprender.pasos[aprender.paso], nombreDelMapa = MAPAS_DE_APRENDER[aprender.numeroDeMapa][0];
+  elemento('aprender').style.display = '';
+  poner('titulo', 'Aprender');
+  poner('centro', `${ficha(aprender.personaje)} en <b>${nombreDelMapa}</b>`);
+  // Aquí no hay cronómetro, ni avisos, ni botones de los juegos.
+  for (const id of ['tiempo', 'mensaje', 'cuenta', 'aviso', 'cartel', 'rivales', 'controles', 'ayuda']) poner(id, '');
+  elemento('centro').style.visibility = '';
+  // Los botones para elegir algoritmo (1 a 5) y mapa. El elegido va en rojo.
+  poner('eleccion', NOMBRES.map((nombre, k) =>
+      `<button data-aprender="algoritmo" data-valor="${nombre}" class="${nombre === aprender.algoritmo ? 'activo' : ''}">` +
+      `<i style="background:${colorCss(COLOR_DE[nombre])}"></i>${k + 1} ${nombre}</button>`).join('') + '<span class="corte"></span>' +
+    MAPAS_DE_APRENDER.map((mapa, k) =>
+      `<button data-aprender="mapa" data-valor="${k}" class="${k === aprender.numeroDeMapa ? 'activo' : ''}">${mapa[0]}</button>`).join('') +
+    `<p>${QUE_ENSEÑA[nombreDelMapa]}</p>`);
+  poner('leyenda', htmlDeLeyenda());
+  // El número de paso y los botones para avanzar, que se quedan fijos arriba del panel.
+  poner('numeroDePaso', `Paso ${aprender.paso + 1} de ${aprender.pasos.length}`);
+  // Con los dedos no hay tecla Esc: se agrega un botón para volver al menú.
+  const botones = BOTONES_DE_APRENDER.concat(document.body.classList.contains('tactil') ? [['menu', 'Menú']] : []);
+  poner('botonesDePaso', botones.map(([accion, texto]) => {
+    if (accion === 'velocidad') { const nombre = VELOCIDADES_DE_APRENDER[aprender.velocidad][0]; texto = nombre[0].toUpperCase() + nombre.slice(1) + ' (V)'; }
+    else if (accion === 'auto' && aprender.auto) texto = 'Pausa';
+    return `<button data-aprender="${accion}" class="${accion === 'auto' && aprender.auto ? 'activo' : ''}">${texto}</button>`;
+  }).join(''));
+  poner('explicacion', paso.texto);
+  // El código, con el renglón que se está ejecutando resaltado.
+  poner('codigo', CODIGO[aprender.algoritmo].map((renglon, k) =>
+    `<div class="${k === paso.renglon ? 'actual' : ''}">${String(k + 1).padStart(2)}  ${escaparHtml(renglon)}</div>`).join(''));
+  // En la cola caben más o menos cajas según el ancho del panel.
+  const caben = Math.max(3, Math.min(8, Math.floor((elemento('lado').clientWidth - 150) / 46)));
+  poner('estructura', htmlDeEstructura(aprender, paso, caben));
+  // La tabla va en dos lugares y la hoja de estilos muestra uno solo, según el tamaño de la pantalla.
+  poner('tabla', htmlDeTabla(aprender));
+  poner('tablaFija', htmlDeTabla(aprender));
+  poner('teclas', AYUDA_DE_APRENDER);
+  // Los letreros del inicio y de la meta, sobre el tablero.
+  const [inicio, meta] = letrerosDeAprender(aprender, escena.tableros[0]);
+  etiquetar('letreroDeInicio', inicio, 'Inicio', 'rotulo', escena.camara);
+  etiquetar('letreroDeMeta', meta, 'Meta', 'rotulo', escena.camara);
+  limpiarEtiquetas();
+}
+
+// Atiende un botón del modo Aprender.
+//   accion: lo que hace el botón; valor: el algoritmo o el número del mapa, si lo lleva
+function accionDeAprender(estado, accion, valor) {
+  if (accion === 'menu') { mostrarMenu(estado); return; }
+  estado.juego = hacerEnAprender(estado.juego, accion, accion === 'mapa' ? Number(valor) : valor);
+}
+
+// Atiende una tecla en el modo Aprender.
+//   tecla:    la tecla oprimida
+//   repetida: true si la tecla sigue oprimida y el teclado la está repitiendo
+// Solo las flechas se repiten: así se puede recorrer la búsqueda dejando oprimida una.
+function teclaDeAprender(estado, tecla, repetida) {
+  const deFlecha = { ArrowLeft: 'anterior', ArrowRight: 'siguiente' }[tecla];
+  if (deFlecha) { accionDeAprender(estado, deFlecha); return; }
+  if (repetida) return;
+  const aprender = estado.juego;
+  if (tecla === 'Escape') mostrarMenu(estado);
+  else if (tecla >= '1' && tecla <= '5') accionDeAprender(estado, 'algoritmo', NOMBRES[Number(tecla) - 1]);
+  else if (tecla === 'm') accionDeAprender(estado, 'mapa', (aprender.numeroDeMapa + 1) % MAPAS_DE_APRENDER.length);
+  else {
+    const accion = { r: 'reiniciar', ' ': 'auto', v: 'velocidad' }[tecla];
+    if (accion) accionDeAprender(estado, accion);
+  }
+}
+
+// ============================================================================
+// 16. PORTADA Y MENÚ
 // La portada muestra el título sobre una partida que se juega sola. Al oprimir
 // una tecla, el fondo se desenfoca, el título se barre hacia un lado y aparecen
 // los modos en cajas. Al elegir uno, su caja estalla en partículas y hay un
@@ -2368,6 +3319,7 @@ function prepararFondo(estado) {
   estado.seguir = null;
   for (const id of ['titulo', 'centro', 'tiempo', 'mensaje', 'ayuda', 'cuenta', 'aviso', 'cartel', 'rivales', 'controles']) poner(id, '');
   limpiarEtiquetas(); limpiarEtiquetas();
+  elemento('aprender').style.display = 'none';
   elemento('barra').style.display = 'none';
   if (!estado.demo) estado.demo = crearDemo();
 }
@@ -2388,7 +3340,9 @@ function mostrarPortada(estado) {
   elemento('menu').style.display = 'none';
   elemento('portada').style.display = '';
   elemento('portada').classList.remove('fuera');
-  poner('portada', '<h1>Maze Runner</h1><p class="subtitulo">Proyecto de matemáticas discretas</p><p class="parpadea">Presiona cualquier tecla</p>');
+  // El texto de abajo depende de si hay teclado o se juega con los dedos; la hoja de estilos muestra el que toca.
+  poner('portada', '<h1>Maze Runner</h1><p class="subtitulo">Proyecto de matemáticas discretas</p>' +
+    '<p class="parpadea"><span class="conTeclado">Presiona cualquier tecla</span><span class="conDedo">Toca la pantalla</span></p>');
 }
 
 // Muestra el menú: desenfoca el fondo, barre el título hacia un lado y hace aparecer las cajas.
@@ -2402,12 +3356,20 @@ function mostrarMenu(estado) {
 }
 
 // Escribe las cajas del menú. Al abrirse, llegan una tras otra.
+// Siempre se escriben de nuevo, aunque el texto sea el mismo de la vez anterior: así ninguna caja
+// conserva restos de la última visita (la que estalló quedó escondida, y todas sin su animación).
+let esperaDelMenu = 0;                  // el temporizador que quita la animación de entrada
 function pintarMenu(estado) {
+  clearTimeout(esperaDelMenu);
+  elemento('interfaz').querySelectorAll('.pedazo').forEach(pedazo => pedazo.remove());   // partículas que sigan volando
+  elemento('menu').classList.remove('yendose');
+  delete elemento('menu').dataset.html;               // obliga a 'poner' a escribir el menú otra vez
   poner('menu', '<h1 class="chico">Maze Runner</h1><div class="cajas entrando">' +
     MODOS.map((modo, k) => `<button data-modo="${modo[0]}" style="animation-delay:${k * 60}ms"><b>${modo[1]}</b><span>${modo[2]}</span></button>`).join('') +
-    '</div><p class="pie">Elige con las flechas y Enter, o con el ratón. Esc: portada.</p>');
+    '</div><p class="pie"><span class="conTeclado">Elige con las flechas y Enter, o con el ratón. Esc: portada.</span>' +
+    '<span class="conDedo">Toca un modo para empezar.</span></p>');
   // Cuando terminan de llegar se quita la animación de entrada, para que puedan rebotar al elegirlas.
-  setTimeout(() => { const cajas = elemento('menu').querySelector('.cajas'); if (cajas) cajas.classList.remove('entrando'); marcarCaja(estado); }, 420 + MODOS.length * 60);
+  esperaDelMenu = setTimeout(() => { const cajas = elemento('menu').querySelector('.cajas'); if (cajas) cajas.classList.remove('entrando'); marcarCaja(estado); }, 420 + MODOS.length * 60);
   marcarCaja(estado);
 }
 
@@ -2421,13 +3383,14 @@ function teclaDeMenu(estado, tecla) {
   if (estado.pantalla === 'salto') return;                           // durante el salto no se atiende nada
   if (estado.pantalla === 'portada') { mostrarMenu(estado); return; }   // cualquier tecla abre el menú
   if (tecla === 'Escape') { mostrarPortada(estado); return; }
-  // Cuántas cajas caben por fila: se cuentan las que están a la misma altura que la primera.
-  const cajas = [...elemento('menu').querySelectorAll('button[data-modo]')];
-  const columnas = Math.max(1, cajas.filter(caja => caja.offsetTop === cajas[0].offsetTop).length);
-  if (tecla === 'ArrowRight') estado.elegida = (estado.elegida + 1) % MODOS.length;
-  else if (tecla === 'ArrowLeft') estado.elegida = (estado.elegida + MODOS.length - 1) % MODOS.length;
-  else if (tecla === 'ArrowDown') estado.elegida = Math.min(MODOS.length - 1, estado.elegida + columnas);
-  else if (tecla === 'ArrowUp') estado.elegida = Math.max(0, estado.elegida - columnas);
+  // El menú tiene tres columnas: fila 0 los juegos (cajas 0 a 2), fila 1 sus versiones de mirar
+  // (cajas 3 a 5) y, debajo, Aprender (caja 6), que ocupa las tres columnas.
+  const aprender = MODOS.length - 1, actual = estado.elegida;
+  if (actual < aprender) estado.columnaDelMenu = actual % 3;         // se recuerda la columna, para volver a ella desde Aprender
+  if (tecla === 'ArrowRight') estado.elegida = actual === aprender ? aprender : Math.floor(actual / 3) * 3 + (actual + 1) % 3;
+  else if (tecla === 'ArrowLeft') estado.elegida = actual === aprender ? aprender : Math.floor(actual / 3) * 3 + (actual + 2) % 3;
+  else if (tecla === 'ArrowDown') estado.elegida = actual < 3 ? actual + 3 : aprender;                  // juego -> mirar -> Aprender
+  else if (tecla === 'ArrowUp') estado.elegida = actual === aprender ? 3 + (estado.columnaDelMenu || 0) : (actual >= 3 ? actual - 3 : actual);
   else if (tecla === 'Enter' || tecla === ' ') { clicDeMenu(estado, MODOS[estado.elegida][0]); return; }
   else return;
   marcarCaja(estado);
@@ -2498,7 +3461,7 @@ function dibujarSalto(estado, segundos) {
   const fondo = mezcla(mezcla(luz.cielo, [0.01, 0.01, 0.03], Math.min(1, avance * 3)), [1, 1, 1], destello);
   gl.clearColor(fondo[0], fondo[1], fondo[2], 1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  dibujarLotes([dinamico], camara, Object.assign({}, luz, { cielo: fondo, lejos: 900 }));
+  dibujarLotes([dinamico], camara, Object.assign({}, luz, { cielo: fondo, lejos: 900, matriz: null }));
   if (salto.t >= DURACION_DEL_SALTO) {
     elemento('menu').classList.remove('yendose');
     empezar(salto.modo);                              // se llega al tablero
@@ -2529,10 +3492,132 @@ function pasearCamara(camara, tableros, t) {
 }
 
 // ============================================================================
-// 15. EL PROGRAMA
+// 17. TELÉFONOS
+// En un teléfono se juega en horizontal y con los dedos: una cruceta para
+// moverse, tres botones (acercar, reiniciar y menú) y, al solo mirar, un dedo
+// gira la cámara y dos la acercan o la alejan. Aquí también se mide la
+// interfaz en cada cuadro, para que nada se encime en pantallas chicas.
 // ============================================================================
 
-// Los modos del juego: clave, nombre y una línea que lo describe.
+// Dice si la página se está viendo en un teléfono: una pantalla que se toca y que es chica.
+const esTelefono = () => navigator.maxTouchPoints > 0 && Math.min(window.innerWidth, window.innerHeight) <= 540;
+
+// Acomoda la interfaz al tamaño y al tipo de pantalla. Se llama en cada cuadro.
+//   estado: el estado del programa
+// Devuelve true cuando el teléfono está en vertical: entonces se muestra el aviso de girarlo y
+// el juego queda en pausa, porque quien llama deja de avanzarlo.
+function acomodarPantalla(estado) {
+  // Los controles para dedos aparecen en un teléfono o en cuanto alguien toca la pantalla.
+  const tactil = estado.tocado || esTelefono();
+  document.body.classList.toggle('tactil', tactil);
+  const jugando = estado.pantalla === 'juego' && estado.modo !== 'aprender';
+  elemento('cruceta').style.display = jugando ? '' : 'none';
+  let botones = '';
+  if (jugando) {
+    const mirando = estado.modo.startsWith('mirar');
+    botones = `<button data-tactil="acercar" class="${estado.seguir !== null ? 'activo' : ''}">${mirando ? 'Seguir a otro' : 'Acercar'}</button>` +
+              '<button data-tactil="reiniciar">Reiniciar</button><button data-tactil="menu">Menú</button>';
+  }
+  poner('botonesTactiles', botones);
+  // La altura de la barra y la del texto de ayuda cambian con el ancho de la ventana. Se le avisan
+  // a la hoja de estilos, que coloca debajo de la barra y encima de la ayuda todo lo demás.
+  const medidas = { '--barra': elemento('barra').offsetHeight || 64, '--pie': elemento('ayuda').offsetHeight };
+  for (const nombre in medidas) {
+    const valor = medidas[nombre] + 'px';
+    if (document.documentElement.style.getPropertyValue(nombre) !== valor) document.documentElement.style.setProperty(nombre, valor);
+  }
+  const girar = esTelefono() && window.innerHeight > window.innerWidth;
+  elemento('girar').style.display = girar ? '' : 'none';
+  if (girar) estado.direcciones = [];                  // en pausa no queda ningún movimiento oprimido
+  return girar;
+}
+
+// Da los márgenes, en pixeles, que la cámara debe dejar libres para la interfaz en la vista general.
+//   juego: la partida que se está dibujando
+// Se miden en la página: arriba, la barra y el mensaje; abajo, los botones y la ayuda. En una
+// pantalla de computadora nunca se deja menos lugar que el acostumbrado.
+function margenesDeLaInterfaz(juego) {
+  const alto = motor.alto, gemas = juego.tipo === 'gemas', chica = alto < 520;
+  // Dónde termina un elemento de arriba y dónde empieza uno de abajo; si no se ve, no estorba.
+  const fondoDe = id => { const zona = elemento(id).getBoundingClientRect(); return zona.height ? zona.bottom : 0; };
+  const topeDe = id => { const zona = elemento(id).getBoundingClientRect(); return zona.height ? zona.top : alto; };
+  // En atrapa gemas cada tablero lleva encima su letrero, que también necesita lugar.
+  let arriba = Math.max(fondoDe('barra'), fondoDe('mensaje')) + (gemas ? (chica ? 36 : 58) : 8);
+  let abajo = alto - Math.min(topeDe('rivales'), topeDe('controles'), topeDe('ayuda')) + 13;
+  if (!chica) { arriba = Math.max(arriba, gemas ? 122 : 112); abajo = Math.max(abajo, gemas ? 40 : 84); }
+  return { lados: chica ? 10 : 24, arriba, abajo };
+}
+
+// Atiende los tres botones para dedos.
+//   accion: 'acercar', 'reiniciar' o 'menu'
+function accionTactil(estado, accion) {
+  const juego = estado.juego;
+  if (accion === 'menu') mostrarMenu(estado);
+  else if (accion === 'reiniciar') empezar(estado.modo);
+  else if (!estado.modo.startsWith('mirar')) {
+    // Jugando: acerca la cámara al jugador, o regresa a la vista general.
+    estado.seguir = estado.seguir === null ? juego.corredores.indexOf(juego.jugador) : null;
+  } else {
+    // Mirando: pasa a seguir al siguiente competidor y, después del último, vuelve a la vista general.
+    estado.seguir = estado.seguir === null ? 0 : (estado.seguir + 1 < juego.corredores.length ? estado.seguir + 1 : null);
+    Object.assign(estado.vista, { dx: 0, dz: 0 });
+  }
+}
+
+// Los dedos sobre la pantalla.
+if (typeof document !== 'undefined') {
+  // El primer toque con un dedo hace aparecer los controles, aunque la pantalla no sea de teléfono.
+  document.addEventListener('pointerdown', evento => { if (evento.pointerType === 'touch') estado.tocado = true; }, true);
+
+  // La cruceta: la dirección sale de hacia dónde está el dedo respecto a su centro, así que se
+  // puede cambiar de rumbo deslizándolo, sin levantarlo.
+  const cruceta = document.getElementById('cruceta');
+  const FLECHAS = { arriba: 'ArrowUp', derecha: 'ArrowRight', abajo: 'ArrowDown', izquierda: 'ArrowLeft' };
+  const apuntar = evento => {
+    const zona = cruceta.getBoundingClientRect();
+    const dx = evento.clientX - (zona.left + zona.width / 2), dy = evento.clientY - (zona.top + zona.height / 2);
+    let hacia = null;
+    if (Math.hypot(dx, dy) > zona.width * 0.12) hacia = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'derecha' : 'izquierda') : (dy > 0 ? 'abajo' : 'arriba');
+    // Es el mismo movimiento que da la flecha del teclado.
+    estado.direcciones = hacia ? [TECLAS_DE_MOVIMIENTO[FLECHAS[hacia]]] : [];
+    for (const marca of cruceta.children) marca.classList.toggle('activa', marca.className.split(' ')[0] === hacia);
+  };
+  let dedoEnCruceta = null;                            // el dedo que la está usando; los demás no la mueven
+  const soltar = evento => {
+    if (evento.pointerId !== dedoEnCruceta) return;
+    dedoEnCruceta = null;
+    estado.direcciones = [];
+    for (const marca of cruceta.children) marca.classList.remove('activa');
+  };
+  cruceta.addEventListener('pointerdown', evento => { dedoEnCruceta = evento.pointerId; apuntar(evento); evento.preventDefault(); });
+  cruceta.addEventListener('pointermove', evento => { if (evento.pointerId === dedoEnCruceta) apuntar(evento); });
+  for (const tipo of ['pointerup', 'pointercancel']) cruceta.addEventListener(tipo, soltar);
+
+  // Pellizcar al solo mirar: con dos dedos, la cámara se acerca o se aleja según se separen o
+  // se junten. Mientras hay dos dedos no se gira.
+  const lienzo = document.getElementById('lienzo'), dedos = new Map();
+  const separacion = () => { const [a, b] = [...dedos.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+  lienzo.addEventListener('pointerdown', evento => {
+    dedos.set(evento.pointerId, [evento.clientX, evento.clientY]);
+    if (dedos.size === 2) estado.arrastre = null;
+  });
+  lienzo.addEventListener('pointermove', evento => {
+    if (!dedos.has(evento.pointerId)) return;
+    const antes = dedos.size === 2 ? separacion() : 0;
+    dedos.set(evento.pointerId, [evento.clientX, evento.clientY]);
+    if (dedos.size !== 2 || antes < 1 || estado.pantalla !== 'juego' || !estado.modo.startsWith('mirar')) return;
+    estado.arrastre = null;
+    estado.vista.zoom = Math.min(6, Math.max(0.5, estado.vista.zoom * separacion() / antes));
+  });
+  for (const tipo of ['pointerup', 'pointercancel']) lienzo.addEventListener(tipo, evento => dedos.delete(evento.pointerId));
+}
+
+// ============================================================================
+// 18. EL PROGRAMA
+// ============================================================================
+
+// Los modos del juego: clave, nombre y una línea que lo describe. Van en el orden del menú:
+// los tres juegos, debajo de cada uno su versión de solo mirar y, al final, Aprender.
 const MODOS = [
   ['gemas', 'Atrapa gemas', 'Carrera contra los cinco algoritmos, cada quien en su tablero.'],
   ['bandera', 'Captura la bandera', 'Uno contra uno: roba la bandera rival. A tres puntos.'],
@@ -2540,10 +3625,12 @@ const MODOS = [
   ['mirar_gemas', 'Mirar: atrapa gemas', 'Compiten solo los algoritmos.'],
   ['mirar_bandera', 'Mirar: captura la bandera', 'Elige el algoritmo de cada lado.'],
   ['mirar_laberinto', 'Mirar: Maze Runner', 'Sigue de cerca a quien quieras.'],
+  ['aprender', 'Aprender', 'Cada algoritmo, paso a paso.'],
 ];
 
 // Todo lo que cambia mientras corre el programa.
 //   pantalla:    'portada', 'menu', 'salto' (el salto tipo hiperespacio) o 'juego'
+//   elegida:     el número de la caja resaltada en el menú; columnaDelMenu: su columna, para volver a ella desde Aprender
 //   modo, juego: el modo que se está jugando y su partida
 //   rival:       el rival elegido en captura la bandera; se conserva entre partidas y empieza en A*
 //   izquierda:   el algoritmo del lado izquierdo al solo mirar; empieza en BFS
@@ -2566,6 +3653,7 @@ function empezar(modo) {
   else if (modo === 'mirar_gemas') estado.juego = crearGemas(false);
   else if (modo === 'bandera') estado.juego = crearBandera(estado.rival);
   else if (modo === 'mirar_bandera') estado.juego = crearBandera(estado.rival, estado.izquierda);
+  else if (modo === 'aprender') estado.juego = empezarAprender();
   else estado.juego = crearLaberinto(modo === 'laberinto');
   estado.pantalla = 'juego';
   elemento('menu').style.display = 'none';
@@ -2592,6 +3680,8 @@ function alOprimir(evento) {
     estado.direcciones.push(direccion);
   }
   if (estado.pantalla !== 'juego') { if (!evento.repeat) teclaDeMenu(estado, evento.key); return; }
+  // El modo Aprender tiene sus propias teclas; ahí las flechas sí se repiten al dejarlas oprimidas.
+  if (estado.modo === 'aprender') { teclaDeAprender(estado, tecla, evento.repeat); return; }
   if (evento.repeat) return;
   const juego = estado.juego, mirando = estado.modo.startsWith('mirar');
   if (tecla === 'Escape') mostrarMenu(estado);                                   // Esc: al menú
@@ -2619,6 +3709,8 @@ function alHacerClic(evento) {
   if (!boton) return;
   if (boton.dataset.modo) clicDeMenu(estado, boton.dataset.modo);
   else if (boton.dataset.rival) { estado.rival = boton.dataset.rival; empezar(estado.modo); }
+  else if (boton.dataset.tactil) accionTactil(estado, boton.dataset.tactil);
+  else if (boton.dataset.aprender) accionDeAprender(estado, boton.dataset.aprender, boton.dataset.valor);
   else if (boton.dataset.accion) accionDeLaberinto(estado, boton.dataset.accion);
   else clicDeModo(estado, boton);
   boton.blur();                                                                  // para que Espacio no vuelva a oprimirlo
@@ -2633,6 +3725,7 @@ function actualizar(segundos) {
   const direcciones = estado.modo.startsWith('mirar') ? [] : estado.direcciones;
   if (juego.tipo === 'gemas') actualizarGemas(juego, segundos, direcciones);
   else if (juego.tipo === 'bandera') actualizarBandera(juego, segundos, direcciones);
+  else if (juego.tipo === 'aprender') actualizarAprender(juego, segundos);
   else actualizarLaberinto(juego, segundos, direcciones);
 }
 
@@ -2642,6 +3735,8 @@ function cuadro(ahora) {
   // Se limita a una décima de segundo para que, si la página se traba, los personajes no den un salto.
   const segundos = Math.min((ahora - momentoAnterior) / 1000, 0.1);
   momentoAnterior = ahora;
+  // Con el teléfono en vertical se pide girarlo y el juego queda en pausa: no avanza ni se dibuja.
+  if (acomodarPantalla(estado)) { requestAnimationFrame(cuadro); return; }
   estado.t += segundos;
   ajustarLienzo(elemento('lienzo'));
   actualizar(segundos);
