@@ -1185,8 +1185,8 @@ const SEPARACION_DE_TABLEROS = 12;      // en atrapa gemas, de la esquina de un 
 
 // Da el color del piso de una casilla según su terreno. El llano es de dos tonos, como tablero de ajedrez.
 function colorDePiso(terreno, f, c) {
-  if (terreno === '.') return (f + c) % 2 ? [0.93, 0.93, 0.95] : [0.80, 0.81, 0.85];
-  if (terreno === 'B') return [0.48, 0.66, 0.46];
+  if (terreno === '.') return (f + c) % 2 ? [0.5, 0.76, 0.4] : [0.44, 0.7, 0.36];      // pasto en dos tonos de verde
+  if (terreno === 'B') return [0.3, 0.52, 0.3];
   if (terreno === 'A') return [0.22, 0.52, 0.95];
   return [0.34, 0.34, 0.38];                          // el piso debajo de un muro
 }
@@ -1608,7 +1608,210 @@ function agregarPersonaje(lote, lugar, corredor, t, carga = null) {
 }
 
 // ============================================================================
-// 9. DIBUJAR UNA PARTIDA
+// 9. AMBIENTACIÓN
+// Lo que le da vida al escenario: adornos en los tableros, nubes, pájaros,
+// cometas, de vez en cuando un dragón o un leviatán, y el ciclo de día y noche.
+// ============================================================================
+
+const DURACION_DEL_DIA = 90;            // segundos que dura un día completo, con su noche
+
+// Dice qué tan de noche es, de 0 (pleno día) a 1 (noche cerrada), según el tiempo.
+// La primera mitad del ciclo es de día; después atardece, es de noche y amanece.
+function nivelDeNoche(t) {
+  const hora = (t % DURACION_DEL_DIA) / DURACION_DEL_DIA;
+  if (hora < 0.5) return 0;
+  if (hora < 0.6) return (hora - 0.5) / 0.1;
+  if (hora < 0.9) return 1;
+  return (1 - hora) / 0.1;
+}
+
+// Los adornos de cada tablero. Se sortean una vez y son distintos en cada uno.
+const adornosHechos = new Map();
+const COLORES_DE_FLOR = [[0.98, 0.98, 0.98], [1, 0.84, 0.25], [0.96, 0.56, 0.69], [0.7, 0.62, 0.86], [1, 0.54, 0.4]];
+
+// Da los adornos de un tablero: flores, rocas de distintas alturas y lámparas en algunas casillas,
+// y además luciérnagas, abejas y motas que flotan.
+function adornosDe(clave, mapa) {
+  if (adornosHechos.has(clave)) return adornosHechos.get(clave);
+  const fijos = [];
+  for (let i = 0; i < mapa.t.length; i++) {
+    const suerte = Math.random();
+    const tipo = suerte < 0.17 ? 'flor' : suerte < 0.23 ? 'roca' : suerte < 0.26 ? 'lampara' : null;
+    if (tipo) fijos.push({ tipo, casilla: i, dx: Math.random() * 0.6 - 0.3, dz: Math.random() * 0.6 - 0.3, color: elegir(COLORES_DE_FLOR),
+                           alto: 0.5 + Math.random() * 0.9, giro: Math.random() * 3 });
+  }
+  const vuelan = cuantos => Array.from({ length: cuantos }, () => ({ f: Math.random() * (mapa.filas - 1), c: Math.random() * (mapa.columnas - 1), fase: Math.random() * 6.28 }));
+  const cuantos = Math.max(3, Math.round(mapa.t.length / 26));
+  const adornos = { fijos, luciernagas: vuelan(cuantos), abejas: vuelan(Math.ceil(cuantos / 2)), motas: vuelan(cuantos * 2) };
+  adornosHechos.set(clave, adornos);
+  return adornos;
+}
+
+// Agrega los adornos de un tablero. Solo se ven donde hay pasto: si ahí cae un muro o agua, se esconden.
+//   noche: qué tan de noche es. De noche se encienden las lámparas y salen las luciérnagas.
+//   faros: la lista de luces de la escena; cada lámpara encendida agrega la suya.
+function agregarAdornos(lote, manchas, tablero, adornos, t, noche, faros) {
+  const { mapa, origen } = tablero;
+  for (const a of adornos.fijos) {
+    if (mapa.t[a.casilla] !== '.') continue;
+    const x = origen[0] + columnaDe(mapa, a.casilla) + a.dx, z = origen[1] + filaDe(mapa, a.casilla) + a.dz;
+    if (a.tipo === 'flor') {
+      lote.caja(bloque(x, 0.07, z, 0.03, 0.14, 0.03), [0.2, 0.5, 0.2]);                                       // el tallo
+      lote.caja(componer(mover(x, 0.17, z), girarY(a.giro), escalar(0.13, 0.07, 0.13)), a.color, 0.3);        // los pétalos
+    } else if (a.tipo === 'roca') {
+      lote.caja(componer(mover(x, 0.09 * a.alto, z), girarY(a.giro), escalar(0.24, 0.18 * a.alto, 0.2)), [0.55, 0.56, 0.6]);
+    } else {
+      // Una lámpara: un poste y un farol. De noche brilla y alumbra a su alrededor.
+      lote.caja(bloque(x, 0.3, z, 0.05, 0.6, 0.05), [0.2, 0.17, 0.15]);
+      lote.caja(bloque(x, 0.66, z, 0.14, 0.14, 0.14), noche > 0.25 ? [1, 0.9, 0.5] : [0.7, 0.7, 0.62], noche > 0.25 ? 1 : 0);
+      if (noche > 0.25) {
+        manchas.mancha(x, 0.66, z, 0.5, [1, 0.85, 0.45], 0.45 * noche);
+        faros.push([x, 0.9, z, 2.6]);
+      }
+    }
+  }
+  const lugar = (v, alto, ancho) => [origen[0] + v.c + Math.cos(t * 0.5 + v.fase * 2) * ancho, alto, origen[1] + v.f + Math.sin(t * 0.7 + v.fase) * ancho];
+  // De noche, luciérnagas que parpadean. De día, abejas que zumban cerca del piso.
+  if (noche > 0.3) {
+    for (const v of adornos.luciernagas) {
+      const p = lugar(v, 0.5 + Math.sin(t + v.fase) * 0.2, 1.4);
+      manchas.mancha(p[0], p[1], p[2], 0.13, [1, 0.96, 0.5], noche * (0.5 + 0.5 * Math.sin(t * 3 + v.fase)), 0.2);
+    }
+  } else {
+    for (const v of adornos.abejas) {
+      const p = lugar(v, 0.4 + Math.sin(t * 7 + v.fase) * 0.06, 0.8);
+      lote.caja(componer(mover(p[0], p[1], p[2]), girarY(t * 3 + v.fase), escalar(0.07, 0.06, 0.1)), [1, 0.8, 0.1], 0.4);
+      lote.caja(componer(mover(p[0], p[1], p[2]), girarY(t * 3 + v.fase), escalar(0.075, 0.065, 0.03)), NEGRO);
+    }
+  }
+  // Las motas: puntitos claros que suben despacio y vuelven a empezar.
+  for (const v of adornos.motas) {
+    const sube = (t * 0.12 + v.fase) % 1;
+    const p = lugar(v, 0.2 + sube * 2.2, 0.5);
+    manchas.mancha(p[0], p[1], p[2], 0.06, [1, 1, 0.9], 0.5 * Math.sin(sube * Math.PI));
+  }
+}
+
+// Las estrellas y las nubes altas: se sortean una vez.
+const ESTRELLAS = Array.from({ length: 150 }, () => {
+  const a = Math.random() * Math.PI * 2, alto = 0.1 + Math.random() * 0.9;
+  return [Math.cos(a) * Math.sqrt(1 - alto * alto * 0.6), alto * 0.75, Math.sin(a) * Math.sqrt(1 - alto * alto * 0.6), 0.4 + Math.random() * 0.6, Math.random() * 6];
+});
+const NUBES_ALTAS = Array.from({ length: 14 }, () => ({ x: Math.random() * 160 - 80, y: 3 + Math.random() * 12, z: -30 - Math.random() * 60,
+                                                        r: 7 + Math.random() * 9, vel: 0.5 + Math.random() }));
+
+// Llena el fondo del cielo según la hora: el sol rojo que se oculta, la luna, las estrellas,
+// las nubes y el mar de nubes. Todo va difuminado, así que el fondo se ve un poco desenfocado.
+function agregarCieloVivo(manchas, centro, t, noche) {
+  const dia = 1 - noche;
+  // El sol rojo baja al atardecer; la luna sube del otro lado.
+  const sol = [centro[0] - 60, 26 - noche * 40, centro[2] - 95];
+  manchas.mancha(sol[0], sol[1], sol[2], 34, [1.0, 0.45, 0.35], 0.35 * dia);
+  manchas.mancha(sol[0], sol[1], sol[2], 13, [0.93, 0.12, 0.12], dia, 0.75);
+  manchas.mancha(centro[0] + 75, 30, centro[2] - 80, 40, [1, 1, 1], 0.45 * dia);          // la luz blanca de contraste
+  manchas.mancha(centro[0] + 55, 6 + noche * 30, centro[2] - 95, 22, [0.75, 0.82, 1], 0.25 * noche);
+  manchas.mancha(centro[0] + 55, 6 + noche * 30, centro[2] - 95, 8, [0.96, 0.97, 1], noche, 0.8);   // la luna
+  // Las estrellas titilan. Solo salen de noche.
+  if (noche > 0.05) {
+    for (const e of ESTRELLAS) {
+      manchas.mancha(centro[0] + e[0] * 170, e[1] * 170, centro[2] + e[2] * 170 - 30, 0.7 * e[3], [1, 1, 0.95], noche * (0.6 + 0.4 * Math.sin(t * 2 + e[4])), 0.3);
+    }
+  }
+  // Nubes suaves y translúcidas, cada una de una sola pieza, que cruzan despacio.
+  const tono = 1 - noche * 0.62;
+  for (const nube of NUBES_ALTAS) {
+    const x = ((nube.x + t * nube.vel + 80) % 160) - 80;
+    manchas.mancha(centro[0] + x, nube.y, centro[2] + nube.z, nube.r, [tono, tono, tono + 0.06], 0.42);
+  }
+  // El mar de nubes, muy por debajo del tablero.
+  for (const nube of NUBES_DEL_MAR) {
+    const x = ((nube.x + t * nube.vel + 90) % 180) - 90;
+    manchas.mancha(centro[0] + x, -9 - nube.r * 0.2, centro[2] + nube.z, nube.r, [nube.tono * tono, nube.tono * tono, tono + 0.05], 0.7);
+  }
+}
+
+// Agrega lo que cruza el cielo: bandadas de pájaros, cometas de noche y, muy de vez en cuando,
+// un dragón o un leviatán nadando entre las nubes.
+function agregarVuelos(lote, manchas, centro, t, noche) {
+  // Tres bandadas, cada una con su ritmo. Cada pájaro son dos alas que aletean.
+  for (let k = 0; k < 3; k++) {
+    const vuelta = 34 + k * 13, paso = ((t + k * 11) % vuelta) / vuelta;
+    if (paso > 0.55) continue;                         // el resto del tiempo esa bandada no se ve
+    const sentido = k % 2 ? -1 : 1;
+    const x = centro[0] + sentido * (paso / 0.55 * 150 - 75), y = 9 + k * 2.5, z = centro[2] - 22 - k * 9;
+    for (let n = 0; n < 5 + k; n++) {
+      const fila = Math.ceil(n / 2), lado = n % 2 ? 1 : -1;        // vuelan en "v"
+      const ala = Math.sin(t * 9 + n) * 0.6;
+      for (const s of [-1, 1]) {
+        lote.caja(componer(mover(x - sentido * fila * 0.9, y + Math.sin(t * 2 + n) * 0.2, z + lado * fila * 0.8), girarZ(s * ala),
+                           mover(s * 0.22, 0, 0), escalar(0.44, 0.04, 0.16)), [0.12, 0.12, 0.14]);
+      }
+    }
+  }
+  // Los cometas: una cabeza brillante y una cola que se desvanece. Solo de noche.
+  if (noche > 0.5) {
+    const paso = (t % 13) / 13;
+    if (paso < 0.3) {
+      const k = paso / 0.3, base = Math.floor(t / 13);
+      const desde = [centro[0] - 70 + (base * 37 % 60), 55, centro[2] - 100];
+      for (let n = 0; n < 12; n++) {
+        const q = k - n * 0.012;
+        manchas.mancha(desde[0] + q * 110, desde[1] - q * 34, desde[2], 1.6 - n * 0.11, [0.85, 0.92, 1], noche * (1 - n / 12) * Math.sin(k * Math.PI), 0.2);
+      }
+    }
+  }
+  // El dragón (rojo, con alas) o el leviatán (azul oscuro, más grande): un cuerpo hecho de
+  // segmentos que ondula entre las nubes. Pasa una vez cada minuto y cuarto, más o menos.
+  const ciclo = 75, paso = (t % ciclo) / ciclo;
+  if (paso > 0.72 && paso < 0.95) {
+    const k = (paso - 0.72) / 0.23, esDragon = Math.floor(t / ciclo) % 2 === 0;
+    const color = esDragon ? [0.72, 0.1, 0.1] : [0.1, 0.25, 0.42], grueso = esDragon ? 1.3 : 2.2;
+    const tinte = 1 - noche * 0.55;
+    for (let n = 0; n < 16; n++) {
+      const u = k * 190 - 95 - n * grueso * 0.95;
+      const y = -5.5 + Math.sin(u * 0.16 + t * 1.5) * 2.2 + (esDragon ? 3 : 0);
+      const tam = grueso * (n === 0 ? 1.25 : 1 - n / 22);
+      lote.caja(componer(mover(centro[0] + u, y, centro[2] - 38), girarZ(Math.cos(u * 0.16 + t * 1.5) * 0.35), escalar(grueso, tam, tam)), color.map(v => v * tinte));
+      if (esDragon && n === 3) {
+        for (const s of [-1, 1]) {
+          lote.caja(componer(mover(centro[0] + u, y + 0.4, centro[2] - 38), girarX(s * (0.5 + Math.sin(t * 5) * 0.5)), mover(0, 0, s * 2.2), escalar(2.4, 0.12, 4.2)),
+                    [0.5, 0.05, 0.05].map(v => v * tinte));
+        }
+      }
+    }
+  }
+}
+
+// Agrega toda la ambientación de un cuadro y ajusta la luz según la hora.
+function agregarAmbiente(estado, juego, tableros, t, segundos, camara) {
+  const noche = nivelDeNoche(t), faros = [];
+  // De noche hay menos luz de sol y el cielo se oscurece.
+  luz.cielo = mezcla([0.72, 0.83, 0.95], [0.04, 0.06, 0.15], noche);
+  luz.colorSol = mezcla([0.74, 0.66, 0.64], [0.16, 0.18, 0.3], noche);
+  luz.ambiente = mezcla([0.36, 0.36, 0.4], [0.13, 0.15, 0.26], noche);
+  luz.colorFaro = [0.85 * noche, 0.66 * noche, 0.3 * noche];
+  // Cada personaje lleva su linterna: un cubito encendido en la mano, que alumbra a su alrededor.
+  if (noche > 0.25) {
+    for (const corredor of juego.corredores) {
+      if (!corredor.mano) continue;
+      dinamico.caja(bloque(corredor.mano[0], corredor.mano[1], corredor.mano[2], 0.1, 0.12, 0.1), [1, 0.92, 0.55], 1);
+      manchasDeFrente.mancha(corredor.mano[0], corredor.mano[1], corredor.mano[2], 0.45, [1, 0.85, 0.45], 0.4 * noche);
+      faros.push([corredor.mano[0], corredor.mano[1] + 0.4, corredor.mano[2], 3.2]);
+    }
+  }
+  tableros.forEach((tablero, numero) => {
+    agregarAdornos(dinamico, manchasDeFrente, tablero, adornosDe(juego.tipo + numero + (juego.sello || ''), tablero.mapa), t, noche, faros);
+  });
+  // La tarjeta de video acepta 8 luces: se quedan las más cercanas a donde mira la cámara.
+  const centro = estado.camara.centro;
+  faros.sort((a, b) => Math.hypot(a[0] - centro[0], a[2] - centro[2]) - Math.hypot(b[0] - centro[0], b[2] - centro[2]));
+  luz.faros = faros.slice(0, 8);
+  agregarCieloVivo(manchasDeFondo, centro, t, noche);
+  agregarVuelos(dinamico, manchasDeFrente, centro, t, noche);
+}
+
+// ============================================================================
+// 10. DIBUJAR UNA PARTIDA
 // ============================================================================
 
 // Los lotes que se llenan de nuevo en cada cuadro.
@@ -1734,7 +1937,7 @@ function dibujarPartida(estado, juego, segundos, t) {
   camaraDeMirar(estado, juego, tableros, segundos);
   moverCamara(estado.camara, segundos);
   const camara = matrizDeCamara(estado.camara);
-  agregarCielo(manchasDeFondo, estado.camara.centro, t);
+  agregarAmbiente(estado, juego, tableros, t, segundos, camara);
 
   // 5. A dibujar: primero el cielo, luego las figuras, sus bordes negros y al final lo translúcido.
   gl.clearColor(luz.cielo[0], luz.cielo[1], luz.cielo[2], 1);
@@ -1751,7 +1954,7 @@ function dibujarPartida(estado, juego, segundos, t) {
 }
 
 // ============================================================================
-// 10. LA INTERFAZ, AL ESTILO DE UN JUEGO DE CARRERAS
+// 11. LA INTERFAZ, AL ESTILO DE UN JUEGO DE CARRERAS
 // Los textos y los botones son elementos de la página, encima del lienzo 3D.
 // ============================================================================
 
@@ -1874,7 +2077,7 @@ const AYUDA_DE_JUGAR = 'Flechas o W A S D: moverte. C: acercar. R: reiniciar. Es
 const AYUDA_DE_MIRAR = 'Rueda: acercar. Arrastrar: girar. W A S D: mover. Tab: seguir a otro. 0: vista general. R: reiniciar. Esc: menú.';
 
 // ============================================================================
-// 11. MAZE RUNNER EN PANTALLA
+// 12. MAZE RUNNER EN PANTALLA
 // ============================================================================
 
 // El lote del laberinto que no se mueve. Se rehace solo dos veces por cambio:
@@ -1977,7 +2180,7 @@ function interfazDeLaberinto(estado, juego, escena) {
 }
 
 // ============================================================================
-// 12. MODOS DE SOLO MIRAR
+// 13. MODOS DE SOLO MIRAR
 // Compiten solo los algoritmos y la cámara se mueve con libertad: la rueda
 // acerca y aleja, arrastrar gira, W A S D desplaza, Tab pasa a seguir a otro
 // personaje y 0 vuelve a la vista general.
@@ -2073,7 +2276,7 @@ if (typeof document !== 'undefined') {
 }
 
 // ============================================================================
-// 13. PORTADA Y MENÚ
+// 14. PORTADA Y MENÚ
 // La portada muestra el título sobre una partida que se juega sola. Al oprimir
 // una tecla, el fondo se desenfoca, el título se barre hacia un lado y aparecen
 // los modos en cajas. Al elegir uno, su caja estalla en partículas y hay un
@@ -2230,7 +2433,7 @@ function pasearCamara(camara, tableros, t) {
 }
 
 // ============================================================================
-// 14. EL PROGRAMA
+// 15. EL PROGRAMA
 // ============================================================================
 
 // Los modos del juego: clave, nombre y una línea que lo describe.
@@ -2261,6 +2464,7 @@ function empezar(modo) {
   estado.seguir = null;
   estado.momento = null;
   estado.cartelCerrado = false;
+  adornosHechos.clear();                               // cada partida estrena adornos
   estado.efectos = crearEfectos();
   if (modo === 'gemas') estado.juego = crearGemas();
   else if (modo === 'mirar_gemas') estado.juego = crearGemas(false);
