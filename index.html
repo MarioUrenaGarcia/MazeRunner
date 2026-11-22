@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Maze Runner</title>
+<style>
+  /* El lienzo 3D ocupa toda la ventana; la interfaz va encima. Colores: rojo, blanco y negro. */
+  :root { --rojo: #c62828; --negro: #111114; --dorado: #ffc107; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: #fff;
+               font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; user-select: none; }
+  #lienzo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; transition: filter .35s; }
+  #interfaz { position: fixed; inset: 0; pointer-events: none; }
+  #interfaz button { pointer-events: auto; cursor: pointer; font: inherit; }
+
+  /* Barra superior, como en un juego de carreras: nombre, marcador y cronómetro. */
+  #barra { position: absolute; top: 0; left: 0; right: 0; height: 64px; background: var(--negro);
+           border-bottom: 5px solid var(--rojo); display: flex; align-items: center; padding: 0 22px; gap: 20px; }
+  #titulo { font-size: 28px; font-weight: 800; white-space: nowrap; }
+  #centro { flex: 1; text-align: center; font-size: 22px; font-weight: 700; white-space: nowrap; }
+  #centro b { color: var(--dorado); font-size: 28px; }
+  #tiempo { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 110px; text-align: right; }
+  i { display: inline-block; width: 12px; height: 18px; border-radius: 3px; border: 2px solid #fff; margin: 0 7px -3px 4px; }
+
+  #mensaje { position: absolute; top: 78px; left: 0; right: 0; text-align: center; font-size: 19px; font-weight: 700;
+             text-shadow: 0 2px 4px #000, 0 0 2px #000; }
+  .dorado { color: var(--dorado); } .rosa { color: #ffb3b3; }
+  #ayuda { position: absolute; bottom: 8px; left: 0; right: 0; text-align: center; font-size: 14px; color: #f0f0f0;
+           text-shadow: 0 1px 3px #000, 0 0 2px #000; }
+
+  /* Letreros que flotan sobre la escena. */
+  .etiqueta { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; text-shadow: 0 2px 4px #000, 0 0 2px #000; }
+  .letrero { font-size: 17px; font-weight: 700; background: rgba(17, 17, 20, .82); padding: 3px 12px 4px 8px; border-radius: 8px; text-shadow: none; }
+  .letrero b { font-size: 24px; margin-right: 2px; } .letrero b.primero { color: var(--dorado); }
+  .letrero small { font-weight: 400; color: #cfcfcf; margin-left: 10px; font-size: 13px; }
+  .nombre { font-size: 15px; font-weight: 700; }
+  .globo { background: #fff; color: #111; font-weight: 900; font-size: 18px; line-height: 12px; padding: 2px 9px 9px;
+           border-radius: 14px; border: 2px solid #111; text-shadow: none; }
+
+  /* Cuenta regresiva y avisos, al centro. */
+  #cuenta { position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); text-align: center; font-size: 190px;
+            font-weight: 900; color: var(--dorado); -webkit-text-stroke: 5px #000; text-shadow: 0 8px 0 #000; }
+  #aviso { position: absolute; top: 42%; left: 0; right: 0; text-align: center; font-size: 34px; font-weight: 800;
+           color: var(--dorado); background: rgba(0, 0, 0, .72); padding: 14px 0; }
+  #cartel { position: absolute; top: 96px; right: 24px; width: 360px; background: rgba(17, 17, 20, .93);
+            border: 4px solid var(--rojo); border-radius: 14px; padding: 16px 20px; }
+  #cartel h2 { margin: 0 0 10px; font-size: 30px; text-align: center; }
+  #cartel table { width: 100%; border-collapse: collapse; font-size: 18px; font-weight: 600; }
+  #cartel td { padding: 4px 2px; } #cartel td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  #cartel tr.yo { color: var(--dorado); }
+  #cartel p { margin: 10px 0 0; font-size: 13px; color: #c8c8c8; text-align: center; }
+
+  /* Botones al pie: elegir rival y controles del modo. */
+  #rivales, #controles { position: absolute; bottom: 34px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 8px; }
+  #rivales span, #controles span { font-size: 15px; text-shadow: 0 1px 3px #000; }
+  #interfaz button { background: #2a2a30; color: #fff; border: 1px solid #6a6a70; border-radius: 9px; padding: 7px 14px; font-size: 15px; }
+  #interfaz button.activo { background: var(--rojo); border-color: #fff; }
+
+  /* El menú. */
+  #menu { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+          background: rgba(0, 0, 0, .28); text-align: center; }
+  #menu h1 { margin: 0; font-size: min(11vw, 110px); font-weight: 900; -webkit-text-stroke: 3px #000; text-shadow: 0 6px 0 #000; }
+  #menu .subtitulo { margin: 0 0 28px; font-size: min(3.4vw, 30px); font-weight: 700; border-top: 7px solid var(--rojo);
+                     padding-top: 8px; text-shadow: 0 2px 4px #000; }
+  #menu .cajas { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; max-width: 980px; }
+  #menu .cajas button { width: 300px; min-height: 120px; padding: 14px; border-radius: 16px; background: rgba(24, 24, 28, .92);
+                        display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+  #menu .cajas button b { font-size: 23px; } #menu .cajas button span { font-size: 15px; color: #d5d5d5; }
+  #menu .pie { font-size: 15px; text-shadow: 0 1px 3px #000; }
+</style>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+<div id="interfaz">
+  <div id="etiquetas"></div>
+  <div id="barra"><span id="titulo"></span><span id="centro"></span><span id="tiempo"></span></div>
+  <div id="mensaje"></div>
+  <div id="cuenta"></div>
+  <div id="aviso"></div>
+  <div id="cartel"></div>
+  <div id="rivales"></div>
+  <div id="controles"></div>
+  <div id="ayuda"></div>
+  <div id="menu"></div>
+</div>
+<script>
+"use strict";
+// ============================================================================
+// 1. EL MOTOR DE DIBUJO EN 3D
+// Todo se dibuja con WebGL, sin bibliotecas. Las figuras son bloques: cajas,
+// pirámides y rombos. Se juntan en "lotes" para mandarlos de un jalón a la
+// tarjeta de video. La luz es de caricatura: en lugar de un sombreado suave,
+// cada cara queda en uno de tres tonos, y todo lleva un borde negro.
+// ============================================================================
+
+// ---- Matrices de 4 x 4, guardadas por columnas en una lista de 16 números.
+
+// La matriz que no cambia nada.
+function identidad() { return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]; }
+
+// Multiplica dos matrices: el resultado aplica primero b y después a.
+function multiplicar(a, b) {
+  const r = new Array(16);
+  for (let c = 0; c < 4; c++) {
+    for (let f = 0; f < 4; f++) {
+      r[c * 4 + f] = a[f] * b[c * 4] + a[4 + f] * b[c * 4 + 1] + a[8 + f] * b[c * 4 + 2] + a[12 + f] * b[c * 4 + 3];
+    }
+  }
+  return r;
+}
+
+// Matrices básicas: mover, cambiar de tamaño y girar alrededor de cada eje (ángulos en radianes).
+function mover(x, y, z) { return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]; }
+function escalar(x, y, z) { return [x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1]; }
+function girarX(a) { const c = Math.cos(a), s = Math.sin(a); return [1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]; }
+function girarY(a) { const c = Math.cos(a), s = Math.sin(a); return [c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]; }
+function girarZ(a) { const c = Math.cos(a), s = Math.sin(a); return [c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]; }
+// Encadena varias matrices: componer(a, b, c) aplica primero c, luego b y al final a.
+function componer(...matrices) { return matrices.reduce(multiplicar); }
+// Atajo muy usado: una caja con centro en (x, y, z) y tamaño (sx, sy, sz).
+function bloque(x, y, z, sx, sy, sz) { return [sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, x, y, z, 1]; }
+
+// La matriz de perspectiva: lo lejano se ve más chico. 'campo' es el ángulo de visión vertical.
+function perspectiva(campo, aspecto, cerca, lejos) {
+  const f = 1 / Math.tan(campo / 2), d = 1 / (cerca - lejos);
+  return [f / aspecto, 0, 0, 0, 0, f, 0, 0, 0, 0, (lejos + cerca) * d, -1, 0, 0, 2 * lejos * cerca * d, 0];
+}
+
+// Operaciones con vectores de 3 números.
+const restar = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const cruz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+function unitario(v) { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
+const mezcla = (a, b, t) => a.map((x, i) => x + (b[i] - x) * t);
+
+// La matriz de la cámara: desde dónde se mira ('ojo') y hacia dónde ('centro').
+function mirarHacia(ojo, centro) {
+  const z = unitario(restar(ojo, centro)), x = unitario(cruz([0, 1, 0], z)), y = cruz(z, x);
+  return [x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0,
+          -(x[0] * ojo[0] + x[1] * ojo[1] + x[2] * ojo[2]), -(y[0] * ojo[0] + y[1] * ojo[1] + y[2] * ojo[2]),
+          -(z[0] * ojo[0] + z[1] * ojo[1] + z[2] * ojo[2]), 1];
+}
+
+// Aplica una matriz a un punto y da su lugar en la pantalla: [x, y] en pixeles y si queda delante de la cámara.
+function proyectar(matriz, p, ancho, alto) {
+  const x = matriz[0] * p[0] + matriz[4] * p[1] + matriz[8] * p[2] + matriz[12];
+  const y = matriz[1] * p[0] + matriz[5] * p[1] + matriz[9] * p[2] + matriz[13];
+  const w = matriz[3] * p[0] + matriz[7] * p[1] + matriz[11] * p[2] + matriz[15];
+  return [(x / w * 0.5 + 0.5) * ancho, (0.5 - y / w * 0.5) * alto, w > 0];
+}
+
+// ---- Las figuras básicas. Cada cara es una lista de esquinas; se parte en triángulos al agregarla.
+const CARAS_DE_CAJA = [
+  [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]], [[1, -1, -1], [-1, -1, -1], [-1, 1, -1], [1, 1, -1]],
+  [[1, -1, 1], [1, -1, -1], [1, 1, -1], [1, 1, 1]], [[-1, -1, -1], [-1, -1, 1], [-1, 1, 1], [-1, 1, -1]],
+  [[-1, 1, 1], [1, 1, 1], [1, 1, -1], [-1, 1, -1]], [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1]],
+].map(cara => cara.map(p => p.map(v => v / 2)));
+// Pirámide de base cuadrada, con la punta arriba. Sirve para la copa de los árboles.
+const CARAS_DE_PIRAMIDE = [
+  [[-.5, -.5, .5], [.5, -.5, .5], [0, .5, 0]], [[.5, -.5, .5], [.5, -.5, -.5], [0, .5, 0]],
+  [[.5, -.5, -.5], [-.5, -.5, -.5], [0, .5, 0]], [[-.5, -.5, -.5], [-.5, -.5, .5], [0, .5, 0]],
+  [[-.5, -.5, -.5], [.5, -.5, -.5], [.5, -.5, .5], [-.5, -.5, .5]],
+];
+// Rombo de ocho caras. Sirve para las gemas.
+const CARAS_DE_ROMBO = [];
+for (const y of [0.5, -0.5]) {
+  const e = [[.5, 0, 0], [0, 0, .5], [-.5, 0, 0], [0, 0, -.5]];
+  for (let k = 0; k < 4; k++) CARAS_DE_ROMBO.push(y > 0 ? [e[k], e[(k + 3) % 4], [0, y, 0]] : [e[(k + 3) % 4], e[k], [0, y, 0]]);
+}
+
+// Un lote: muchas figuras juntas en una sola lista de vértices.
+// Cada vértice lleva 13 números: posición (3), normal de su cara (3), color (3),
+// brillo propio (1: no le afecta la luz) y dirección de su esquina (3), que sirve para el borde.
+class Lote {
+  constructor() { this.datos = []; this.vertices = 0; this.bufer = null; this.subido = false; }
+  vaciar() { this.datos.length = 0; this.vertices = 0; this.subido = false; }
+
+  // Agrega una figura: sus caras, la matriz que la coloca, su color y su brillo propio.
+  figura(caras, m, color, brillo = 0) {
+    const d = this.datos;
+    for (const cara of caras) {
+      // Las esquinas ya colocadas en el mundo.
+      const p = cara.map(v => [m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12], m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13],
+                               m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14]]);
+      const n = unitario(cruz(restar(p[1], p[0]), restar(p[2], p[0])));          // hacia dónde ve la cara
+      // La dirección de cada esquina, vista desde el centro de la figura.
+      const e = cara.map(v => unitario([m[0] * v[0] + m[4] * v[1] + m[8] * v[2], m[1] * v[0] + m[5] * v[1] + m[9] * v[2],
+                                        m[2] * v[0] + m[6] * v[1] + m[10] * v[2]]));
+      const orden = cara.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2];           // un cuadro son dos triángulos
+      for (const k of orden) {
+        d.push(p[k][0], p[k][1], p[k][2], n[0], n[1], n[2], color[0], color[1], color[2], brillo, e[k][0], e[k][1], e[k][2]);
+      }
+      this.vertices += orden.length;
+    }
+    this.subido = false;
+  }
+  caja(m, color, brillo = 0) { this.figura(CARAS_DE_CAJA, m, color, brillo); }
+  piramide(m, color, brillo = 0) { this.figura(CARAS_DE_PIRAMIDE, m, color, brillo); }
+  rombo(m, color, brillo = 0) { this.figura(CARAS_DE_ROMBO, m, color, brillo); }
+}
+
+// Una lista de manchas: cuadros que siempre miran a la cámara y se desvanecen hacia la orilla.
+// Con ellas se hacen el sol, las nubes, los destellos y las partículas. Por estar difuminadas,
+// lo que se dibuja con manchas se ve desenfocado.
+// Cada vértice lleva 11 números: centro (3), esquina (2), radio (1), color con transparencia (4) y dureza (1).
+class Manchas {
+  constructor() { this.datos = []; this.vertices = 0; this.bufer = null; }
+  vaciar() { this.datos.length = 0; this.vertices = 0; }
+  // dureza va de 0 (muy difuminada) a 1 (orilla nítida).
+  mancha(x, y, z, radio, color, alfa = 1, dureza = 0) {
+    for (const [ex, ey] of [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]]) {
+      this.datos.push(x, y, z, ex, ey, radio, color[0], color[1], color[2], alfa, dureza);
+    }
+    this.vertices += 6;
+  }
+}
+
+// ---- Los programas de la tarjeta de video.
+const SOMBREADOR_DE_VERTICES = `
+attribute vec3 aPosicion, aNormal, aColor, aEsquina;
+attribute float aBrillo;
+uniform mat4 uCamara;
+uniform float uBorde;
+varying vec3 vNormal, vColor, vPosicion;
+varying float vBrillo, vLejos;
+void main() {
+  // Para el borde, cada vértice se empuja un poco hacia afuera siguiendo su esquina.
+  vec3 p = aPosicion + aEsquina * uBorde;
+  vNormal = aNormal; vColor = aColor; vBrillo = aBrillo; vPosicion = p;
+  gl_Position = uCamara * vec4(p, 1.0);
+  vLejos = gl_Position.w;
+}`;
+const SOMBREADOR_DE_COLOR = `
+precision mediump float;
+varying vec3 vNormal, vColor, vPosicion;
+varying float vBrillo, vLejos;
+uniform vec3 uSol, uColorSol, uContraluz, uAmbiente, uNiebla, uColorBorde;
+uniform float uEsBorde, uLejosNiebla;
+uniform vec4 uFaros[8];          // luces de noche: posición (x, y, z) y alcance
+uniform vec3 uColorFaro;
+void main() {
+  if (uEsBorde > 0.5) { gl_FragColor = vec4(uColorBorde, 1.0); return; }
+  vec3 n = normalize(vNormal);
+  // Luz de caricatura: en lugar de un degradado, tres tonos según qué tan de frente da el sol.
+  float d = dot(n, uSol);
+  float tono = d > 0.5 ? 1.0 : (d > 0.0 ? 0.72 : 0.46);
+  vec3 luz = uAmbiente + uColorSol * tono;
+  // La luz blanca de contraste: un filo claro en las caras que ven hacia el otro lado.
+  luz += vec3(0.20) * step(0.55, dot(n, uContraluz));
+  // De noche, las lámparas y las linternas alumbran lo que tienen cerca.
+  for (int i = 0; i < 8; i++) {
+    float cerca = 1.0 - distance(vPosicion, uFaros[i].xyz) / max(uFaros[i].w, 0.001);
+    luz += uColorFaro * step(0.0, cerca) * (cerca > 0.5 ? 1.0 : 0.5) * step(0.001, uFaros[i].w);
+  }
+  vec3 color = mix(vColor * luz, vColor, vBrillo);
+  // La niebla: lo lejano se funde con el color del cielo.
+  float niebla = clamp((vLejos - uLejosNiebla) / (uLejosNiebla * 1.6), 0.0, 0.85);
+  gl_FragColor = vec4(mix(color, uNiebla, niebla), 1.0);
+}`;
+const MANCHA_DE_VERTICES = `
+attribute vec3 aCentro;
+attribute vec2 aEsquina;
+attribute float aRadio, aDureza;
+attribute vec4 aColor;
+uniform mat4 uCamara;
+uniform vec3 uDerecha, uArriba;
+varying vec2 vEsquina;
+varying vec4 vColor;
+varying float vDureza;
+void main() {
+  vEsquina = aEsquina; vColor = aColor; vDureza = aDureza;
+  gl_Position = uCamara * vec4(aCentro + (uDerecha * aEsquina.x + uArriba * aEsquina.y) * aRadio, 1.0);
+}`;
+const MANCHA_DE_COLOR = `
+precision mediump float;
+varying vec2 vEsquina;
+varying vec4 vColor;
+varying float vDureza;
+void main() {
+  // Qué tan lejos está este punto del centro de la mancha: 0 en el centro, 1 en la orilla.
+  float r = length(vEsquina);
+  float alfa = 1.0 - smoothstep(vDureza * 0.9, 1.0, r);
+  gl_FragColor = vec4(vColor.rgb, vColor.a * alfa);
+}`;
+
+// El motor: guarda el contexto de WebGL y los dos programas.
+const motor = { gl: null, solido: null, mancha: null, ancho: 1, alto: 1 };
+
+// Compila un programa a partir de sus dos sombreadores y anota dónde va cada dato.
+function crearPrograma(gl, vertices, color, atributos, uniformes) {
+  const programa = gl.createProgram();
+  for (const [tipo, fuente] of [[gl.VERTEX_SHADER, vertices], [gl.FRAGMENT_SHADER, color]]) {
+    const s = gl.createShader(tipo);
+    gl.shaderSource(s, fuente);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error('Sombreador: ' + gl.getShaderInfoLog(s));
+    gl.attachShader(programa, s);
+  }
+  gl.linkProgram(programa);
+  if (!gl.getProgramParameter(programa, gl.LINK_STATUS)) throw new Error('Programa: ' + gl.getProgramInfoLog(programa));
+  const lugares = { programa, a: {}, u: {} };
+  for (const nombre of atributos) lugares.a[nombre] = gl.getAttribLocation(programa, nombre);
+  for (const nombre of uniformes) lugares.u[nombre] = gl.getUniformLocation(programa, nombre);
+  return lugares;
+}
+
+// Prepara WebGL sobre el lienzo de la página. Devuelve false si el navegador no lo soporta.
+function iniciarMotor(lienzo) {
+  const gl = lienzo.getContext('webgl', { antialias: true, alpha: false });
+  if (!gl) return false;
+  motor.gl = gl;
+  motor.solido = crearPrograma(gl, SOMBREADOR_DE_VERTICES, SOMBREADOR_DE_COLOR,
+    ['aPosicion', 'aNormal', 'aColor', 'aBrillo', 'aEsquina'],
+    ['uCamara', 'uBorde', 'uSol', 'uColorSol', 'uContraluz', 'uAmbiente', 'uNiebla', 'uColorBorde', 'uEsBorde', 'uLejosNiebla', 'uFaros', 'uColorFaro']);
+  motor.mancha = crearPrograma(gl, MANCHA_DE_VERTICES, MANCHA_DE_COLOR,
+    ['aCentro', 'aEsquina', 'aRadio', 'aColor', 'aDureza'], ['uCamara', 'uDerecha', 'uArriba']);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.CULL_FACE);
+  return true;
+}
+
+// Ajusta el lienzo al tamaño de la ventana. Con pantallas muy densas se limita para no alentar.
+function ajustarLienzo(lienzo) {
+  const densidad = Math.min(window.devicePixelRatio || 1, 2);
+  const ancho = Math.floor(lienzo.clientWidth * densidad), alto = Math.floor(lienzo.clientHeight * densidad);
+  if (lienzo.width !== ancho || lienzo.height !== alto) { lienzo.width = ancho; lienzo.height = alto; }
+  motor.ancho = lienzo.clientWidth;
+  motor.alto = lienzo.clientHeight;
+  motor.gl.viewport(0, 0, ancho, alto);
+}
+
+// Manda los vértices de un lote a la tarjeta de video, si cambiaron.
+function subir(lote, dinamico) {
+  const gl = motor.gl;
+  if (!lote.bufer) lote.bufer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, lote.bufer);
+  if (!lote.subido) {
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lote.datos), dinamico ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+    lote.subido = true;
+  }
+}
+
+// Dibuja lotes de figuras sólidas. Con 'borde' mayor que cero dibuja solo su contorno:
+// las mismas figuras, un poco infladas y mostrando sus caras de atrás, en un solo color.
+function dibujarLotes(lotes, camara, luz, borde = 0, colorBorde = [0, 0, 0]) {
+  const gl = motor.gl, p = motor.solido;
+  gl.useProgram(p.programa);
+  gl.uniformMatrix4fv(p.u.uCamara, false, camara);
+  gl.uniform1f(p.u.uBorde, borde);
+  gl.uniform1f(p.u.uEsBorde, borde > 0 ? 1 : 0);
+  gl.uniform3fv(p.u.uColorBorde, colorBorde);
+  gl.uniform3fv(p.u.uSol, luz.sol);
+  gl.uniform3fv(p.u.uColorSol, luz.colorSol);
+  gl.uniform3fv(p.u.uContraluz, luz.contraluz);
+  gl.uniform3fv(p.u.uAmbiente, luz.ambiente);
+  gl.uniform3fv(p.u.uNiebla, luz.cielo);
+  gl.uniform1f(p.u.uLejosNiebla, luz.lejos);
+  const faros = new Float32Array(32);
+  (luz.faros || []).slice(0, 8).forEach((f, i) => faros.set(f, i * 4));
+  gl.uniform4fv(p.u.uFaros, faros);
+  gl.uniform3fv(p.u.uColorFaro, luz.colorFaro || [0, 0, 0]);
+  gl.cullFace(borde > 0 ? gl.FRONT : gl.BACK);
+  for (const lote of lotes) {
+    if (!lote.vertices) continue;
+    subir(lote, lote.dinamico);
+    const paso = 13 * 4;
+    for (const [nombre, cuantos, desde] of [['aPosicion', 3, 0], ['aNormal', 3, 3], ['aColor', 3, 6], ['aBrillo', 1, 9], ['aEsquina', 3, 10]]) {
+      gl.enableVertexAttribArray(p.a[nombre]);
+      gl.vertexAttribPointer(p.a[nombre], cuantos, gl.FLOAT, false, paso, desde * 4);
+    }
+    gl.drawArrays(gl.TRIANGLES, 0, lote.vertices);
+  }
+  gl.cullFace(gl.BACK);
+}
+
+// Dibuja una lista de manchas. Son translúcidas: se mezclan con lo que ya hay.
+// 'derecha' y 'arriba' son las direcciones de la cámara, para que las manchas la miren de frente.
+function dibujarManchas(manchas, camara, derecha, arriba, conProfundidad) {
+  if (!manchas.vertices) return;
+  const gl = motor.gl, p = motor.mancha;
+  gl.useProgram(p.programa);
+  gl.uniformMatrix4fv(p.u.uCamara, false, camara);
+  gl.uniform3fv(p.u.uDerecha, derecha);
+  gl.uniform3fv(p.u.uArriba, arriba);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthMask(false);                                // no tapan a lo que venga después
+  if (!conProfundidad) gl.disable(gl.DEPTH_TEST);
+  gl.disable(gl.CULL_FACE);
+  if (!manchas.bufer) manchas.bufer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, manchas.bufer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(manchas.datos), gl.DYNAMIC_DRAW);
+  const paso = 11 * 4;
+  for (const [nombre, cuantos, desde] of [['aCentro', 3, 0], ['aEsquina', 2, 3], ['aRadio', 1, 5], ['aColor', 4, 6], ['aDureza', 1, 10]]) {
+    gl.enableVertexAttribArray(p.a[nombre]);
+    gl.vertexAttribPointer(p.a[nombre], cuantos, gl.FLOAT, false, paso, desde * 4);
+  }
+  gl.drawArrays(gl.TRIANGLES, 0, manchas.vertices);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.CULL_FACE);
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+}
+
+// ============================================================================
+// 2. EL MAPA Y LOS ALGORITMOS
+// La misma lógica del notebook y del programa de Python. Un mapa es una
+// cuadrícula; cada casilla se nombra con un solo número: fila * columnas + columna.
+// Comparar dos de esos números es lo mismo que comparar (fila, columna).
+// ============================================================================
+
+// Costo de entrar a cada terreno. Los muros ('#') no se pueden pisar.
+const COSTOS = { '.': 1, 'B': 3, 'A': 5 };
+// Los 4 movimientos permitidos: arriba, derecha, abajo, izquierda (cambio de fila, cambio de columna).
+const MOVIMIENTOS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+
+// Crea un mapa de puro llano. 't' guarda el terreno de cada casilla.
+function mapaVacio(filas, columnas) {
+  return { filas, columnas, t: new Array(filas * columnas).fill('.') };
+}
+// Convierte (fila, columna) en el número de la casilla, y de regreso.
+const casilla = (mapa, f, c) => f * mapa.columnas + c;
+const filaDe = (mapa, i) => Math.floor(i / mapa.columnas);
+const columnaDe = (mapa, i) => i % mapa.columnas;
+
+// Da las casillas a las que se puede pasar desde una casilla: las aristas del grafo.
+// Devuelve pares [vecina, costo de entrar a ella], en el orden arriba, derecha, abajo, izquierda.
+function vecinos(mapa, i) {
+  const f = filaDe(mapa, i), c = columnaDe(mapa, i), lista = [];
+  for (const [df, dc] of MOVIMIENTOS) {
+    const nf = f + df, nc = c + dc;
+    if (nf < 0 || nc < 0 || nf >= mapa.filas || nc >= mapa.columnas) continue;   // fuera del mapa cuenta como muro
+    const terreno = mapa.t[nf * mapa.columnas + nc];
+    if (terreno !== '#') lista.push([nf * mapa.columnas + nc, COSTOS[terreno]]);
+  }
+  return lista;
+}
+
+// Arma la ruta caminando hacia atrás desde la meta. El padre del inicio es -1.
+function reconstruirRuta(padres, meta) {
+  const ruta = [];
+  for (let i = meta; i !== -1; i = padres[i]) ruta.push(i);
+  return ruta.reverse();
+}
+
+// Estima cuánto falta para la meta: la distancia en casillas, sin diagonales.
+function estimacion(mapa, a, b) {
+  return Math.abs(filaDe(mapa, a) - filaDe(mapa, b)) + Math.abs(columnaDe(mapa, a) - columnaDe(mapa, b));
+}
+
+// Cola de prioridad: un montículo donde siempre sale el elemento menor.
+// Los elementos son listas de números y se comparan dato por dato, de izquierda a derecha.
+class Monticulo {
+  constructor() { this.d = []; }
+  get vacio() { return this.d.length === 0; }
+  static menor(a, b) {
+    for (let k = 0; k < a.length; k++) { if (a[k] !== b[k]) return a[k] < b[k]; }
+    return false;
+  }
+  meter(x) {
+    const d = this.d;
+    let i = d.push(x) - 1;
+    while (i > 0) {                                   // sube mientras sea menor que su padre
+      const p = (i - 1) >> 1;
+      if (!Monticulo.menor(d[i], d[p])) break;
+      [d[i], d[p]] = [d[p], d[i]];
+      i = p;
+    }
+  }
+  sacar() {
+    const d = this.d, primero = d[0], ultimo = d.pop();
+    if (d.length) {
+      d[0] = ultimo;
+      let i = 0;
+      for (;;) {                                      // baja mientras algún hijo sea menor
+        let m = i;
+        const a = 2 * i + 1, b = a + 1;
+        if (a < d.length && Monticulo.menor(d[a], d[m])) m = a;
+        if (b < d.length && Monticulo.menor(d[b], d[m])) m = b;
+        if (m === i) break;
+        [d[i], d[m]] = [d[m], d[i]];
+        i = m;
+      }
+    }
+    return primero;
+  }
+}
+
+// Cada algoritmo recibe el mapa, el inicio y la meta, y devuelve [ruta, exploradas].
+// La ruta es null si no hay camino. 'exploradas' es la lista de casillas que revisó.
+
+// BFS: explora por capas. Encuentra la ruta con menos pasos; no toma en cuenta los costos.
+function bfs(mapa, inicio, meta) {
+  const cola = [inicio], padres = new Map([[inicio, -1]]), exploradas = [];
+  for (let k = 0; k < cola.length; k++) {
+    const actual = cola[k];                           // sale la que lleva más tiempo esperando
+    exploradas.push(actual);
+    if (actual === meta) return [reconstruirRuta(Object.fromEntries(padres), meta), exploradas];
+    for (const [vecina] of vecinos(mapa, actual)) {
+      if (!padres.has(vecina)) { padres.set(vecina, actual); cola.push(vecina); }
+    }
+  }
+  return [null, exploradas];
+}
+
+// DFS: sigue un camino hasta el fondo antes de probar otro. No garantiza nada sobre la ruta.
+function dfs(mapa, inicio, meta) {
+  const pila = [inicio], padres = { [inicio]: -1 }, exploradas = [], vistas = new Set();
+  while (pila.length) {
+    const actual = pila.pop();                        // sale la última que entró
+    if (vistas.has(actual)) continue;
+    vistas.add(actual);
+    exploradas.push(actual);
+    if (actual === meta) return [reconstruirRuta(padres, meta), exploradas];
+    const lista = vecinos(mapa, actual).reverse();    // al revés, para que la de arriba salga primero
+    for (const [vecina] of lista) {
+      if (!vistas.has(vecina)) { padres[vecina] = actual; pila.push(vecina); }
+    }
+  }
+  return [null, exploradas];
+}
+
+// Dijkstra: explora siempre la casilla más barata de alcanzar. Encuentra la ruta de menor costo.
+function dijkstra(mapa, inicio, meta) {
+  const cola = new Monticulo(), costos = { [inicio]: 0 }, padres = { [inicio]: -1 }, exploradas = [], vistas = new Set();
+  cola.meter([0, inicio]);
+  while (!cola.vacio) {
+    const [costo, actual] = cola.sacar();             // sale la de menor costo acumulado
+    if (vistas.has(actual)) continue;
+    vistas.add(actual);
+    exploradas.push(actual);
+    if (actual === meta) return [reconstruirRuta(padres, meta), exploradas];
+    for (const [vecina, paso] of vecinos(mapa, actual)) {
+      const nuevo = costo + paso;
+      if (!(vecina in costos) || nuevo < costos[vecina]) {
+        costos[vecina] = nuevo; padres[vecina] = actual; cola.meter([nuevo, vecina]);
+      }
+    }
+  }
+  return [null, exploradas];
+}
+
+// Voraz: explora siempre la casilla que parece más cerca de la meta. Rápida, pero sin garantía.
+function voraz(mapa, inicio, meta) {
+  const cola = new Monticulo(), padres = { [inicio]: -1 }, exploradas = [];
+  cola.meter([estimacion(mapa, inicio, meta), inicio]);
+  while (!cola.vacio) {
+    const actual = cola.sacar()[1];                   // sale la que parece más cerca de la meta
+    exploradas.push(actual);
+    if (actual === meta) return [reconstruirRuta(padres, meta), exploradas];
+    for (const [vecina] of vecinos(mapa, actual)) {
+      if (!(vecina in padres)) { padres[vecina] = actual; cola.meter([estimacion(mapa, vecina, meta), vecina]); }
+    }
+  }
+  return [null, exploradas];
+}
+
+// A*: explora la casilla con menor suma de lo ya gastado más lo que se estima que falta.
+// Encuentra la ruta de menor costo, porque la estimación nunca se pasa del costo real.
+function aEstrella(mapa, inicio, meta) {
+  const cola = new Monticulo(), costos = { [inicio]: 0 }, padres = { [inicio]: -1 }, exploradas = [], vistas = new Set();
+  const h0 = estimacion(mapa, inicio, meta);
+  cola.meter([h0, h0, inicio]);                       // [costo + estimación, estimación, casilla]
+  while (!cola.vacio) {
+    const actual = cola.sacar()[2];
+    if (vistas.has(actual)) continue;
+    vistas.add(actual);
+    exploradas.push(actual);
+    if (actual === meta) return [reconstruirRuta(padres, meta), exploradas];
+    for (const [vecina, paso] of vecinos(mapa, actual)) {
+      const nuevo = costos[actual] + paso;
+      if (!(vecina in costos) || nuevo < costos[vecina]) {
+        costos[vecina] = nuevo; padres[vecina] = actual;
+        const h = estimacion(mapa, vecina, meta);
+        cola.meter([nuevo + h, h, vecina]);           // en empates sale la más cercana a la meta
+      }
+    }
+  }
+  return [null, exploradas];
+}
+
+// Los cinco algoritmos con su nombre.
+const ALGORITMOS = { 'BFS': bfs, 'DFS': dfs, 'Dijkstra': dijkstra, 'Voraz': voraz, 'A*': aEstrella };
+const NOMBRES = Object.keys(ALGORITMOS);
+
+// Da el conjunto de casillas a las que se puede llegar desde una casilla.
+function alcanzables(mapa, origen) {
+  const vistas = new Set([origen]), pendientes = [origen];
+  while (pendientes.length) {
+    for (const [vecina] of vecinos(mapa, pendientes.pop())) {
+      if (!vistas.has(vecina)) { vistas.add(vecina); pendientes.push(vecina); }
+    }
+  }
+  return vistas;
+}
+
+// ============================================================================
+// 3. TERRENO SORTEADO Y CORREDORES
+// ============================================================================
+
+// Azar: un entero de 0 a n - 1, un elemento de una lista, y varios elementos distintos.
+const azar = n => Math.floor(Math.random() * n);
+const elegir = lista => lista[azar(lista.length)];
+function muestra(lista, cuantos) {
+  const copia = lista.slice();
+  for (let i = copia.length - 1; i > 0; i--) { const j = azar(i + 1); [copia[i], copia[j]] = [copia[j], copia[i]]; }
+  return copia.slice(0, cuantos);
+}
+
+// Una letra por mancha: 5 muros, 5 bosques y 5 charcos. Cada mancha ocupa dos casillas contiguas.
+const MANCHAS = '#####BBBBBAAAAA';
+const DURACION_DEL_CAMBIO = 0.6;        // segundos que tarda en verse un cambio de terreno
+
+// Da una casilla y sus cuatro vecinas dentro del mapa. Sirve para apartar el terreno de un personaje.
+function juntoA(mapa, i) {
+  const f = filaDe(mapa, i), c = columnaDe(mapa, i), lista = [i];
+  for (const [df, dc] of MOVIMIENTOS) {
+    if (f + df >= 0 && f + df < mapa.filas && c + dc >= 0 && c + dc < mapa.columnas) lista.push(casilla(mapa, f + df, c + dc));
+  }
+  return lista;
+}
+
+// Sortea el terreno de un tablero: 5 muros, 5 árboles y 5 charcos, en manchas de dos.
+//   prohibidas: casillas donde no puede caer terreno
+//   conectadas: casillas que deben seguir comunicadas entre sí
+//   espejo:     las manchas se sortean en la mitad izquierda y se reflejan en la derecha;
+//               la columna del centro queda libre. Son 5, 5 y 5 en cada mitad.
+// Se repite hasta que nadie quede encerrado. Si no se logra, devuelve el tablero vacío.
+function sortearTerreno(filas, columnas, prohibidas, conectadas, espejo = false) {
+  const ultima = espejo ? Math.floor(columnas / 2) - 1 : columnas - 1;
+  const reflejo = i => Math.floor(i / columnas) * columnas + (columnas - 1 - i % columnas);
+  const vedadas = new Set(prohibidas);
+  if (espejo) for (const i of prohibidas) vedadas.add(reflejo(i));
+
+  for (let intento = 0; intento < 400; intento++) {
+    const mapa = mapaVacio(filas, columnas);
+    let completo = true;
+    for (const tipo of MANCHAS) {
+      let puesta = false;
+      for (let prueba = 0; prueba < 80 && !puesta; prueba++) {
+        const f = azar(filas), c = azar(ultima + 1), [df, dc] = elegir(MOVIMIENTOS);
+        const f2 = f + df, c2 = c + dc;
+        if (f2 < 0 || f2 >= filas || c2 < 0 || c2 > ultima) continue;
+        const a = f * columnas + c, b = f2 * columnas + c2;
+        if (vedadas.has(a) || vedadas.has(b) || mapa.t[a] !== '.' || mapa.t[b] !== '.') continue;
+        for (const i of [a, b]) { mapa.t[i] = tipo; if (espejo) mapa.t[reflejo(i)] = tipo; }
+        puesta = true;
+      }
+      if (!puesta) { completo = false; break; }
+    }
+    if (!completo) continue;
+    const llega = alcanzables(mapa, conectadas[0]);
+    if (conectadas.every(i => llega.has(i))) return mapa;
+  }
+  return mapaVacio(filas, columnas);
+}
+
+const VELOCIDAD_JUGADOR = 5.0;          // casillas de llano por segundo
+const VELOCIDAD_RIVAL = 4.4;
+const VELOCIDAD_RIVAL_BANDERA = 4.3;    // en captura la bandera el rival va un poco más lento
+const SEGUNDOS_DE_PENSAR = 0.008;       // por cada casilla que el rival exploró al planear
+const CUENTA_REGRESIVA = 3.0;
+
+// El color de cada competidor: el jugador rojo, BFS ámbar, DFS turquesa, Dijkstra azul, Voraz violeta, A* carbón.
+const COLOR_DE = { 'Tú': [0.83, 0.13, 0.13], 'BFS': [1.0, 0.70, 0.0], 'DFS': [0.0, 0.75, 0.70],
+                   'Dijkstra': [0.16, 0.47, 1.0], 'Voraz': [0.61, 0.30, 0.80], 'A*': [0.23, 0.24, 0.27] };
+
+// Crea un personaje. 'algoritmo' es null para el jugador.
+// Campos: casilla (dónde está), destino (hacia dónde camina, o null), avance (0 a 1 del paso actual),
+// duracion (segundos del paso), sobra (tiempo que sobró al llegar), zancadas (pasos dados),
+// mira (1 derecha, -1 izquierda), rumbo (ángulo hacia donde camina), brillo (segundos que le quedan de brillar),
+// final (cuándo terminó, o null). Para los rivales: ruta, objetivo, pensando, replanear, pasos y planes.
+function crearCorredor(nombre, casillaInicial, algoritmo = null, velocidad = VELOCIDAD_RIVAL, color = null) {
+  return { nombre, color: color || COLOR_DE[nombre], algoritmo, velocidad, casilla: casillaInicial, destino: null,
+           avance: 0, duracion: 0, sobra: 0, zancadas: 0, mira: 1, rumbo: 0, brillo: 0, final: null,
+           ruta: [], objetivo: null, pensando: 0, replanear: false, pasos: 0, planes: 0 };
+}
+
+// Hace que un corredor empiece a caminar hacia una casilla vecina. Devuelve false si es muro.
+function empezarPaso(corredor, mapa, vecina) {
+  if (vecina < 0 || vecina >= mapa.t.length || mapa.t[vecina] === '#') return false;
+  const dc = columnaDe(mapa, vecina) - columnaDe(mapa, corredor.casilla);
+  const df = filaDe(mapa, vecina) - filaDe(mapa, corredor.casilla);
+  if (dc !== 0) corredor.mira = dc > 0 ? 1 : -1;
+  corredor.rumbo = Math.atan2(dc, df);               // hacia dónde voltea el muñeco en 3D
+  corredor.destino = vecina;
+  corredor.zancadas += 1;
+  // El costo del terreno se vuelve tiempo: el bosque tarda 3 veces más que el llano y el agua 5 veces más.
+  corredor.duracion = COSTOS[mapa.t[vecina]] / corredor.velocidad;
+  // El tiempo que sobró al llegar a la casilla anterior cuenta para este paso.
+  corredor.avance = Math.min(corredor.sobra / corredor.duracion, 0.99);
+  corredor.sobra = 0;
+  return true;
+}
+
+// Hace avanzar el paso en curso. Devuelve true si en este cuadro llegó a una casilla nueva.
+function avanzar(corredor, segundos) {
+  corredor.brillo = Math.max(0, corredor.brillo - segundos);
+  if (corredor.destino === null) { corredor.sobra = 0; return false; }
+  corredor.avance += segundos / corredor.duracion;
+  if (corredor.avance >= 1) {
+    corredor.sobra = (corredor.avance - 1) * corredor.duracion;
+    corredor.casilla = corredor.destino;
+    corredor.destino = null;
+    return true;
+  }
+  return false;
+}
+
+// Da la posición exacta [fila, columna] de un corredor, aunque vaya a medio paso.
+function posicion(corredor, mapa) {
+  const f = filaDe(mapa, corredor.casilla), c = columnaDe(mapa, corredor.casilla);
+  if (corredor.destino === null) return [f, c];
+  const a = corredor.avance;
+  return [f + (filaDe(mapa, corredor.destino) - f) * a, c + (columnaDe(mapa, corredor.destino) - c) * a];
+}
+const distancia = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+
+// Mueve a un rival durante un cuadro: piensa, planea o da su siguiente paso.
+// Solo vuelve a planear cuando cambia su objetivo o cuando cambió el terreno. Cada vez que
+// planea se queda quieto 0.008 segundos por cada casilla que exploró.
+function conducirRival(rival, mapa, objetivo, segundos, factorDePensar = 1) {
+  if (rival.pensando > 0) { rival.pensando -= segundos; return; }
+  if (rival.destino !== null) return;
+  const cambio = rival.objetivo !== objetivo;
+  // Cuando persigue a alguien se le pide dar al menos un paso con cada plan, para que no se quede solo pensando.
+  const puede = rival.pasos >= 1 || rival.ruta.length === 0;
+  if (rival.replanear || (cambio && puede)) {
+    const [ruta, exploradas] = rival.algoritmo(mapa, rival.casilla, objetivo);
+    rival.ruta = ruta ? ruta.slice(1) : [];
+    rival.objetivo = objetivo;
+    rival.replanear = false;
+    rival.pasos = 0;
+    rival.planes += 1;
+    rival.pensando = SEGUNDOS_DE_PENSAR * exploradas.length * factorDePensar;
+    return;
+  }
+  if (rival.ruta.length) {
+    if (empezarPaso(rival, mapa, rival.ruta[0])) { rival.ruta.shift(); rival.pasos += 1; }
+    else rival.replanear = true;
+  }
+}
+
+// Empieza un paso del jugador si está quieto y tiene una dirección oprimida.
+// 'direcciones' va de la más vieja a la más reciente; se prueba primero la más reciente.
+function moverJugador(jugador, mapa, direcciones) {
+  if (jugador.destino !== null) return;
+  const f = filaDe(mapa, jugador.casilla), c = columnaDe(mapa, jugador.casilla);
+  for (let k = direcciones.length - 1; k >= 0; k--) {
+    const nf = f + direcciones[k][0], nc = c + direcciones[k][1];
+    if (nf < 0 || nc < 0 || nf >= mapa.filas || nc >= mapa.columnas) continue;
+    if (empezarPaso(jugador, mapa, casilla(mapa, nf, nc))) return;
+  }
+}
+
+// Deja anotado algo que pasó, para que el dibujo le ponga un efecto.
+// tipo: 'recoger', 'punto' o 'victoria'. tablero: en cuál ocurrió.
+function anotarEvento(juego, tipo, quien, tablero = 0) {
+  juego.eventos.push({ tipo, quien, tablero });
+  if (juego.eventos.length > 40) juego.eventos.shift();
+  if (tipo === 'recoger') quien.brillo = 0.9;
+}
+
+// ============================================================================
+// 4. ATRAPA GEMAS
+// ============================================================================
+
+const LADO_GEMAS = 9, CANTIDAD_DE_GEMAS = 8, SALIDA_GEMAS = 0;      // la salida es la esquina superior izquierda
+const DISTANCIA_ENTRE_GEMAS = 5, RADIO_DE_RECOGER = 0.5;
+
+// Prepara una partida de atrapa gemas. conJugador es false para solo mirar.
+// gemas: la secuencia de 8 casillas, igual para todos. mapas: 8 terrenos, uno por gema, iguales para todos.
+function crearGemas(conJugador = true) {
+  const base = mapaVacio(LADO_GEMAS, LADO_GEMAS), gemas = [], mapas = [];
+  let previa = SALIDA_GEMAS;
+  for (let numero = 0; numero < CANTIDAD_DE_GEMAS; numero++) {
+    // La gema se sortea entre las casillas que están a 5 o más de la anterior, sin diagonales.
+    const lejanas = base.t.map((x, i) => i).filter(i => estimacion(base, i, previa) >= DISTANCIA_ENTRE_GEMAS);
+    const gema = elegir(lejanas);
+    // Cuando aparece este terreno, cada competidor está parado en la gema anterior: ahí y alrededor
+    // no cae nada, ni tampoco sobre la gema nueva.
+    mapas.push(sortearTerreno(LADO_GEMAS, LADO_GEMAS, [gema, ...juntoA(base, previa)], [previa, gema]));
+    gemas.push(gema);
+    previa = gema;
+  }
+  const corredores = (conJugador ? ['Tú'] : []).concat(NOMBRES).map(nombre => {
+    const corredor = nombre === 'Tú' ? crearCorredor('Tú', SALIDA_GEMAS, null, VELOCIDAD_JUGADOR)
+                                     : crearCorredor(nombre, SALIDA_GEMAS, ALGORITMOS[nombre], VELOCIDAD_RIVAL);
+    corredor.siguiente = 0;                           // cuántas gemas ha recogido
+    corredor.cambio = 0;                              // segundos desde que cambió su terreno
+    return corredor;
+  });
+  return { tipo: 'gemas', gemas, mapas, corredores, jugador: conJugador ? corredores[0] : null,
+           reloj: 0, cuenta: CUENTA_REGRESIVA, fase: 'cuenta', anuncio: false, eventos: [] };
+}
+
+// Da el terreno que le toca ver a un competidor: el de la gema que está buscando.
+function mapaDe(juego, corredor) {
+  return juego.mapas[Math.min(corredor.siguiente, CANTIDAD_DE_GEMAS - 1)];
+}
+
+// Avanza un cuadro de atrapa gemas.
+function actualizarGemas(juego, segundos, direcciones) {
+  for (const corredor of juego.corredores) corredor.cambio += segundos;
+  if (juego.fase === 'cuenta') {
+    juego.cuenta -= segundos;
+    if (juego.cuenta <= 0) juego.fase = 'carrera';
+    return;
+  }
+  juego.reloj += segundos;
+  juego.corredores.forEach((corredor, numero) => {
+    if (corredor.final !== null) return;
+    avanzar(corredor, segundos);
+    const base = juego.mapas[0], gema = juego.gemas[corredor.siguiente];
+    // La gema se recoge al estar a menos de media casilla de ella.
+    if (distancia(posicion(corredor, base), [filaDe(base, gema), columnaDe(base, gema)]) < RADIO_DE_RECOGER) {
+      corredor.siguiente += 1;                        // su tablero pasa al terreno de la gema que sigue
+      corredor.cambio = 0;
+      corredor.objetivo = null;
+      corredor.ruta = [];
+      anotarEvento(juego, 'recoger', corredor, numero);
+      if (corredor.siguiente === CANTIDAD_DE_GEMAS) {
+        corredor.final = juego.reloj;
+        anotarEvento(juego, 'victoria', corredor, numero);
+        return;
+      }
+    }
+    const mapa = mapaDe(juego, corredor);
+    if (corredor.algoritmo === null) moverJugador(corredor, mapa, direcciones);
+    else conducirRival(corredor, mapa, juego.gemas[corredor.siguiente], segundos);
+  });
+  // El resultado se anuncia cuando termina el jugador; al solo mirar, cuando llega el primero.
+  juego.anuncio = juego.jugador ? juego.jugador.final !== null : juego.corredores.some(c => c.final !== null);
+}
+
+// Ordena a los competidores de una carrera del primero al último.
+// Atrapa gemas: primero quien ya terminó, luego quien lleva más gemas, luego quien está más cerca de la siguiente.
+// Maze Runner: primero quien ya salió y luego quien está más cerca de la salida.
+function clasificacion(juego) {
+  const clave = corredor => {
+    if (corredor.final !== null) return [0, corredor.final, 0];
+    if (juego.tipo === 'laberinto') {
+      const d = juego.distancias[corredor.destino !== null ? corredor.destino : corredor.casilla];
+      return [1, 0, d === undefined ? 9999 : d];
+    }
+    const base = juego.mapas[0], gema = juego.gemas[corredor.siguiente];
+    return [1, -corredor.siguiente, distancia(posicion(corredor, base), [filaDe(base, gema), columnaDe(base, gema)])];
+  };
+  return juego.corredores.slice().sort((a, b) => {
+    const x = clave(a), y = clave(b);
+    for (let k = 0; k < 3; k++) if (x[k] !== y[k]) return x[k] - y[k];
+    return 0;
+  });
+}
+
+// ============================================================================
+// 5. CAPTURA LA BANDERA
+// ============================================================================
+
+const FILAS_BANDERA = 11, COLUMNAS_BANDERA = 17;
+const SALIDA_IZQUIERDA = 5 * COLUMNAS_BANDERA;                        // centro del borde izquierdo
+const SALIDA_DERECHA = 5 * COLUMNAS_BANDERA + COLUMNAS_BANDERA - 1;   // centro del borde derecho
+const PUNTOS_PARA_GANAR = 3, POSICIONES_DE_BANDERA = 16, DISTANCIA_A_LA_SALIDA = 3, DISTANCIA_DE_CHOQUE = 0.6;
+const OPCIONES_DE_RIVAL = NOMBRES.concat(['Azar']);
+
+// Da la casilla espejo: la misma fila, del otro lado del tablero.
+const reflejoBandera = i => Math.floor(i / COLUMNAS_BANDERA) * COLUMNAS_BANDERA + (COLUMNAS_BANDERA - 1 - i % COLUMNAS_BANDERA);
+
+// Prepara una partida de captura la bandera.
+//   eleccion:  el rival del lado derecho: un algoritmo o 'Azar'
+//   izquierda: null para jugar; para solo mirar, el algoritmo del lado izquierdo, que conserva el rojo
+function crearBandera(eleccion = 'A*', izquierda = null) {
+  const base = mapaVacio(FILAS_BANDERA, COLUMNAS_BANDERA);
+  // La bandera de la izquierda va en su mitad: a 3 o más de su salida y fuera de las tres columnas centrales.
+  const centro = Math.floor(COLUMNAS_BANDERA / 2);
+  const posibles = base.t.map((x, i) => i).filter(i => columnaDe(base, i) < centro - 1 && estimacion(base, i, SALIDA_IZQUIERDA) >= DISTANCIA_A_LA_SALIDA);
+  const secuencia = Array.from({ length: POSICIONES_DE_BANDERA }, () => elegir(posibles));
+  const nombre = eleccion === 'Azar' ? elegir(NOMBRES) : eleccion;
+  const jugador = izquierda === null ? crearCorredor('Tú', SALIDA_IZQUIERDA, null, VELOCIDAD_JUGADOR)
+                                     : crearCorredor(izquierda, SALIDA_IZQUIERDA, ALGORITMOS[izquierda], VELOCIDAD_RIVAL_BANDERA, COLOR_DE['Tú']);
+  const rival = crearCorredor(nombre, SALIDA_DERECHA, ALGORITMOS[nombre], VELOCIDAD_RIVAL_BANDERA);
+  Object.assign(jugador, { salida: SALIDA_IZQUIERDA, lleva: false, puntos: 0, mira: 1, rumbo: Math.PI / 2 });
+  Object.assign(rival, { salida: SALIDA_DERECHA, lleva: false, puntos: 0, mira: -1, rumbo: -Math.PI / 2 });
+  const juego = { tipo: 'bandera', eleccion, humano: izquierda === null, mapa: base, mapaViejo: null, cambio: 0,
+                  secuencia, turno: 0, jugador, rival, corredores: [jugador, rival], reloj: 0, cuenta: CUENTA_REGRESIVA,
+                  fase: 'cuenta', pausa: 0, aviso: '', avisoResta: 0, eventos: [] };
+  cambiarTerreno(juego);                              // el terreno cambia al empezar
+  return juego;
+}
+
+// Da la casilla donde está la bandera de un personaje cuando nadie la carga.
+function banderaDe(juego, corredor) {
+  const mia = juego.secuencia[juego.turno % POSICIONES_DE_BANDERA];
+  return corredor === juego.jugador ? mia : reflejoBandera(mia);
+}
+
+// Sortea un terreno nuevo. Nunca cae sobre una salida ni una bandera, ni encima o junto a un
+// personaje, y siempre deja comunicadas las salidas, las banderas y los personajes.
+function cambiarTerreno(juego) {
+  const { jugador, rival } = juego;
+  const fijas = [SALIDA_IZQUIERDA, SALIDA_DERECHA, banderaDe(juego, jugador), banderaDe(juego, rival)];
+  const personajes = [];
+  for (const corredor of [jugador, rival]) {
+    personajes.push(corredor.casilla);
+    if (corredor.destino !== null) personajes.push(corredor.destino);
+  }
+  const prohibidas = fijas.slice();
+  for (const i of personajes) prohibidas.push(...juntoA(juego.mapa, i));
+  juego.mapaViejo = juego.mapa;
+  juego.cambio = 0;
+  juego.mapa = sortearTerreno(FILAS_BANDERA, COLUMNAS_BANDERA, prohibidas, fijas.concat(personajes), true);
+  jugador.replanear = true;
+  rival.replanear = true;
+}
+
+// Muestra un aviso en pantalla durante un momento.
+function avisar(juego, texto, segundos = 1.6) { juego.aviso = texto; juego.avisoResta = segundos; }
+
+// Decide a dónde quiere ir un personaje automático: si lleva la bandera del otro, va a la suya;
+// si el otro lleva la suya, lo persigue; si nadie lleva nada, va a robar.
+function objetivoDe(juego, quien, otro) {
+  if (quien.lleva) return banderaDe(juego, quien);
+  if (otro.lleva) return otro.destino !== null ? otro.destino : otro.casilla;
+  return banderaDe(juego, otro);
+}
+
+// Da el nombre con el que se menciona a un personaje en los avisos.
+function nombreParaAviso(juego, corredor) {
+  return corredor === juego.jugador && !juego.humano ? corredor.nombre + ' (rojo)' : corredor.nombre;
+}
+
+// Revisa si un personaje roba una bandera o anota, según la casilla que pisa.
+function revisarBanderas(juego, quien, otro) {
+  if (quien.destino !== null) return;
+  const esHumano = quien === juego.jugador && juego.humano;
+  if (!quien.lleva && quien.casilla === banderaDe(juego, otro)) {
+    quien.lleva = true;                               // pisó la bandera del otro: se la roba
+    cambiarTerreno(juego);
+    anotarEvento(juego, 'recoger', quien);
+    if (!esHumano) avisar(juego, `${nombreParaAviso(juego, quien)} robó ${juego.humano ? 'tu bandera' : 'la bandera de ' + nombreParaAviso(juego, otro)}`);
+  } else if (quien.lleva && quien.casilla === banderaDe(juego, quien)) {
+    quien.puntos += 1;                                // pisó su propia bandera cargando la del otro: punto
+    quien.lleva = false;
+    otro.lleva = false;                               // quien cargaba una bandera la pierde
+    if (quien.puntos >= PUNTOS_PARA_GANAR) {
+      quien.final = juego.reloj;
+      juego.fase = 'final';
+      anotarEvento(juego, 'victoria', quien);
+      return;
+    }
+    anotarEvento(juego, 'punto', quien);
+    juego.turno += 1;                                 // las dos banderas saltan a la siguiente posición
+    if (juego.eleccion === 'Azar') {
+      // En Azar, el rival cambia de algoritmo después de cada punto.
+      const nombre = elegir(NOMBRES.filter(n => n !== juego.rival.nombre));
+      Object.assign(juego.rival, { nombre, algoritmo: ALGORITMOS[nombre], color: COLOR_DE[nombre] });
+    }
+    cambiarTerreno(juego);
+    avisar(juego, esHumano ? 'Punto para ti' : `Punto para ${nombreParaAviso(juego, quien)}`);
+  }
+}
+
+// Avanza un cuadro de captura la bandera.
+function actualizarBandera(juego, segundos, direcciones) {
+  juego.avisoResta = Math.max(0, juego.avisoResta - segundos);
+  juego.cambio += segundos;
+  if (juego.fase === 'cuenta') {
+    juego.cuenta -= segundos;
+    if (juego.cuenta <= 0) juego.fase = 'carrera';
+    return;
+  }
+  if (juego.fase === 'final') return;
+  if (juego.pausa > 0) { juego.pausa -= segundos; return; }
+  juego.reloj += segundos;
+  const { jugador, rival } = juego;
+  avanzar(jugador, segundos);
+  avanzar(rival, segundos);
+  revisarBanderas(juego, jugador, rival);
+  if (juego.fase === 'carrera') revisarBanderas(juego, rival, jugador);
+  if (juego.fase === 'final') return;
+  // Choque: solo cuenta si alguno lleva una bandera. Los dos regresan a su salida, sueltan lo que
+  // llevaban, y las banderas y el terreno cambian de lugar.
+  if ((jugador.lleva || rival.lleva) && distancia(posicion(jugador, juego.mapa), posicion(rival, juego.mapa)) < DISTANCIA_DE_CHOQUE) {
+    for (const corredor of [jugador, rival]) {
+      Object.assign(corredor, { casilla: corredor.salida, destino: null, lleva: false, ruta: [], objetivo: null, pensando: 0 });
+    }
+    juego.turno += 1;
+    cambiarTerreno(juego);
+    juego.pausa = 0.8;
+    avisar(juego, 'Choque: los dos regresan a su salida');
+    return;
+  }
+  if (juego.humano) moverJugador(jugador, juego.mapa, direcciones);
+  else conducirRival(jugador, juego.mapa, objetivoDe(juego, jugador, rival), segundos);
+  conducirRival(rival, juego.mapa, objetivoDe(juego, rival, jugador), segundos);
+}
+
+// ============================================================================
+// 6. LA ESCENA
+// Convierte el estado del juego en figuras. En el mundo 3D, una casilla mide
+// 1 de lado: la columna es la x, la fila es la z y la altura es la y.
+// ============================================================================
+
+const BLANCO = [0.96, 0.96, 0.96], NEGRO = [0.05, 0.05, 0.06], ROJO = [0.83, 0.13, 0.13], DORADO = [1.0, 0.78, 0.1];
+const VERDE_INICIO = [0.0, 0.78, 0.33];
+const COLOR_DE_MURO = [0.2, 0.2, 0.23], COLOR_DE_TRONCO = [0.36, 0.25, 0.16], COLOR_DE_COPA = [0.14, 0.44, 0.26];
+const SEPARACION_DE_TABLEROS = 12;      // en atrapa gemas, de la esquina de un tablero a la del siguiente
+
+// Da el color del piso de una casilla según su terreno. El llano es de dos tonos, como tablero de ajedrez.
+function colorDePiso(terreno, f, c) {
+  if (terreno === '.') return (f + c) % 2 ? [0.93, 0.93, 0.95] : [0.80, 0.81, 0.85];
+  if (terreno === 'B') return [0.48, 0.66, 0.46];
+  if (terreno === 'A') return [0.22, 0.52, 0.95];
+  return [0.34, 0.34, 0.38];                          // el piso debajo de un muro
+}
+
+// Agrega a un lote lo que tiene altura en una casilla: el bloque de un muro o los árboles de un bosque.
+// 'tamaño' va de 0 a 1 y sirve para los cambios de terreno: los muros suben o bajan y los árboles crecen.
+function agregarBloque(lote, terreno, x, z, tamaño) {
+  if (tamaño <= 0.01) return;
+  if (terreno === '#') {
+    lote.caja(bloque(x, 0.42 * tamaño, z, 0.94, 0.84 * tamaño, 0.94), COLOR_DE_MURO);
+  } else if (terreno === 'B') {
+    for (const [dx, dz, alto] of [[-0.22, -0.18, 1.0], [0.2, 0.2, 0.8]]) {
+      const h = alto * tamaño;
+      lote.caja(bloque(x + dx, 0.14 * h, z + dz, 0.1, 0.28 * h, 0.1), COLOR_DE_TRONCO);
+      lote.piramide(bloque(x + dx, (0.28 + 0.36) * h, z + dz, 0.5 * tamaño, 0.72 * h, 0.5 * tamaño), COLOR_DE_COPA);
+    }
+  }
+}
+
+// Construye el lote de un tablero: la plataforma que flota, el piso y los bloques.
+//   origen:   [x, z] de la esquina del tablero en el mundo
+//   anterior: terreno que tenía cada casilla antes del último cambio, o null si no está cambiando
+//   progreso: de 0 a 1, cuánto va del cambio
+// En la primera mitad del cambio lo viejo se hunde; en la segunda, lo nuevo crece. El color del
+// piso pasa poco a poco del anterior al nuevo, y así el agua aparece y desaparece.
+function construirTablero(mapa, origen, anterior, progreso) {
+  const lote = new Lote();
+  const [ox, oz] = origen, ancho = mapa.columnas, fondo = mapa.filas;
+  // La plataforma: una losa oscura con un filo rojo, y debajo un bloque más chico.
+  lote.caja(bloque(ox + (ancho - 1) / 2, -0.38, oz + (fondo - 1) / 2, ancho + 0.7, 0.5, fondo + 0.7), [0.13, 0.13, 0.15]);
+  lote.caja(bloque(ox + (ancho - 1) / 2, -0.72, oz + (fondo - 1) / 2, ancho + 0.3, 0.2, fondo + 0.3), ROJO);
+  lote.caja(bloque(ox + (ancho - 1) / 2, -1.25, oz + (fondo - 1) / 2, ancho * 0.7, 0.9, fondo * 0.7), [0.1, 0.1, 0.12]);
+  for (let i = 0; i < mapa.t.length; i++) {
+    const f = filaDe(mapa, i), c = columnaDe(mapa, i), terreno = mapa.t[i];
+    const cambia = anterior && anterior[i] !== terreno;
+    let color = colorDePiso(terreno, f, c);
+    if (cambia) color = mezcla(colorDePiso(anterior[i], f, c), color, progreso);
+    // El agua va un poco hundida. Durante un cambio, el piso baja o sube poco a poco.
+    let hundido = terreno === 'A' ? 0.1 : 0;
+    if (cambia) hundido = (anterior[i] === 'A' ? 0.1 : 0) * (1 - progreso) + hundido * progreso;
+    lote.caja(bloque(ox + c, -0.07 - hundido, oz + f, 0.97, 0.14, 0.97), color);
+    if (cambia) {
+      if (progreso < 0.5) agregarBloque(lote, anterior[i], ox + c, oz + f, 1 - progreso * 2);
+      else agregarBloque(lote, terreno, ox + c, oz + f, progreso * 2 - 1);
+    } else {
+      agregarBloque(lote, terreno, ox + c, oz + f, 1);
+    }
+  }
+  return lote;
+}
+
+// Los tableros ya construidos, para no rehacerlos en cada cuadro. Solo se rehacen mientras cambian.
+const tablerosHechos = new Map();
+function loteDeTablero(clave, mapa, origen, anterior, progreso) {
+  const guardado = tablerosHechos.get(clave);
+  if (progreso >= 1 && guardado && guardado.mapa === mapa) return guardado.lote;
+  if (guardado && guardado.lote.bufer) motor.gl.deleteBuffer(guardado.lote.bufer);   // se libera el anterior
+  const lote = construirTablero(mapa, origen, progreso < 1 ? anterior : null, progreso);
+  tablerosHechos.set(clave, { mapa: progreso >= 1 ? mapa : null, lote });
+  return lote;
+}
+
+// Da el lugar en el mundo de una posición [fila, columna] de un tablero.
+const enMundo = (origen, p, y = 0) => [origen[0] + p[1], y, origen[1] + p[0]];
+const posDeCasilla = (mapa, i) => [filaDe(mapa, i), columnaDe(mapa, i)];
+
+// Dibuja una ruta sobre el piso: una tira delgada que une los centros de sus casillas.
+function agregarRuta(lote, origen, puntos, color, alto = 0.05) {
+  for (let k = 0; k + 1 < puntos.length; k++) {
+    const a = enMundo(origen, puntos[k]), b = enMundo(origen, puntos[k + 1]);
+    const largo = Math.hypot(b[0] - a[0], b[2] - a[2]);
+    if (largo < 0.01) continue;
+    const giro = Math.atan2(b[0] - a[0], b[2] - a[2]);
+    lote.caja(componer(mover((a[0] + b[0]) / 2, alto, (a[2] + b[2]) / 2), girarY(giro), escalar(0.16, 0.05, largo + 0.16)), color, 0.9);
+  }
+}
+
+// Dibuja la ruta que tiene planeada un rival, desde donde está.
+function agregarRutaDeCorredor(lote, origen, mapa, corredor) {
+  const casillas = (corredor.destino !== null ? [corredor.destino] : []).concat(corredor.ruta);
+  if (!casillas.length) return;
+  agregarRuta(lote, origen, [posicion(corredor, mapa)].concat(casillas.map(i => posDeCasilla(mapa, i))), corredor.color);
+}
+
+// Dibuja el punto verde de una salida: un disco bajo, hecho con dos cuadros girados.
+function agregarPunto(lote, lugar, color, radio = 0.3) {
+  for (const giro of [0, Math.PI / 4]) {
+    lote.caja(componer(mover(lugar[0], 0.04, lugar[2]), girarY(giro), escalar(radio * 1.5, 0.06, radio * 1.5)), color, 0.6);
+  }
+}
+
+// Dibuja una gema: un rombo dorado que gira y flota.
+function agregarGema(lote, manchas, lugar, t) {
+  const y = 0.62 + Math.sin(t * 3) * 0.08;
+  lote.rombo(componer(mover(lugar[0], y, lugar[2]), girarY(t * 2.2), escalar(0.46, 0.7, 0.46)), DORADO, 0.55);
+  manchas.mancha(lugar[0], y, lugar[2], 0.75, [1, 0.85, 0.3], 0.35);      // un resplandor alrededor
+}
+
+// Dibuja una bandera: un asta y un paño que ondea un poco.
+function agregarBandera(lote, lugar, color, t, tamaño = 1) {
+  lote.caja(bloque(lugar[0], 0.55 * tamaño, lugar[2], 0.07, 1.1 * tamaño, 0.07), [0.92, 0.92, 0.92]);
+  lote.caja(componer(mover(lugar[0], 0.92 * tamaño, lugar[2]), girarY(Math.sin(t * 4) * 0.25), mover(0.24 * tamaño, 0, 0),
+                     escalar(0.46 * tamaño, 0.3 * tamaño, 0.05)), color, 0.25);
+}
+
+// ---- Efectos: partículas al recoger algo y fuegos artificiales al anotar o ganar.
+
+const COLORES_DE_FIESTA = [[1, 0.25, 0.25], [1, 0.84, 0.25], [0.4, 0.94, 0.68], [0.25, 0.77, 1], [0.88, 0.5, 1], [1, 1, 1]];
+
+// Crea el estado de los efectos: partículas en vuelo y fuegos artificiales programados.
+function crearEfectos() { return { particulas: [], cohetes: [] }; }
+
+// Suelta un montón de partículas desde un punto del mundo, en todas direcciones.
+function estallar(efectos, p, color, cantidad = 16, fuerza = 3.4) {
+  for (let k = 0; k < cantidad; k++) {
+    const a = Math.random() * Math.PI * 2, sube = Math.random() * 1.3 + 0.2, r = (0.4 + Math.random() * 0.6) * fuerza;
+    const vida = 0.5 + Math.random() * 0.6;
+    efectos.particulas.push({ p: p.slice(), v: [Math.cos(a) * r, sube * fuerza, Math.sin(a) * r], color,
+                              tam: 0.07 + Math.random() * 0.09, vida, total: vida, giro: Math.random() * 6 });
+  }
+  if (efectos.particulas.length > 900) efectos.particulas.splice(0, efectos.particulas.length - 900);
+}
+
+// Programa varios fuegos artificiales sobre un tablero, uno tras otro.
+function fuegosArtificiales(efectos, centro, ancho, cantidad) {
+  for (let k = 0; k < cantidad; k++) {
+    efectos.cohetes.push({ falta: k * 0.22, p: [centro[0] + (Math.random() - 0.5) * ancho, 3 + Math.random() * 3, centro[2] + (Math.random() - 0.5) * ancho * 0.6],
+                           color: elegir(COLORES_DE_FIESTA) });
+  }
+}
+
+// Convierte en efectos lo que acaba de pasar en la partida. 'tableros' dice dónde está cada tablero.
+function lanzarEventos(efectos, juego, tableros) {
+  for (const evento of juego.eventos) {
+    const tablero = tableros[evento.tablero];
+    if (!tablero) continue;
+    const lugar = enMundo(tablero.origen, posicion(evento.quien, tablero.mapa), 0.8);
+    const centro = [tablero.origen[0] + (tablero.mapa.columnas - 1) / 2, 0, tablero.origen[1] + (tablero.mapa.filas - 1) / 2];
+    if (evento.tipo === 'recoger') estallar(efectos, lugar, DORADO);
+    else fuegosArtificiales(efectos, centro, tablero.mapa.columnas, evento.tipo === 'punto' ? 4 : 9);
+  }
+  juego.eventos.length = 0;
+}
+
+// Mueve las partículas y hace estallar los fuegos artificiales a su tiempo.
+function actualizarEfectos(efectos, segundos) {
+  for (const cohete of efectos.cohetes) {
+    cohete.falta -= segundos;
+    if (cohete.falta <= 0) estallar(efectos, cohete.p, cohete.color, 34, 5.2);
+  }
+  efectos.cohetes = efectos.cohetes.filter(cohete => cohete.falta > 0);
+  for (const q of efectos.particulas) {
+    for (let k = 0; k < 3; k++) q.p[k] += q.v[k] * segundos;
+    q.v[1] -= 7.5 * segundos;                         // la gravedad las hace caer
+    q.vida -= segundos;
+  }
+  efectos.particulas = efectos.particulas.filter(q => q.vida > 0);
+}
+
+// Dibuja las partículas: cubitos brillantes que giran y se achican al apagarse.
+function agregarEfectos(lote, efectos) {
+  for (const q of efectos.particulas) {
+    const tam = q.tam * (q.vida / q.total);
+    lote.caja(componer(mover(q.p[0], q.p[1], q.p[2]), girarY(q.giro + q.vida * 6), girarX(q.vida * 5), escalar(tam, tam, tam)), q.color, 1);
+  }
+}
+
+// ---- El cielo: el tablero flota sobre un mar de nubes, con un sol rojo y una luz blanca de contraste.
+
+// La luz de la escena. 'faros' son las luces de noche (se usan desde el paso de ambientación).
+function crearLuz() {
+  return { sol: unitario([-0.45, 0.8, 0.4]), colorSol: [0.74, 0.66, 0.64], contraluz: unitario([0.6, 0.25, -0.75]),
+           ambiente: [0.36, 0.36, 0.4], cielo: [0.72, 0.83, 0.95], lejos: 46, faros: [], colorFaro: [0, 0, 0] };
+}
+
+// Las nubes del mar de nubes: se sortean una vez y después solo se deslizan.
+const NUBES_DEL_MAR = Array.from({ length: 150 }, () => ({ x: Math.random() * 180 - 90, z: Math.random() * 150 - 95,
+                                                           r: 5 + Math.random() * 8, vel: 0.3 + Math.random() * 0.5, tono: 0.92 + Math.random() * 0.08 }));
+
+// Llena la lista de manchas del fondo: el sol rojo, la luz blanca y el mar de nubes.
+// Todo esto se dibuja con manchas difuminadas, y por eso el fondo se ve un poco desenfocado.
+function agregarCielo(manchas, centro, t) {
+  // El sol rojo, lejos y a la izquierda: un disco con su resplandor.
+  const sol = [centro[0] - 60, 26, centro[2] - 95];
+  manchas.mancha(sol[0], sol[1], sol[2], 34, [1.0, 0.45, 0.35], 0.35);
+  manchas.mancha(sol[0], sol[1], sol[2], 13, [0.93, 0.12, 0.12], 1, 0.75);
+  // La luz blanca de contraste, del lado opuesto.
+  manchas.mancha(centro[0] + 75, 30, centro[2] - 80, 40, [1, 1, 1], 0.45);
+  // El mar de nubes, muy por debajo del tablero.
+  for (const nube of NUBES_DEL_MAR) {
+    const x = ((nube.x + t * nube.vel + 90) % 180) - 90;
+    manchas.mancha(centro[0] + x, -9 - nube.r * 0.2, centro[2] + nube.z, nube.r, [nube.tono, nube.tono, 1], 0.7);
+  }
+}
+
+// ---- La cámara: se mueve suave hacia donde se le pide.
+
+// Crea una cámara: desde dónde mira, hacia dónde, y a dónde se le pidió ir.
+function crearCamara(ojo, centro) {
+  return { ojo: ojo.slice(), centro: centro.slice(), ojoMeta: ojo.slice(), centroMeta: centro.slice() };
+}
+
+// Acerca la cámara un poco a su meta en cada cuadro. Así nunca brinca: siempre se desliza.
+function moverCamara(camara, segundos, rapidez = 3.2) {
+  const k = 1 - Math.exp(-segundos * rapidez);
+  camara.ojo = mezcla(camara.ojo, camara.ojoMeta, k);
+  camara.centro = mezcla(camara.centro, camara.centroMeta, k);
+}
+
+// Da la matriz completa de la cámara (perspectiva por vista) y sus direcciones derecha y arriba.
+function matrizDeCamara(camara) {
+  const vista = mirarHacia(camara.ojo, camara.centro);
+  const total = multiplicar(perspectiva(0.72, motor.ancho / motor.alto, 0.5, 400), vista);
+  return { total, derecha: [vista[0], vista[4], vista[8]], arriba: [vista[1], vista[5], vista[9]] };
+}
+
+// Da los tableros de una partida: su mapa, su lugar en el mundo y su dueño.
+function tablerosDe(juego) {
+  if (juego.tipo === 'gemas') {
+    return juego.corredores.map((corredor, numero) => ({
+      mapa: mapaDe(juego, corredor), corredor,
+      origen: [(numero % 3) * SEPARACION_DE_TABLEROS, Math.floor(numero / 3) * SEPARACION_DE_TABLEROS] }));
+  }
+  return [{ mapa: juego.mapa, origen: [0, 0], corredor: null }];
+}
+
+// El centro de un tablero en el mundo.
+const centroDe = tablero => [tablero.origen[0] + (tablero.mapa.columnas - 1) / 2, 0, tablero.origen[1] + (tablero.mapa.filas - 1) / 2];
+
+// Decide a dónde debe mirar la cámara en este momento.
+//   seguir:  el número del corredor al que sigue de cerca, o null para la vista general
+//   momento: un momento especial en curso (alguien anotó o ganó), o null
+function apuntarCamara(camara, juego, tableros, seguir, momento, t) {
+  const lugarDe = numero => {
+    const tablero = juego.tipo === 'gemas' ? tableros[numero] : tableros[0];
+    return enMundo(tablero.origen, posicion(juego.corredores[numero], tablero.mapa));
+  };
+  if (momento) {
+    const p = lugarDe(momento.quien);
+    if (momento.tipo === 'victoria') {
+      // La cámara gira alrededor de quien ganó.
+      const a = momento.t * 0.8;
+      camara.ojoMeta = [p[0] + Math.cos(a) * 5.5, 3.6, p[2] + Math.sin(a) * 5.5];
+    } else {
+      camara.ojoMeta = [p[0], 5.5, p[2] + 6.5];       // un acercamiento rápido a quien anotó
+    }
+    camara.centroMeta = [p[0], 0.7, p[2]];
+    return;
+  }
+  if (seguir !== null) {
+    const p = lugarDe(seguir);
+    camara.ojoMeta = [p[0], 8.5, p[2] + 8];
+    camara.centroMeta = [p[0], 0.4, p[2]];
+    return;
+  }
+  // Vista general: todos los tableros. Se calcula qué tan lejos hay que poner la cámara para
+  // que quepan a lo ancho y a lo hondo; entre más angosta la ventana, más se aleja.
+  const centros = tableros.map(centroDe);
+  const medio = [0, 1].map(k => (Math.min(...centros.map(c => c[k * 2])) + Math.max(...centros.map(c => c[k * 2]))) / 2);
+  const ancho = Math.max(...centros.map(c => c[0])) - Math.min(...centros.map(c => c[0])) + tableros[0].mapa.columnas + 1;
+  const fondo = Math.max(...centros.map(c => c[2])) - Math.min(...centros.map(c => c[2])) + tableros[0].mapa.filas + 1;
+  const abertura = Math.tan(0.72 / 2);                // la mitad del ángulo de visión vertical
+  const porAncho = (ancho / 2) / (abertura * motor.ancho / motor.alto) * 1.1;
+  const porFondo = (fondo * 0.8 / 2) / abertura * 1.1;
+  const lejos = Math.max(porAncho, porFondo);
+  camara.ojoMeta = [medio[0], lejos * 0.80, medio[1] + lejos * 0.60 + fondo * 0.04];
+  camara.centroMeta = [medio[0], 0, medio[1] - fondo * 0.02];
+}
+
+// ============================================================================
+// 7. LOS PERSONAJES
+// Cada personaje es un muñequito de bloques que da saltitos al caminar.
+// ============================================================================
+
+// Acerca poco a poco el giro del muñeco hacia el rumbo que lleva, por el camino más corto.
+function girarHacia(corredor, segundos) {
+  if (corredor.giro === undefined) corredor.giro = corredor.rumbo;
+  let falta = corredor.rumbo - corredor.giro;
+  while (falta > Math.PI) falta -= 2 * Math.PI;
+  while (falta < -Math.PI) falta += 2 * Math.PI;
+  corredor.giro += falta * Math.min(1, segundos * 14);
+}
+
+// Agrega un personaje a un lote.
+//   lugar:  su posición en el mundo
+//   t:      el tiempo, para el saltito
+//   carga:  el color de la bandera que lleva, o null
+function agregarPersonaje(lote, lugar, corredor, t, carga = null) {
+  const camina = corredor.destino !== null;
+  const festeja = corredor.final !== null;
+  // Al caminar da un saltito por paso; al festejar, brinca en su lugar.
+  const salto = festeja ? Math.abs(Math.sin(t * 6)) * 0.35 : (camina ? Math.sin(Math.PI * corredor.avance) * 0.16 : 0);
+  const base = componer(mover(lugar[0], salto, lugar[2]), girarY(corredor.giro === undefined ? corredor.rumbo : corredor.giro));
+  const oscuro = mezcla(corredor.color, [0, 0, 0], 0.35);
+  const paso = camina ? Math.sin(Math.PI * corredor.avance) * (corredor.zancadas % 2 ? 1 : -1) * 0.5 : 0;
+  // Las piernas se mueven una adelante y otra atrás.
+  for (const lado of [-1, 1]) {
+    lote.caja(componer(base, mover(lado * 0.1, 0.3, 0), girarX(lado * paso), mover(0, -0.15, 0), escalar(0.14, 0.3, 0.16)), oscuro);
+  }
+  lote.caja(componer(base, bloque(0, 0.52, 0, 0.42, 0.44, 0.26)), corredor.color);           // el cuerpo
+  lote.caja(componer(base, bloque(0, 0.93, 0, 0.36, 0.36, 0.36)), [1.0, 0.86, 0.72]);        // la cabeza
+  for (const lado of [-1, 1]) {
+    lote.caja(componer(base, bloque(lado * 0.09, 0.96, 0.181, 0.06, 0.07, 0.02)), NEGRO);     // los ojos, al frente
+  }
+  if (carga) agregarBandera(lote, [lugar[0] - Math.sin(corredor.giro || 0) * 0.25, 0, lugar[2] - Math.cos(corredor.giro || 0) * 0.25], carga, t, 0.9);
+}
+
+// ============================================================================
+// 8. DIBUJAR UNA PARTIDA
+// ============================================================================
+
+// Los lotes que se llenan de nuevo en cada cuadro.
+const dinamico = new Lote(), brillantes = new Lote(), manchasDeFondo = new Manchas(), manchasDeFrente = new Manchas();
+dinamico.dinamico = brillantes.dinamico = true;
+const luz = crearLuz();
+
+// Da el terreno anterior y el progreso del cambio de un tablero, para dibujar la transformación.
+function cambioDeTablero(juego, tablero) {
+  if (juego.tipo === 'gemas') {
+    const corredor = tablero.corredor;
+    if (corredor.cambio >= DURACION_DEL_CAMBIO || corredor.final !== null) return [null, 1];
+    // Al empezar, el tablero estaba vacío; después, tenía el terreno de la gema anterior.
+    const previo = corredor.siguiente === 0 ? mapaVacio(LADO_GEMAS, LADO_GEMAS) : juego.mapas[corredor.siguiente - 1];
+    return [previo.t, corredor.cambio / DURACION_DEL_CAMBIO];
+  }
+  if (juego.tipo === 'bandera') {
+    if (juego.cambio >= DURACION_DEL_CAMBIO || !juego.mapaViejo) return [null, 1];
+    return [juego.mapaViejo.t, juego.cambio / DURACION_DEL_CAMBIO];
+  }
+  return [null, 1];
+}
+
+// Agrega al lote dinámico todo lo que se mueve en atrapa gemas: salidas, rutas, gemas y personajes.
+function agregarGemas(juego, tableros, t, segundos) {
+  tableros.forEach(tablero => {
+    const { mapa, origen, corredor } = tablero;
+    agregarPunto(dinamico, enMundo(origen, [0, 0]), VERDE_INICIO);                   // la salida, con su punto verde
+    if (corredor.algoritmo !== null) agregarRutaDeCorredor(dinamico, origen, mapa, corredor);
+    if (corredor.final === null) {
+      // Solo hay una gema a la vista: la que le toca a este competidor.
+      agregarGema(dinamico, manchasDeFrente, enMundo(origen, posDeCasilla(mapa, juego.gemas[corredor.siguiente])), t);
+    }
+    girarHacia(corredor, segundos);
+    const lugar = enMundo(origen, posicion(corredor, mapa));
+    agregarPersonaje(dinamico, lugar, corredor, t);
+    if (corredor.brillo > 0) agregarPersonaje(brillantes, lugar, corredor, t);       // su contorno brilla un momento
+  });
+}
+
+// Agrega al lote dinámico todo lo que se mueve en captura la bandera.
+function agregarBanderas(juego, tablero, t, segundos) {
+  const { mapa, origen } = tablero, { jugador, rival } = juego;
+  for (const corredor of [jugador, rival]) {
+    agregarPunto(dinamico, enMundo(origen, posDeCasilla(mapa, corredor.salida)), corredor.color, 0.34);   // su salida
+  }
+  if (juego.fase !== 'final') agregarRutaDeCorredor(dinamico, origen, mapa, rival);
+  if (!juego.humano) { if (juego.fase !== 'final') agregarRutaDeCorredor(dinamico, origen, mapa, jugador); }
+  else if (jugador.lleva && juego.fase === 'carrera') {
+    // La ruta más corta hasta mi bandera, en dorado, y un aro que late en el lugar a donde hay que llevarla.
+    const desde = jugador.destino !== null ? jugador.destino : jugador.casilla;
+    const ruta = dijkstra(mapa, desde, banderaDe(juego, jugador))[0] || [];
+    agregarRuta(dinamico, origen, [posicion(jugador, mapa)].concat(ruta.map(i => posDeCasilla(mapa, i))), DORADO, 0.07);
+    const meta = enMundo(origen, posDeCasilla(mapa, banderaDe(juego, jugador)));
+    for (let k = 0; k < 3; k++) {
+      const radio = 0.4 + ((t * 0.9 + k / 3) % 1) * 1.1;
+      manchasDeFrente.mancha(meta[0], 0.15, meta[2], radio, DORADO, 0.5 * (1 - ((t * 0.9 + k / 3) % 1)), 0.8);
+    }
+    // Una flecha dorada que sube y baja encima.
+    const alto = 2.3 + Math.sin(t * 5) * 0.2;
+    dinamico.piramide(componer(mover(meta[0], alto, meta[2]), girarX(Math.PI), girarY(t * 2), escalar(0.5, 0.6, 0.5)), DORADO, 0.8);
+    dinamico.caja(bloque(meta[0], alto + 0.5, meta[2], 0.2, 0.5, 0.2), DORADO, 0.8);
+  }
+  // Cada bandera está clavada en su casilla mientras el otro no se la lleve.
+  for (const [dueño, otro] of [[jugador, rival], [rival, jugador]]) {
+    if (!otro.lleva) agregarBandera(dinamico, enMundo(origen, posDeCasilla(mapa, banderaDe(juego, dueño))), dueño.color, t);
+  }
+  for (const [corredor, otro] of [[jugador, rival], [rival, jugador]]) {
+    girarHacia(corredor, segundos);
+    const lugar = enMundo(origen, posicion(corredor, mapa));
+    agregarPersonaje(dinamico, lugar, corredor, t, corredor.lleva ? otro.color : null);
+    if (corredor.brillo > 0) agregarPersonaje(brillantes, lugar, corredor, t);
+  }
+}
+
+// Revisa lo que acaba de pasar para ver si toca un momento especial de cámara.
+// Devuelve el momento nuevo, o el que ya había.
+function momentoDeCamara(estado, juego) {
+  for (const evento of juego.eventos) {
+    const quien = juego.corredores.indexOf(evento.quien);
+    if (evento.tipo === 'punto') return { tipo: 'punto', quien, t: 0, dura: 1.5 };
+    if (evento.tipo === 'victoria') {
+      // En las carreras, la cámara gira alrededor del jugador cuando termina; al solo mirar, del primero que llega.
+      const esElMomento = juego.tipo === 'bandera' || (juego.jugador ? evento.quien === juego.jugador
+                                                                       : juego.corredores.filter(c => c.final !== null).length === 1);
+      if (esElMomento) return { tipo: 'victoria', quien, t: 0, dura: juego.tipo === 'bandera' ? 999 : 7 };
+    }
+  }
+  return estado.momento;
+}
+
+// Dibuja un cuadro completo de la partida: tableros, personajes, efectos y cielo.
+function dibujarPartida(estado, juego, segundos, t) {
+  const gl = motor.gl;
+  const tableros = tablerosDe(juego);
+  dinamico.vaciar(); brillantes.vaciar(); manchasDeFondo.vaciar(); manchasDeFrente.vaciar();
+
+  // 1. Los tableros. Solo se reconstruyen mientras su terreno está cambiando.
+  const estaticos = tableros.map((tablero, numero) => {
+    const [anterior, progreso] = cambioDeTablero(juego, tablero);
+    return loteDeTablero(juego.tipo + numero, tablero.mapa, tablero.origen, anterior, progreso);
+  });
+
+  // 2. Lo que se mueve.
+  if (juego.tipo === 'gemas') agregarGemas(juego, tableros, t, segundos);
+  else if (juego.tipo === 'bandera') agregarBanderas(juego, tableros[0], t, segundos);
+
+  // 3. Los efectos y los momentos especiales de la cámara.
+  estado.momento = momentoDeCamara(estado, juego);
+  lanzarEventos(estado.efectos, juego, tableros);
+  agregarEfectos(dinamico, estado.efectos);
+  if (estado.momento) {
+    estado.momento.t += segundos;
+    if (estado.momento.t > estado.momento.dura) estado.momento = null;
+  }
+
+  // 4. La cámara.
+  apuntarCamara(estado.camara, juego, tableros, estado.seguir, estado.momento, t);
+  moverCamara(estado.camara, segundos);
+  const camara = matrizDeCamara(estado.camara);
+  agregarCielo(manchasDeFondo, estado.camara.centro, t);
+
+  // 5. A dibujar: primero el cielo, luego las figuras, sus bordes negros y al final lo translúcido.
+  gl.clearColor(luz.cielo[0], luz.cielo[1], luz.cielo[2], 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  dibujarManchas(manchasDeFondo, camara.total, camara.derecha, camara.arriba, false);
+  const lotes = estaticos.concat([dinamico]);
+  dibujarLotes(lotes, camara.total, luz);
+  // El borde se hace más grueso mientras más lejos está la cámara, para que siempre se vea igual.
+  const lejania = Math.hypot(...restar(estado.camara.ojo, estado.camara.centro));
+  dibujarLotes(lotes, camara.total, luz, lejania * 0.0012);
+  dibujarLotes([brillantes], camara.total, luz, lejania * 0.0012 + 0.07, DORADO);    // el contorno dorado de quien recogió algo
+  dibujarManchas(manchasDeFrente, camara.total, camara.derecha, camara.arriba, true);
+  return { tableros, camara };
+}
+
+// ============================================================================
+// 9. LA INTERFAZ, AL ESTILO DE UN JUEGO DE CARRERAS
+// Los textos y los botones son elementos de la página, encima del lienzo 3D.
+// ============================================================================
+
+const elemento = id => document.getElementById(id);
+const textoDeTiempo = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+const colorCss = c => `rgb(${c.map(v => Math.round(v * 255)).join(',')})`;
+
+// Cambia el contenido de un elemento solo si es distinto, para no hacer trabajar de más al navegador.
+function poner(id, html) {
+  const e = elemento(id);
+  if (e.dataset.html !== html) { e.innerHTML = html; e.dataset.html = html; }
+  e.style.display = html ? '' : 'none';
+}
+
+// Las etiquetas que flotan sobre la escena: letreros de cada tablero, nombres y globitos de pensar.
+const etiquetas = new Map();
+// Coloca una etiqueta en el punto de la pantalla que corresponde a un lugar del mundo.
+function etiquetar(clave, lugar, html, clase, camara) {
+  const [x, y, delante] = proyectar(camara.total, lugar, motor.ancho, motor.alto);
+  let e = etiquetas.get(clave);
+  if (!e) {
+    e = document.createElement('div');
+    elemento('etiquetas').appendChild(e);
+    etiquetas.set(clave, e);
+  }
+  e.className = 'etiqueta ' + clase;
+  if (e.dataset.html !== html) { e.innerHTML = html; e.dataset.html = html; }
+  e.style.display = delante ? '' : 'none';
+  e.style.left = x + 'px';
+  e.style.top = y + 'px';
+  e.dataset.vista = '1';
+}
+// Esconde las etiquetas que no se usaron en este cuadro.
+function limpiarEtiquetas() {
+  for (const e of etiquetas.values()) { if (e.dataset.vista !== '1') e.style.display = 'none'; e.dataset.vista = '0'; }
+}
+
+// Da el letrero con la ficha de color y el nombre de un competidor.
+const ficha = corredor => `<i style="background:${colorCss(corredor.color)}"></i>${corredor.nombre}`;
+
+// Actualiza la interfaz de atrapa gemas: lugar de cada competidor, avance y globitos de pensar.
+function interfazDeGemas(estado, juego, escena) {
+  const orden = clasificacion(juego), jugador = juego.jugador;
+  poner('titulo', jugador ? 'Atrapa gemas' : 'Mirar: atrapa gemas');
+  poner('centro', jugador ? `Vas en el lugar <b>${orden.indexOf(jugador) + 1}</b> de ${orden.length}` : `Va ganando <b>${orden[0].nombre}</b>`);
+  escena.tableros.forEach((tablero, numero) => {
+    const corredor = tablero.corredor, lugar = orden.indexOf(corredor) + 1;
+    let avance = `gema ${corredor.siguiente + 1} de ${CANTIDAD_DE_GEMAS}`;
+    if (corredor.final !== null) avance = 'terminó en ' + textoDeTiempo(corredor.final);
+    else if (corredor.pensando > 0) avance = 'pensando...';
+    etiquetar('tablero' + numero, [tablero.origen[0] + 4, 0, tablero.origen[1] - 1.5],
+              `<b class="${lugar === 1 ? 'primero' : ''}">${lugar}</b>${ficha(corredor)}<small>${avance}</small>`, 'letrero', escena.camara);
+    if (corredor.pensando > 0 && corredor.final === null) {
+      etiquetar('globo' + numero, enMundo(tablero.origen, posicion(corredor, tablero.mapa), 1.6), '...', 'globo', escena.camara);
+    }
+  });
+  if (juego.anuncio) cartelDeCarrera(juego, orden);
+}
+
+// Muestra el cartel con el resultado de una carrera: el lugar del jugador y los tiempos de quienes ya llegaron.
+function cartelDeCarrera(juego, orden) {
+  const jugador = juego.jugador;
+  const titulo = !jugador ? `Ganó ${orden[0].nombre}` : (orden[0] === jugador ? '¡Ganaste!' : `Quedaste en el lugar ${orden.indexOf(jugador) + 1}`);
+  const renglones = orden.map((c, k) => `<tr class="${c === jugador ? 'yo' : ''}"><td>${k + 1}.</td><td>${ficha(c)}</td>` +
+    `<td>${c.final !== null ? textoDeTiempo(c.final) : 'sigue corriendo'}</td></tr>`).join('');
+  poner('cartel', `<h2>${titulo}</h2><table>${renglones}</table><p>Espacio o Enter: otra carrera. R: reiniciar. Esc: menú.</p>`);
+}
+
+// Actualiza la interfaz de captura la bandera: marcador, avisos, nombres y botones de rival.
+function interfazDeBandera(estado, juego, escena) {
+  const { jugador, rival } = juego, humano = juego.humano, enJuego = juego.fase === 'carrera';
+  const izquierdo = humano ? 'Tú' : jugador.nombre;
+  poner('titulo', humano ? 'Captura la bandera' : 'Mirar: captura la bandera');
+  poner('centro', `<span style="color:#ff7a7a">${izquierdo} <b>${jugador.puntos}</b></span> : <b>${rival.puntos}</b> ${ficha(rival)}`);
+  let mensaje = `Roba la bandera de ${rival.nombre} y llévala a donde está la tuya.`;
+  if (!humano) mensaje = `${jugador.nombre} (rojo) contra ${rival.nombre}. Gana quien llegue a ${PUNTOS_PARA_GANAR}.`;
+  else if (jugador.lleva && enJuego) mensaje = '<b class="dorado">¡Llevas la bandera! Llévala a donde está la tuya: sigue la ruta dorada.</b>';
+  else if (rival.lleva && enJuego) mensaje = `<b class="rosa">${rival.nombre} te robó la bandera. Chócalo para recuperarla.</b>`;
+  poner('mensaje', juego.fase === 'final' ? '' : mensaje);
+  const tablero = escena.tableros[0];
+  for (const corredor of [jugador, rival]) {
+    const lugar = enMundo(tablero.origen, posicion(corredor, tablero.mapa), 1.5);
+    etiquetar('nombre' + (corredor === jugador ? 0 : 1), lugar, corredor.pensando > 0 ? '...' : (corredor === jugador && humano ? 'Tú' : corredor.nombre),
+              corredor.pensando > 0 ? 'globo' : 'nombre', escena.camara);
+  }
+  // Los botones para elegir rival: del 1 al 6. El elegido va en rojo.
+  poner('rivales', (humano ? '<span>Rival:</span>' : '') + OPCIONES_DE_RIVAL.map((opcion, k) =>
+    `<button data-rival="${opcion}" class="${opcion === juego.eleccion ? 'activo' : ''}">` +
+    `${opcion in COLOR_DE ? `<i style="background:${colorCss(COLOR_DE[opcion])}"></i>` : ''}${k + 1} ${opcion}</button>`).join(''));
+  poner('aviso', juego.avisoResta > 0 && juego.fase !== 'final' ? juego.aviso : '');
+  if (juego.fase === 'final') {
+    const ganoIzquierda = jugador.puntos > rival.puntos;
+    const titulo = humano && ganoIzquierda ? '¡Ganaste!' : `Ganó ${nombreParaAviso(juego, ganoIzquierda ? jugador : rival)}`;
+    poner('cartel', `<h2>${titulo}</h2><table><tr class="yo"><td></td><td>${izquierdo}</td><td>${jugador.puntos}</td></tr>` +
+      `<tr><td></td><td>${ficha(rival)}</td><td>${rival.puntos}</td></tr><tr><td></td><td>Tiempo</td><td>${textoDeTiempo(juego.reloj)}</td></tr></table>` +
+      '<p>Espacio o Enter: otra partida. R: reiniciar. Esc: menú.</p>');
+  }
+}
+
+// Actualiza toda la interfaz de la partida en curso.
+function actualizarInterfaz(estado, juego, escena) {
+  poner('tiempo', textoDeTiempo(juego.reloj));
+  poner('cartel', '');
+  if (juego.tipo !== 'bandera') { poner('rivales', ''); poner('mensaje', ''); poner('aviso', ''); }
+  if (juego.tipo === 'gemas') interfazDeGemas(estado, juego, escena);
+  else if (juego.tipo === 'bandera') interfazDeBandera(estado, juego, escena);
+  // La cuenta regresiva de salida: 3, 2, 1 y la palabra de arranque.
+  let cuenta = '';
+  if (juego.fase === 'cuenta') cuenta = String(Math.ceil(juego.cuenta));
+  else if (juego.fase === 'carrera' && juego.reloj < 0.8) cuenta = '¡Ya!';
+  poner('cuenta', cuenta);
+  poner('ayuda', estado.modo.startsWith('mirar') ? AYUDA_DE_MIRAR : AYUDA_DE_JUGAR);
+  limpiarEtiquetas();
+}
+
+const AYUDA_DE_JUGAR = 'Flechas o W A S D: moverte. C: acercar. R: reiniciar. Esc: menú.';
+const AYUDA_DE_MIRAR = 'Rueda: acercar. Arrastrar: girar. W A S D: mover. Tab: seguir a otro. 0: vista general. R: reiniciar. Esc: menú.';
+
+// ============================================================================
+// 10. EL MENÚ
+// ============================================================================
+
+// Muestra el menú: una caja por modo. La elegida va resaltada.
+function mostrarMenu(estado) {
+  estado.pantalla = 'menu';
+  estado.juego = null;
+  for (const id of ['titulo', 'centro', 'tiempo', 'mensaje', 'ayuda', 'cuenta', 'aviso', 'cartel', 'rivales']) poner(id, '');
+  limpiarEtiquetas(); limpiarEtiquetas();
+  elemento('barra').style.display = 'none';
+  elemento('menu').style.display = '';
+  pintarMenu(estado);
+}
+
+// Escribe las cajas del menú en la página.
+function pintarMenu(estado) {
+  poner('menu', '<h1>Maze Runner</h1><p class="subtitulo">Proyecto de matemáticas discretas</p><div class="cajas">' +
+    MODOS.map((modo, k) => `<button data-modo="${modo[0]}" class="${k === estado.elegida ? 'activo' : ''}"><b>${modo[1]}</b><span>${modo[2]}</span></button>`).join('') +
+    '</div><p class="pie">Elige con las flechas y Enter, o con el ratón.</p>');
+}
+
+// Atiende una tecla en el menú: las flechas cambian la caja elegida y Enter entra al modo.
+function teclaDeMenu(estado, tecla) {
+  if (tecla === 'ArrowRight' || tecla === 'ArrowDown') estado.elegida = (estado.elegida + 1) % MODOS.length;
+  else if (tecla === 'ArrowLeft' || tecla === 'ArrowUp') estado.elegida = (estado.elegida + MODOS.length - 1) % MODOS.length;
+  else if (tecla === 'Enter' || tecla === ' ') { empezar(MODOS[estado.elegida][0]); return; }
+  pintarMenu(estado);
+}
+
+// Atiende un clic en el menú.
+function clicDeMenu(estado, modo) { empezar(modo); }
+
+// Dibuja el fondo del menú: el cielo, con la cámara girando despacio.
+function dibujarMenu(estado, segundos, t) {
+  const gl = motor.gl;
+  estado.camara.ojoMeta = [Math.cos(t * 0.05) * 30, 16, Math.sin(t * 0.05) * 30];
+  estado.camara.centroMeta = [0, 2, 0];
+  moverCamara(estado.camara, segundos);
+  const camara = matrizDeCamara(estado.camara);
+  manchasDeFondo.vaciar();
+  agregarCielo(manchasDeFondo, [0, 0, 0], t);
+  gl.clearColor(luz.cielo[0], luz.cielo[1], luz.cielo[2], 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  dibujarManchas(manchasDeFondo, camara.total, camara.derecha, camara.arriba, false);
+}
+
+// ============================================================================
+// 11. EL PROGRAMA
+// ============================================================================
+
+// Los modos del juego: clave, nombre y una línea que lo describe.
+const MODOS = [
+  ['gemas', 'Atrapa gemas', 'Carrera contra los cinco algoritmos, cada quien en su tablero.'],
+  ['bandera', 'Captura la bandera', 'Uno contra uno: roba la bandera rival. A tres puntos.'],
+];
+
+// Todo lo que cambia mientras corre el programa.
+//   pantalla:    'menu' o 'juego'
+//   modo, juego: el modo que se está jugando y su partida
+//   rival:       el rival elegido en captura la bandera; se conserva entre partidas y empieza en A*
+//   izquierda:   el algoritmo del lado izquierdo al solo mirar; empieza en BFS
+//   direcciones: los movimientos oprimidos, del más viejo al más reciente
+//   seguir:      el número del corredor al que sigue la cámara, o null para la vista general
+//   momento:     el momento especial de cámara en curso (alguien anotó o ganó), o null
+const estado = { pantalla: 'menu', elegida: 0, modo: null, juego: null, rival: 'A*', izquierda: 'BFS', direcciones: [],
+                 seguir: null, momento: null, efectos: crearEfectos(), camara: crearCamara([0, 18, 30], [0, 0, 0]), t: 0 };
+
+// Empieza una partida nueva del modo indicado.
+function empezar(modo) {
+  estado.modo = modo;
+  estado.direcciones = [];
+  estado.seguir = null;
+  estado.momento = null;
+  estado.efectos = crearEfectos();
+  if (modo === 'gemas') estado.juego = crearGemas();
+  else if (modo === 'bandera') estado.juego = crearBandera(estado.rival);
+  estado.pantalla = 'juego';
+  elemento('menu').style.display = 'none';
+  elemento('barra').style.display = '';
+}
+
+// Dice si la partida ya terminó: se anunció el resultado o alguien llegó a 3 puntos.
+const terminada = juego => juego.tipo === 'bandera' ? juego.fase === 'final' : juego.anuncio;
+
+// Las teclas de movimiento y su movimiento (cambio de fila, cambio de columna).
+const TECLAS_DE_MOVIMIENTO = { ArrowUp: [-1, 0], w: [-1, 0], ArrowRight: [0, 1], d: [0, 1], ArrowDown: [1, 0], s: [1, 0], ArrowLeft: [0, -1], a: [0, -1] };
+
+// Atiende una tecla que se oprime.
+function alOprimir(evento) {
+  const tecla = evento.key.length === 1 ? evento.key.toLowerCase() : evento.key;
+  if (tecla in TECLAS_DE_MOVIMIENTO || tecla === ' ' || tecla === 'Tab') evento.preventDefault();   // que la página no se mueva
+  if (tecla in TECLAS_DE_MOVIMIENTO && !evento.repeat) {
+    // Las direcciones se anotan al oprimirse; la más reciente queda al final.
+    const direccion = TECLAS_DE_MOVIMIENTO[tecla];
+    estado.direcciones = estado.direcciones.filter(x => x !== direccion);
+    estado.direcciones.push(direccion);
+  }
+  if (estado.pantalla !== 'juego') { if (!evento.repeat) teclaDeMenu(estado, evento.key); return; }
+  if (evento.repeat) return;
+  const juego = estado.juego, mirando = estado.modo.startsWith('mirar');
+  if (tecla === 'Escape') mostrarMenu(estado);                                   // Esc: al menú
+  else if (tecla === 'r') empezar(estado.modo);                                  // R: reinicia
+  else if ((tecla === ' ' || tecla === 'Enter') && terminada(juego)) empezar(estado.modo);   // otra partida, cuando ya terminó
+  else if (tecla === 'c' && !mirando) estado.seguir = estado.seguir === null ? juego.corredores.indexOf(juego.jugador) : null;   // C: acercar
+  else if (juego.tipo === 'bandera' && tecla >= '1' && tecla <= '6' && !evento.shiftKey) {
+    estado.rival = OPCIONES_DE_RIVAL[Number(tecla) - 1];                         // se conserva para las partidas siguientes
+    empezar(estado.modo);
+  }
+}
+
+// Atiende una tecla que se suelta.
+function alSoltar(evento) {
+  const tecla = evento.key.length === 1 ? evento.key.toLowerCase() : evento.key;
+  if (tecla in TECLAS_DE_MOVIMIENTO) estado.direcciones = estado.direcciones.filter(x => x !== TECLAS_DE_MOVIMIENTO[tecla]);
+}
+
+// Atiende un clic sobre un botón de la interfaz.
+function alHacerClic(evento) {
+  const boton = evento.target.closest('button');
+  if (!boton) return;
+  if (boton.dataset.modo) clicDeMenu(estado, boton.dataset.modo);
+  else if (boton.dataset.rival) { estado.rival = boton.dataset.rival; empezar(estado.modo); }
+  boton.blur();                                                                  // para que Espacio no vuelva a oprimirlo
+}
+
+// Avanza la partida un cuadro.
+function actualizar(segundos) {
+  actualizarEfectos(estado.efectos, segundos);
+  if (estado.pantalla !== 'juego') return;
+  const juego = estado.juego;
+  // Al solo mirar, las teclas de movimiento mueven la cámara y no a un personaje.
+  const direcciones = estado.modo.startsWith('mirar') ? [] : estado.direcciones;
+  if (juego.tipo === 'gemas') actualizarGemas(juego, segundos, direcciones);
+  else if (juego.tipo === 'bandera') actualizarBandera(juego, segundos, direcciones);
+}
+
+// Un cuadro completo: avanzar, dibujar y pedir el siguiente.
+let momentoAnterior = 0;
+function cuadro(ahora) {
+  // Se limita a una décima de segundo para que, si la página se traba, los personajes no den un salto.
+  const segundos = Math.min((ahora - momentoAnterior) / 1000, 0.1);
+  momentoAnterior = ahora;
+  estado.t += segundos;
+  ajustarLienzo(elemento('lienzo'));
+  actualizar(segundos);
+  if (estado.pantalla === 'juego') {
+    const escena = dibujarPartida(estado, estado.juego, segundos, estado.t);
+    actualizarInterfaz(estado, estado.juego, escena);
+  } else {
+    dibujarMenu(estado, segundos, estado.t);
+  }
+  requestAnimationFrame(cuadro);
+}
+
+// Arranca el programa cuando la página termina de cargar.
+function iniciar() {
+  if (!iniciarMotor(elemento('lienzo'))) {
+    poner('menu', '<h1>Maze Runner</h1><p>Este navegador no puede dibujar en 3D (WebGL).</p>');
+    return;
+  }
+  window.addEventListener('keydown', alOprimir);
+  window.addEventListener('keyup', alSoltar);
+  document.addEventListener('click', alHacerClic);
+  window.addEventListener('blur', () => { estado.direcciones = []; });          // al cambiar de ventana se sueltan las teclas
+  mostrarMenu(estado);
+  requestAnimationFrame(ahora => { momentoAnterior = ahora; requestAnimationFrame(cuadro); });
+}
+if (typeof document !== 'undefined') iniciar();
+
+</script>
+</body>
+</html>
