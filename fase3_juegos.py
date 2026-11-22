@@ -1512,7 +1512,7 @@ def pose_de(corredor, t):
         DFS        corre inclinado con los brazos hacia atrás y festeja girando como trompo
         Dijkstra   camina de puntillas equilibrándose y festeja con una reverencia
         Voraz      da zancadas enormes con los brazos al frente y festeja a grandes brincos
-        A*         va a saltos largos, uno por casilla, y festeja con el baile del robot
+        A*         corre a saltos largos, uno por casilla, y festeja con el baile del robot
     """
     pose = {'salto': 0.0, 'inclinacion': 0.0, 'pierna_izq': 0.0, 'pierna_der': 0.0, 'brazo_izq': -8.0, 'brazo_der': 8.0,
             'codo_izq': 0.0, 'codo_der': 0.0, 'ancho': 1.0, 'cabeza': 0.0}
@@ -1580,11 +1580,13 @@ def pose_de(corredor, t):
         pose.update(pierna_izq=62 * vaiven * m, pierna_der=-62 * vaiven * m, brazo_izq=85 * m, brazo_der=(85 + 8 * sin(t * 14)) * m,
                     inclinacion=10 * m, salto=7 * abs(vaiven))
     elif nombre == 'A*':
-        # Un salto largo por casilla: sale parado, en el aire abre las piernas alternando
-        # cuál va adelante, y cae con las dos juntas. Todo exagerado.
+        # Un salto largo por casilla, como correr y saltar a la vez: sale parado, en el aire abre
+        # las piernas una adelante y otra atrás, y cae con las dos juntas. En cada salto cambia
+        # cuál pierna va adelante. Los brazos van al contrario de las piernas, como al correr.
+        # Los pies no atraviesan el piso: el salto sube más de lo que las piernas bajan al abrirse.
         aire = sin(pi * avance)
-        pose.update(salto=20 * aire, pierna_izq=58 * aire * lado * m, pierna_der=-58 * aire * lado * m,
-                    brazo_izq=-(40 + 110 * aire), brazo_der=40 + 110 * aire)
+        pose.update(salto=22 * aire, inclinacion=10 * aire * m, pierna_izq=68 * aire * lado * m, pierna_der=-68 * aire * lado * m,
+                    brazo_izq=-78 * aire * lado * m, brazo_der=78 * aire * lado * m)
     else:
         # El jugador camina normal.
         pose.update(pierna_izq=32 * vaiven * m, pierna_der=-32 * vaiven * m, brazo_izq=-28 * vaiven * m, brazo_der=28 * vaiven * m,
@@ -1618,11 +1620,12 @@ def dibujar_personaje(pantalla, vista, corredor, t, entorno, bandera=None):
     chica = max(0.5, 1 - pose['salto'] / 40)
     pygame.draw.ellipse(pantalla, (52, 84, 46), (x - 13 * s * chica, y - 4 * s, 26 * s * chica, 9 * s))
 
-    # El brillo de quien acaba de recoger algo: un halo dorado que late.
+    # El brillo de quien acaba de recoger algo: un halo blanco que late. Se dibuja antes que el
+    # personaje, así que queda detrás de él y solo se ve alrededor de su silueta.
     if corredor['brillo'] > 0:
         radio = int((26 + 6 * sin(t * 20)) * s)
         halo = pygame.Surface((radio * 2, radio * 2), pygame.SRCALPHA)
-        pygame.draw.circle(halo, (255, 220, 90, int(150 * min(1, corredor['brillo'] * 2))), (radio, radio), radio)
+        pygame.draw.circle(halo, (255, 255, 255, int(170 * min(1, corredor['brillo'] * 2))), (radio, radio), radio)
         pantalla.blit(halo, (x - radio, y - 22 * s - radio))
 
     # Las articulaciones: cadera, hombros y cabeza. La inclinación gira el cuerpo sobre la cadera.
@@ -1656,12 +1659,9 @@ def dibujar_personaje(pantalla, vista, corredor, t, entorno, bandera=None):
             pygame.draw.line(pantalla, NEGRO, a, b, grosor + 2)
             pygame.draw.line(pantalla, oscuro, a, b, grosor)
 
-    # La cabeza, con sus ojos del lado hacia donde ve.
+    # La cabeza: un círculo liso, sin cara.
     pygame.draw.circle(pantalla, (255, 224, 189), cabeza, 8.5 * s)
     pygame.draw.circle(pantalla, NEGRO, cabeza, 8.5 * s, max(1, int(2 * s)))
-    if ancho > -0.3:                                 # de espaldas (al girar) no se le ven los ojos
-        for dx in (-3, 3):
-            pygame.draw.circle(pantalla, NEGRO, (cabeza[0] + (dx + 1.5 * corredor['mira']) * s * ancho, cabeza[1] - s), max(1, 1.5 * s))
 
     if bandera:
         dibujar_bandera(pantalla, vista, (hombros[0] - 8 * s * corredor['mira'], hombros[1] + 6 * s), bandera, 0.7)
@@ -3071,11 +3071,26 @@ def dibujar_menu(pantalla, fuentes, estado, t):
         llegada = min(1.0, max(0.0, (estado['tiempo_en_menu'] - i * 0.04) / 0.3))
         zona = zona.move(0, int((1 - llegada) * 60))
         elegida = i == estado['elegida']
+        if elegida:
+            # La caja recién elegida (con el cursor o con las flechas) se apachurra y rebota:
+            # primero se ensancha y se aplasta, luego se estira, y se asienta un poco más grande.
+            k = min(1.0, (estado['tiempo_en_menu'] - estado['elegida_desde']) / 0.45)
+            vaiven = sin(k * pi * 3) * (1 - k)
+            zona = zona.inflate(int(zona.width * (0.04 + 0.10 * vaiven)), int(zona.height * (0.04 - 0.18 * vaiven)))
         pygame.draw.rect(pantalla, ROJO if elegida else (34, 36, 42), zona, border_radius=14)
         pygame.draw.rect(pantalla, BLANCO if elegida else (96, 98, 104), zona, 3 if elegida else 1, border_radius=14)
-        escribir(pantalla, fuentes['normal'], nombre, (zona.centerx, zona.y + 48), BLANCO, 'centro')
-        for k, renglon in enumerate(partir_texto(fuentes['chica'], descripcion, zona.width - 28)):
-            escribir(pantalla, fuentes['chica'], renglon, (zona.centerx, zona.y + 88 + k * 20), BLANCO if elegida else GRIS_CLARO, 'centro')
+        # El nombre y la descripción se parten en los renglones que hagan falta para caber en la
+        # caja, y el bloque completo se centra a lo alto.
+        titulo = partir_texto(fuentes['normal'], nombre, zona.width - 28)
+        texto = partir_texto(fuentes['chica'], descripcion, zona.width - 28)
+        y = zona.centery - (len(titulo) * 26 + 10 + len(texto) * 20) // 2 + 13
+        for renglon in titulo:
+            escribir(pantalla, fuentes['normal'], renglon, (zona.centerx, y), BLANCO, 'centro')
+            y += 26
+        y += 6
+        for renglon in texto:
+            escribir(pantalla, fuentes['chica'], renglon, (zona.centerx, y), BLANCO if elegida else GRIS_CLARO, 'centro')
+            y += 20
 
 
 def dibujar_transicion(pantalla, fuentes, estado, t):
@@ -3123,13 +3138,14 @@ def crear_estado():
         'arrastrando': True mientras se arrastra la vista con el ratón
         'transicion':  la transición en curso: {'indice', 't'}
         'tiempo_en_menu': segundos desde que se abrió el menú
+        'elegida_desde': valor de 'tiempo_en_menu' cuando se resaltó la caja actual (para su rebote)
         'entorno':     el ambiente: hora del día, nubes y pájaros
         'efectos':     las partículas y los fuegos artificiales
         'abierto':     False cuando hay que cerrar el programa
     """
     return {'pantalla': 'portada', 'elegida': 0, 'juego': None, 'modo': None, 'aprender': None,
             'demo': crear_gemas(con_jugador=False), 'rival': 'A*', 'izquierda': 'BFS', 'direcciones': [],
-            'arrastrando': False, 'transicion': None, 'tiempo_en_menu': 0.0,
+            'arrastrando': False, 'transicion': None, 'tiempo_en_menu': 0.0, 'elegida_desde': 0.0,
             'entorno': crear_entorno(), 'efectos': crear_efectos(), 'abierto': True}
 
 
@@ -3173,12 +3189,23 @@ def elegir(estado, indice):
         estado['pantalla'] = 'transicion'
 
 
+def resaltar(estado, numero):
+    """Resalta una caja del menú. Si es otra que la que estaba, empieza su rebote.
+
+    Entradas: el estado y el número de la caja.
+    """
+    if numero != estado['elegida']:
+        estado['elegida'] = numero
+        estado['elegida_desde'] = estado['tiempo_en_menu']
+
+
 def al_menu(estado):
     """Regresa al menú desde cualquier modo."""
     estado['pantalla'] = 'menu'
     estado['juego'] = None
     estado['aprender'] = None
     estado['tiempo_en_menu'] = 0.0
+    estado['elegida_desde'] = 0.0
     estado['direcciones'] = []
 
 
@@ -3407,11 +3434,11 @@ def atender(estado, evento):
             elif evento.key == pygame.K_ESCAPE:
                 estado['pantalla'] = 'portada'
                 return
-            estado['elegida'] = fila * 4 + columna
+            resaltar(estado, fila * 4 + columna)
         elif evento.type == pygame.MOUSEMOTION:
             for i, zona in enumerate(zonas_del_menu()):
                 if zona.collidepoint(evento.pos):
-                    estado['elegida'] = i
+                    resaltar(estado, i)
         elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
             for i, zona in enumerate(zonas_del_menu()):
                 if zona.collidepoint(evento.pos):
